@@ -1,0 +1,122 @@
+/* css/bovis.css - O Laboratório de Bovis */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #050508; font-family: 'Lato', sans-serif; color: #fff; height: 100vh; overflow: hidden; }
+
+.bovis-container {
+    display: grid; grid-template-columns: 350px 1fr 350px;
+    height: 100vh; width: 100%; position: relative;
+    background: radial-gradient(circle at bottom, #0b1a20 0%, #000 100%);
+}
+
+/* REAPROVEITAMENTO DE ESTILOS (Mesa/Inputs) - Igual ao Hawkins */
+.pilar { position: relative; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; border-right: 1px solid rgba(0, 255, 255, 0.1); height: 100%; }
+.pilar-centro { justify-content: center; border-right: 1px solid rgba(0, 255, 255, 0.1); }
+.pilar-direita { border-right: none; justify-content: center; }
+
+.mesa-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.5; z-index: 0; }
+.textura-mesa { width: 100%; height: 100%; object-fit: cover; filter: hue-rotate(180deg); /* Mesa mais azulada para diferenciar */ }
+
+.painel-identidade { background: rgba(0, 10, 20, 0.8); backdrop-filter: blur(10px); padding: 30px; border-radius: 15px; border: 2px solid #00e6e6; width: 100%; text-align: center; position: relative; z-index: 2; margin-top: 50px; box-shadow: 0 0 20px rgba(0, 230, 230, 0.2); }
+.titulo-pilar { font-family: 'Cinzel'; color: #00e6e6; font-size: 1.8rem; margin-bottom: 10px; }
+.desc-pilar { color: #aaa; font-size: 0.9rem; margin-bottom: 25px; }
+
+.input-radiestesia label { display: block; color: #00e6e6; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
+.input-radiestesia input { width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid #00e6e6; color: #fff; border-radius: 8px; margin-bottom: 15px; outline: none; }
+.btn-cristal { width: 100%; padding: 15px; background: linear-gradient(45deg, #008b8b, #00e6e6); border: none; color: #000; font-family: 'Cinzel'; font-weight: bold; cursor: pointer; border-radius: 8px; transition: 0.3s; text-transform: uppercase; }
+.btn-cristal:hover { filter: brightness(1.2); box-shadow: 0 0 20px #00e6e6; }
+
+/* CRISTAL (Correção de Tamanho) */
+.cristal-oculto { 
+    position: absolute; 
+    top: 50%; left: 50%; 
+    transform: translate(-50%, -50%) scale(0); 
+    opacity: 0; 
+    transition: 1s; 
+    pointer-events: none; 
+    z-index: 10; 
+    
+    /* Aqui definimos o tamanho máximo do container */
+    width: 120px; /* Ajustei para 120px, que é um tamanho elegante (nem 100px sumido, nem gigante) */
+}
+
+/* ESTA É A REGRA QUE ESTAVA FALTANDO: */
+.cristal-oculto img {
+    width: 100%;       /* Obriga a imagem a caber nos 120px do pai */
+    height: auto;      /* Mantém a proporção */
+    display: block;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8)); /* Sombra para dar peso */
+}
+.cristal-oculto.visivel { opacity: 1; transform: translate(-50%, -30%) scale(1); }
+.cristal-caindo { animation: cairCristal 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+@keyframes cairCristal { 0% { transform: translate(-50%, -300%) scale(2); opacity: 0; } 100% { transform: translate(-50%, -30%) scale(1); opacity: 1; } }
+
+/* --- CENTRO: RÉGUA E PÊNDULO --- */
+.status-leitura { text-align: center; margin-bottom: 40px; }
+#campo-atual { font-family: 'Cinzel'; font-size: 2rem; color: #fff; margin-bottom: 5px; text-shadow: 0 0 10px #00e6e6; }
+.valor-destaque { font-size: 3rem; font-weight: bold; color: #00e6e6; font-family: monospace; text-shadow: 0 0 20px currentColor; }
+
+.area-medicao { position: relative; width: 100%; height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+/* Régua */
+.regua-container { position: absolute; bottom: 0; width: 100%; max-width: 600px; height: 150px; }
+.img-regua { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px #00e6e6); }
+.marcador-vitalidade { position: absolute; bottom: 0; left: 65%; /* 6500 de 10000 */ width: 2px; height: 100%; border-left: 2px dashed rgba(255, 0, 0, 0.5); pointer-events: none; }
+
+/* Pêndulo */
+.pendulo-suporte {
+    position: absolute; top: 0; left: 50%;
+    width: 20px; height: 300px; /* Altura da corda */
+    transform-origin: top center;
+    transform: translateX(-50%) rotate(0deg); /* Posição inicial (0) */
+    transition: transform 2s cubic-bezier(0.25, 1, 0.5, 1); /* Movimento suave */
+    z-index: 10;
+}
+.img-pendulo {
+    width: 100px; /* Tamanho do pêndulo */
+    position: absolute; bottom: -80px; left: -50px; /* Centraliza a ponta */
+    filter: drop-shadow(0 0 15px rgba(0, 255, 255, 0.5));
+}
+/* Animação de Oscilação (buscando) */
+.pendulo-buscando { animation: oscilarBusca 1s infinite alternate ease-in-out; }
+@keyframes oscilarBusca { from { transform: translateX(-50%) rotate(-10deg); } to { transform: translateX(-50%) rotate(10deg); } }
+
+/* Lista Parcial */
+.lista-resultados-live { width: 80%; margin-top: 20px; display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; }
+.item-bovis { display: flex; justify-content: space-between; background: rgba(255, 255, 255, 0.05); padding: 8px 15px; border-radius: 5px; border-left: 3px solid #00e6e6; color: #fff; }
+.item-bovis.surgir { animation: surgir 0.5s ease-out; }
+
+/* --- DIREITA: CORPO SUTIL --- */
+.aura-container { position: relative; width: 100%; max-width: 250px; height: 500px; }
+.img-aura { width: 100%; height: 100%; object-fit: contain; opacity: 0.8; }
+
+.scanner-aura {
+    position: absolute; left: 0; width: 100%; height: 10px;
+    background: linear-gradient(90deg, transparent, #00e6e6, transparent);
+    box-shadow: 0 0 20px #00e6e6;
+    top: 0; opacity: 0;
+}
+.scan-vertical { animation: scanV 3s infinite alternate ease-in-out; opacity: 0.8; }
+@keyframes scanV { from { top: 0%; } to { top: 100%; } }
+
+.legenda-campos { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; text-align: center; width: 100%; }
+.campo-tag { font-size: 0.8rem; text-transform: uppercase; color: #555; transition: 0.3s; }
+.campo-tag.ativo { color: #fff; text-shadow: 0 0 10px currentColor; font-weight: bold; transform: scale(1.1); }
+.mental.ativo { color: #ffff00; } /* Amarelo */
+.emocional.ativo { color: #ff00ff; } /* Rosa/Violeta */
+.fisico.ativo { color: #ff0000; } /* Vermelho */
+.espiritual.ativo { color: #0000ff; } /* Azul */
+
+/* Botão Próximo */
+.btn-proximo { margin-top: 20px; padding: 10px 30px; background: #00e6e6; color: #000; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; animation: surgir 0.5s; }
+
+/* RELATÓRIO FINAL */
+.relatorio-final-container { width: 90%; background: rgba(5,15,20,0.95); padding: 20px; border: 1px solid #00e6e6; border-radius: 10px; text-align: center; }
+.tabela-bovis { width: 100%; border-collapse: collapse; margin-top: 20px; }
+.tabela-bovis th { color: #00e6e6; border-bottom: 2px solid #00e6e6; padding: 10px; }
+.tabela-bovis td { padding: 10px; border-bottom: 1px solid #333; }
+.status-bom { color: #00ff00; }
+.status-atencao { color: #ffff00; }
+.status-critico { color: #ff0000; }
+
+@media (max-width: 900px) { .bovis-container { grid-template-columns: 1fr; height: auto; overflow-y: auto; } }

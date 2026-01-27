@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursos & Saberes | Portal El'Luminar</title>
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/cursos.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <a href="index.html" class="link-voltar-home">← Voltar ao Portal</a>
+
+    <section class="cursos-container">
+        <header class="cabecalho-cursos">
+            <h1 class="titulo-area">Sabedoria Ancestral</h1>
+            <p class="subtitulo-area">Jornadas de conhecimento para a expansão da consciência.</p>
+        </header>
+
+        <div class="grid-cursos">
+            <div class="card-curso">
+                <div class="img-curso-container">
+                    <img src="assets/Cursos/ALinguagemdaLuz/Capa.png" alt="A Linguagem da Luz" class="img-curso">
+                    <div class="tag-curso">Curso Disponível</div>
+                </div>
+                <div class="info-curso">
+                    <h2 class="titulo-curso">A Linguagem da Luz</h2>
+                    <p class="desc-curso">Uma jornada em 11 módulos pela anatomia sutil, cura pelas mãos e despertar da consciência.</p>
+                    
+                    <div class="progresso-container">
+                        <div class="barra-fundo"><div class="barra-preenchida" id="progresso-luz" style="width: 0%"></div></div>
+                        <span class="texto-progresso" id="texto-progresso-luz">0% Concluído</span>
+                    </div>
+
+                    <a href="curso-player.html?id=linguagem_luz" class="btn-iniciar">Acessar Jornada ✨</a>
+                </div>
+            </div>
+
+            <div class="card-curso em-breve">
+                <div class="img-curso-container">
+                    <div class="img-placeholder">🔮</div>
+                    <div class="tag-curso futuro">Em Breve</div>
+                </div>
+                <div class="info-curso">
+                    <h2 class="titulo-curso">Radiestesia Estelar</h2>
+                    <p class="desc-curso">Domine o pêndulo e os gráficos para diagnósticos precisos.</p>
+                    <button class="btn-iniciar bloqueado" disabled>Aguarde</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dados = JSON.parse(localStorage.getItem('curso_progresso_linguagem_luz')) || { concluidos: [] };
+            const totalModulos = 11; // Sabemos que são 11
+            const concluidos = dados.concluidos.length;
+            const porcentagem = Math.floor((concluidos / totalModulos) * 100);
+            
+            document.getElementById('progresso-luz').style.width = `${porcentagem}%`;
+            document.getElementById('texto-progresso-luz').innerText = `${porcentagem}% Concluído`;
+            
+            const btn = document.querySelector('.btn-iniciar');
+            if(porcentagem > 0) btn.innerText = "Continuar Jornada ▶";
+        });
+    </script>
+</body>
+</html>

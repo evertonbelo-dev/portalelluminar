@@ -1,0 +1,5 @@
+C:\PORTALELLUMINAR\assets\hawkins\ametista.png
+C:\PORTALELLUMINAR\assets\hawkins\halkins
+C:\PORTALELLUMINAR\assets\hawkins\mesa.png
+C:\PORTALELLUMINAR\assets\hawkins\pendulo.png
+C:\PORTALELLUMINAR\assets\hawkins\piramide.png

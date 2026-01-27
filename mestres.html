@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Templo dos Mestres | A Egrégora</title>
+    
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/mestres.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <a href="index.html" class="link-voltar-home">← Voltar ao Portal</a>
+
+    <section class="templo-container">
+        
+        <header class="cabecalho-templo">
+            <img src="assets/Mestres/Chama_Trina.png" alt="Chama Trina" class="simbolo-sagrado">
+            <h1 class="titulo-templo">A Egrégora da Luz</h1>
+            <p class="subtitulo-templo">Conecte-se com os Guardiões que sustentam este trabalho.</p>
+        </header>
+
+        <div id="galeria-guardioes" class="galeria-grid">
+            </div>
+
+    </section>
+
+    <div id="modal-altar" class="modal-overlay oculto" onclick="fecharAltar(event)">
+        <div class="modal-conteudo">
+            <button class="btn-fechar" onclick="fecharAltar(event)">×</button>
+            
+            <div class="modal-coluna-img">
+                <img id="modal-img" src="" alt="Mestre">
+                <div class="halo-luz"></div>
+            </div>
+            
+            <div class="modal-coluna-texto">
+                <h2 id="modal-nome">Nome do Mestre</h2>
+                <div class="linha-divisoria"></div>
+                <p id="modal-desc" class="texto-canalizado">
+                    Mensagem carregando...
+                </p>
+                <button class="btn-sintonizar">Sintonizar Frequência 🧘‍♂️</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/mestres.js"></script>
+
+</body>
+</html>

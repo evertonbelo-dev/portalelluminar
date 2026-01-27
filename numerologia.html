@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Numerologia Pitagórica | A Estrela da Alma</title>
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/numerologia.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <a href="index.html" class="link-voltar-home">← Voltar ao Portal</a>
+
+    <div class="metatron-badge">
+        <svg viewBox="0 0 100 100" class="metatron-svg">
+            <circle cx="50" cy="50" r="48" stroke="var(--ouro-solar)" stroke-width="1" fill="none" opacity="0.3"/>
+            <circle cx="50" cy="50" r="30" stroke="var(--dourado-antigo)" stroke-width="1" fill="none"/>
+            <path d="M50 5 L90 27 L90 73 L50 95 L10 73 L10 27 Z" stroke="var(--ouro-solar)" fill="none"/>
+            <path d="M50 5 L50 95 M10 27 L90 73 M90 27 L10 73" stroke="var(--dourado-antigo)" fill="none" opacity="0.5"/>
+            <path d="M50 20 L76 35 L76 65 L50 80 L24 65 L24 35 Z" stroke="#fff" fill="none" opacity="0.2"/>
+        </svg>
+    </div>
+
+    <div class="circuito-borda">
+        <div class="feixe-luz"></div>
+    </div>
+
+    <div class="fundo-geometrico">
+        <div class="forma-geo forma-1"></div>
+        
+        <div class="cena-cubo">
+            <div class="cubo-wireframe">
+                <div class="face frente"></div>
+                <div class="face tras"></div>
+                <div class="face direita"></div>
+                <div class="face esquerda"></div>
+                <div class="face topo"></div>
+                <div class="face fundo"></div>
+            </div>
+        </div>
+
+        <div class="forma-geo forma-3"></div>
+    </div>
+
+    <section class="num-container-principal">
+        <div id="fase-entrada" class="painel-central">
+            <h1 class="titulo-num">A Matriz da Alma</h1>
+            <p class="subtitulo-num">Insira seu código terreno para revelar sua assinatura estelar.</p>
+            <div class="input-group-mistico" id="container-nome">
+                <label>Nome Completo de Batismo</label>
+                <input type="text" id="input-nome" placeholder="Digite seu nome..." autocomplete="off">
+            </div>
+            <div class="input-group-mistico">
+                <label>Data de Aterrissagem</label>
+                <input type="date" id="input-data">
+            </div>
+            <button onclick="iniciarTransmutacao()" class="btn-luz grande">Decifrar Código Pitagórico</button>
+        </div>
+
+        <div id="fase-resultado" class="painel-central oculto">
+            <h2 class="titulo-resultado">Sua Geometria Sagrada</h2>
+            <p style="color: #aaa; margin-bottom: 20px;">Toque nas pontas para decifrar.</p>
+            <div class="triangulo-container">
+                <div class="triangulo-svg"><svg viewBox="0 0 100 100"><polygon points="50,10 90,90 10,90" class="linha-triangulo" /></svg></div>
+                <div class="ponta ponta-topo" onclick="mostrarDetalhe('missao')"><span class="label-ponta">MISSÃO</span><span class="numero-ponta" id="num-missao">0</span><span class="arquetipo-ponta" id="arq-missao"></span></div>
+                <div class="ponta ponta-esq" onclick="mostrarDetalhe('expressao')"><span class="label-ponta">QUEM ÉS</span><span class="numero-ponta" id="num-expressao">0</span><span class="arquetipo-ponta" id="arq-expressao"></span></div>
+                <div class="ponta ponta-dir" onclick="mostrarDetalhe('alma')"><span class="label-ponta">ALMA</span><span class="numero-ponta" id="num-alma">0</span><span class="arquetipo-ponta" id="arq-alma"></span></div>
+            </div>
+            <div id="resumo-box" class="resumo-numerologico">
+                <h3 id="titulo-resumo" style="color: var(--ouro-solar);">O Triângulo da Vida</h3>
+                <p id="texto-resumo">Descubra os pilares da sua existência.</p>
+            </div>
+            <div id="box-mestre" class="card-mestre-secreto">
+                <div class="brilho-raio" id="brilho-mestre"></div>
+                <div class="conteudo-mestre">
+                    <small>SEU MENTOR DA FRATERNIDADE BRANCA</small>
+                    <h2 id="nome-mestre">...</h2>
+                    <p id="raio-mestre">Analisando frequência...</p>
+                    <p class="msg-mestre" id="msg-mestre">""</p>
+                </div>
+            </div>
+            <div class="cta-mapa-completo">
+                <button class="btn-luz" onclick="alert('Venda do Mapa!')">📜 Encomendar Mapa Profundo</button>
+                <br>
+                <button onclick="location.reload()" class="btn-voltar-simples" style="margin-top:20px;">Nova Análise</button>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/numerologia.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequência Hawkins | O Diagnóstico da Alma</title>
+    
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/hawkins.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <a href="index.html" class="link-voltar-home">← Voltar ao Portal</a>
+
+    <section class="hawkins-container">
+        
+        <div class="pilar pilar-esquerda">
+            <div class="mesa-bg">
+                <img src="assets/hawkins/mesa.png" alt="Mesa" class="textura-mesa">
+            </div>
+            
+            <div class="painel-identidade">
+                <h2 class="titulo-pilar">O Testemunho</h2>
+                <p class="desc-pilar">Insira os dados para conectar.</p>
+                
+                <div class="input-radiestesia">
+                    <label>Nome Completo</label>
+                    <input type="text" id="input-nome" placeholder="Digite o nome...">
+                </div>
+                
+                <div class="input-radiestesia">
+                    <label>Data de Nascimento</label>
+                    <input type="date" id="input-data">
+                </div>
+
+                <button class="btn-cristal" onclick="iniciarSessao()">Posicionar Testemunho</button>
+
+                <div id="cristal-testemunho" class="cristal-oculto">
+                    <img src="assets/hawkins/ametista.png" alt="Cristal">
+                </div>
+            </div>
+        </div>
+
+        <div class="pilar pilar-centro">
+            <div class="area-pendulo">
+                <div class="pendulo-container" id="pendulo-mestre">
+                    <img src="assets/hawkins/pendulo.png" alt="Pêndulo" class="img-pendulo">
+                </div>
+            </div>
+
+            <div id="lista-parcial" class="lista-resultados-live"></div>
+
+            <div class="status-leitura">
+                <h3 id="area-atual">Aguardando Conexão...</h3>
+                <p id="status-vibracao">O campo está aberto.</p>
+            </div>
+        </div>
+
+        <div class="pilar pilar-direita">
+            <div class="piramide-container">
+                <img src="assets/hawkins/piramide.png" alt="Escala Hawkins" class="img-piramide">
+                <div class="scanner-luz" id="scanner-hawkins"></div>
+                <div class="marcador-nivel oculto" id="marcador-resultado">
+                    <span class="valor-hz">0 Hz</span>
+                    <span class="nome-estado">...</span>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <script src="js/hawkins.js"></script>
+
+</body>
+</html>

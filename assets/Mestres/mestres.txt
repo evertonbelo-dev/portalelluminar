@@ -1,0 +1,14 @@
+\assets\Mestres\Alethira.png
+\assets\Mestres\Aurex.png
+\assets\assets\Mestres\Brahma.png
+\assets\Mestres\Chama_Trina.png
+\assets\Mestres\CristoVivo.png
+\assets\Mestres\Elion.png
+\assets\Mestres\Kael.png
+\assets\Mestres\Lyra.png
+\assets\Mestres\Maria.png
+\assets\Mestres\mestres.txt
+\assets\Mestres\Sabbah.png
+\assets\Mestres\Seraphion.png
+\assets\Mestres\Sirian.png
+\assets\Mestres\Yhanel.png

@@ -1,0 +1,245 @@
+/* css/numerologia.css - Versão Final Ajustada (Dimensões e Rota de Luz) */
+
+body {
+    background: #050510;
+    overflow-x: hidden;
+    font-family: 'Lato', sans-serif;
+    perspective: 1000px;
+    margin: 0;
+    padding: 0;
+}
+
+/* --- 1. SELO DE METATRON (Origem da Luz) --- */
+.metatron-badge {
+    position: fixed;
+    top: 30px;        /* Mais afastado da borda */
+    right: 40px;
+    width: 100px;     /* Maior para impor presença */
+    height: 100px;
+    z-index: 5;       /* Atrás do conteúdo, mas visível */
+    opacity: 0.6;
+    filter: drop-shadow(0 0 15px rgba(255, 170, 0, 0.4));
+}
+
+.metatron-svg {
+    width: 100%;
+    height: 100%;
+    animation: giroLento 60s linear infinite;
+}
+
+@keyframes giroLento { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* --- 2. FUNDO COM CUBO 3D (Destino da Luz) --- */
+.fundo-geometrico {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1;
+    background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+    overflow: hidden;
+}
+
+/* O CUBO 3D REAL */
+.cena-cubo {
+    position: absolute;
+    bottom: 10%;      /* Posicionado no chão */
+    right: 10%;       /* Canto direito */
+    width: 180px; 
+    height: 180px;
+    perspective: 800px;
+    z-index: 1;
+}
+
+.cubo-wireframe {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    animation: rotacaoCubo 20s infinite linear;
+}
+
+.face {
+    position: absolute;
+    width: 180px; height: 180px;
+    border: 2px solid rgba(255, 170, 0, 0.3); /* Linhas mais visíveis */
+    background: rgba(255, 170, 0, 0.02);
+    box-shadow: inset 0 0 30px rgba(255, 170, 0, 0.05);
+}
+
+/* Montagem do Cubo (Baseado no tamanho 180px -> translateZ deve ser metade: 90px) */
+.face.frente  { transform: rotateY(0deg) translateZ(90px); }
+.face.tras    { transform: rotateY(180deg) translateZ(90px); }
+.face.direita { transform: rotateY(90deg) translateZ(90px); }
+.face.esquerda{ transform: rotateY(-90deg) translateZ(90px); }
+.face.topo    { transform: rotateX(90deg) translateZ(90px); }
+.face.fundo   { transform: rotateX(-90deg) translateZ(90px); }
+
+@keyframes rotacaoCubo {
+    0% { transform: rotateX(0deg) rotateY(0deg); }
+    100% { transform: rotateX(360deg) rotateY(360deg); }
+}
+
+/* Formas sutis de fundo */
+.forma-geo { position: absolute; opacity: 0.05; border: 1px solid var(--dourado-antigo); animation: flutuar 30s infinite linear; }
+.forma-1 { top: 15%; left: 15%; width: 200px; height: 200px; border-radius: 50%; border-style: dashed; }
+.forma-3 { bottom: 20%; left: 10%; width: 120px; height: 120px; border-radius: 50%; }
+@keyframes flutuar { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(180deg); } 100% { transform: translateY(0) rotate(360deg); } }
+
+
+/* --- 3. CIRCUITO DE LUZ (A Serpente) --- */
+.circuito-borda {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 2; overflow: hidden;
+}
+
+.feixe-luz {
+    position: absolute;
+    width: 200px; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--ouro-solar), #fff);
+    box-shadow: 0 0 15px var(--ouro-solar);
+    border-radius: 50%;
+    opacity: 0;
+    animation: percorrerCaminho 10s linear infinite;
+}
+
+/* ROTA EXATA: Metatron (Top-Right) -> Top-Left -> Bottom-Left -> Cubo (Bottom-Right) */
+@keyframes percorrerCaminho {
+    /* 1. Nasce no Metatron */
+    0% { top: 80px; right: 90px; left: auto; width: 0; opacity: 0; transform: rotate(180deg); }
+    5% { width: 150px; opacity: 1; }
+    
+    /* 2. Vai até o canto superior esquerdo */
+    30% { top: 80px; right: auto; left: 50px; transform: rotate(180deg); }
+    
+    /* 3. Vira para baixo */
+    35% { top: 80px; left: 50px; transform: rotate(90deg); transform-origin: left top; }
+    
+    /* 4. Desce até o canto inferior esquerdo */
+    60% { top: 85%; left: 50px; transform: rotate(90deg); }
+    
+    /* 5. Vira para a direita */
+    65% { top: 85%; left: 50px; transform: rotate(0deg); transform-origin: left bottom; }
+    
+    /* 6. Viaja até o Cubo (Direita) */
+    95% { top: auto; bottom: 15%; left: auto; right: 20%; opacity: 1; }
+    
+    /* 7. Entra no Cubo e some */
+    100% { top: auto; bottom: 15%; left: auto; right: 10%; width: 0; opacity: 0; }
+}
+
+
+/* --- 4. LAYOUT PRINCIPAL E INPUTS --- */
+.num-container-principal {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 20px;
+    position: relative;
+    z-index: 10; /* Garante que o texto fique sobre o fundo */
+}
+
+.painel-central {
+    width: 100%; max-width: 650px; /* Mais largo para os inputs respirarem */
+    text-align: center;
+    animation: surgir 1s ease-out;
+}
+
+.titulo-num { font-family: 'Cinzel'; font-size: 3rem; color: var(--dourado-antigo); margin-bottom: 10px; text-shadow: 0 0 20px rgba(0,0,0,0.8); }
+.subtitulo-num { color: #ccc; margin-bottom: 50px; font-size: 1.2rem; }
+
+/* INPUTS MAIS ROBUSTOS */
+.input-group-mistico { 
+    margin-bottom: 35px; 
+    text-align: left; 
+    position: relative;
+}
+
+.input-group-mistico label { 
+    display: block; 
+    color: var(--ouro-solar); 
+    font-size: 1rem; 
+    margin-bottom: 10px; 
+    text-transform: uppercase; 
+    letter-spacing: 2px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px #000;
+}
+
+.input-group-mistico input {
+    width: 100%; 
+    padding: 18px 25px; /* Mais espaçoso */
+    background: rgba(0, 0, 0, 0.6); /* Mais escuro para contraste */
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(212, 175, 55, 0.4);
+    border-radius: 12px;
+    color: #fff; 
+    font-family: 'Cinzel', serif; 
+    font-size: 1.4rem; /* Letra maior */
+    transition: 0.4s;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+}
+
+.input-group-mistico input:focus { 
+    outline: none; 
+    border-color: var(--ouro-solar); 
+    box-shadow: 0 0 30px rgba(255, 170, 0, 0.3); 
+    transform: scale(1.02);
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* Partículas */
+.particula-flutuante {
+    position: absolute; color: var(--ouro-solar); font-family: 'Courier New';
+    font-size: 1.2rem; pointer-events: none; animation: subir 1.5s ease-out forwards;
+    font-weight: bold; z-index: 20; text-shadow: 0 0 5px #000;
+}
+@keyframes subir { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-60px) scale(1.5); opacity: 0; } }
+
+
+/* --- 5. RESULTADO (TRIÂNGULO) --- */
+.titulo-resultado { font-family: 'Cinzel'; font-size: 2.5rem; color: #fff; margin-bottom: 5px; }
+.triangulo-container { position: relative; width: 340px; height: 340px; margin: 50px auto; }
+.triangulo-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 15px var(--ouro-solar)); }
+.linha-triangulo { fill: none; stroke: var(--dourado-antigo); stroke-width: 2; stroke-dasharray: 400; animation: desenharTriangulo 2s ease-out forwards; }
+@keyframes desenharTriangulo { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
+
+.ponta {
+    position: absolute; width: 90px; height: 90px;
+    background: radial-gradient(circle, #222 0%, #000 100%);
+    border: 2px solid var(--ouro-solar); border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: 0.3s;
+    box-shadow: 0 0 20px rgba(0,0,0,0.8); z-index: 10;
+}
+.ponta:hover { transform: scale(1.15); border-color: #fff; box-shadow: 0 0 40px var(--ouro-solar); }
+
+.ponta-topo { top: -20px; left: 50%; transform: translateX(-50%); }
+.ponta-esq { bottom: 0; left: -20px; }
+.ponta-dir { bottom: 0; right: -20px; }
+
+.numero-ponta { font-family: 'Cinzel'; font-size: 2.2rem; color: #fff; font-weight: bold; }
+.label-ponta { font-size: 0.7rem; color: #aaa; margin-bottom: 2px; font-weight: bold; text-transform: uppercase; }
+.arquetipo-ponta { font-size: 0.65rem; color: var(--ouro-solar); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; max-width: 80px; text-align: center; line-height: 1; display: none; }
+
+/* CARD MESTRE */
+.card-mestre-secreto {
+    margin-top: 50px; padding: 35px; border-radius: 15px;
+    background: rgba(20, 20, 20, 0.95); border: 1px solid #333;
+    position: relative; overflow: hidden; transition: 0.5s; text-align: left;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.6);
+}
+.brilho-raio { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: white; box-shadow: 0 0 20px 5px white; }
+.conteudo-mestre small { color: #888; display: block; margin-bottom: 10px; letter-spacing: 2px; font-size: 0.8rem; text-transform: uppercase; }
+.conteudo-mestre h2 { font-family: 'Cinzel'; color: #fff; font-size: 2rem; margin-bottom: 5px; }
+.msg-mestre { font-style: italic; color: #ccc; margin-top: 15px; border-left: 3px solid #555; padding-left: 20px; line-height: 1.6; font-size: 1.1rem; }
+
+.cta-mapa-completo { margin-top: 50px; padding-bottom: 60px; }
+.resumo-numerologico { background: rgba(255,255,255,0.05); padding: 25px; border-radius: 10px; border: 1px dashed #444; margin-bottom: 40px; min-height: 100px; }
+.oculto { display: none !important; }
+@keyframes surgir { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Responsividade para Celular */
+@media (max-width: 768px) {
+    .metatron-badge { width: 60px; height: 60px; top: 15px; right: 15px; }
+    .cena-cubo { width: 120px; height: 120px; bottom: 5%; right: 5%; opacity: 0.5; } /* Cubo menor no mobile */
+    .titulo-num { font-size: 2rem; }
+    .input-group-mistico input { font-size: 1.1rem; padding: 15px; }
+    /* Ajuste da rota da luz no mobile (simplificada ou oculta se preferir) */
+    .circuito-borda { display: none; } /* Oculta a borda no celular para não bugar a tela pequena */
+}

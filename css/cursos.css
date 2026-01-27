@@ -1,0 +1,212 @@
+/* css/cursos.css */
+
+/* --- TELA DE VITRINE (cursos.html) --- */
+.cursos-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; text-align: center; }
+.cabecalho-cursos { margin-bottom: 50px; }
+.titulo-area { font-family: 'Cinzel'; color: var(--ouro-solar); font-size: 2.5rem; margin-bottom: 10px; }
+.subtitulo-area { color: #aaa; font-size: 1.1rem; }
+
+.grid-cursos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+
+.card-curso { background: rgba(20,20,30,0.8); border: 1px solid #444; border-radius: 10px; overflow: hidden; transition: 0.3s; text-align: left; }
+.card-curso:hover { border-color: var(--ouro-solar); transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+
+/* css/cursos.css - Ajuste para não cortar imagens */
+
+/* 1. NOS CARDS (Vitrine) */
+.img-curso-container { 
+    position: relative; 
+    height: 200px; 
+    overflow: hidden; 
+    background: #000; /* Fundo preto para preencher sobras se a imagem for estreita */
+}
+
+.img-curso { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: contain; /* <--- O SEGREDO: Ajusta sem cortar nada */
+    object-position: center;
+    transition: 0.5s; 
+}
+
+/* Mantemos o efeito de zoom, mas suave */
+.card-curso:hover .img-curso { 
+    transform: scale(1.05); 
+}
+
+.tag-curso { position: absolute; top: 10px; right: 10px; background: var(--ouro-solar); color: #000; padding: 5px 10px; font-size: 0.7rem; font-weight: bold; border-radius: 3px; }
+.tag-curso.futuro { background: #555; color: #aaa; }
+
+.info-curso { padding: 20px; }
+.titulo-curso { font-family: 'Cinzel'; color: #fff; font-size: 1.4rem; margin-bottom: 10px; }
+.desc-curso { color: #ccc; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5; }
+
+.progresso-container { margin-bottom: 20px; }
+.barra-fundo { width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin-bottom: 5px; }
+.barra-preenchida { height: 100%; background: linear-gradient(90deg, #b8860b, #ffd700); transition: width 0.5s; }
+.texto-progresso { font-size: 0.8rem; color: #888; }
+
+.btn-iniciar { display: block; width: 100%; padding: 12px; background: transparent; border: 1px solid var(--ouro-solar); color: var(--ouro-solar); text-align: center; text-decoration: none; font-weight: bold; border-radius: 5px; transition: 0.3s; }
+.btn-iniciar:hover { background: var(--ouro-solar); color: #000; }
+.btn-iniciar.bloqueado { border-color: #555; color: #555; cursor: not-allowed; }
+.btn-iniciar.bloqueado:hover { background: transparent; color: #555; }
+
+
+/* --- PLAYER DE ESTUDO (curso-player.html) --- */
+.modo-leitura { background: #0a0a0f; overflow: hidden; height: 100vh; }
+
+.layout-player { display: grid; grid-template-columns: 280px 1fr 300px; height: 100vh; }
+
+/* Sidebar Esquerda (Módulos) */
+.sidebar-modulos { background: #111; border-right: 1px solid #333; display: flex; flex-direction: column; }
+.sidebar-header { padding: 20px; border-bottom: 1px solid #333; }
+.voltar-btn { color: #888; text-decoration: none; font-size: 0.9rem; display: block; margin-bottom: 10px; }
+.sidebar-header h3 { color: #fff; font-family: 'Cinzel'; margin: 0; }
+
+.lista-modulos-scroll { flex: 1; overflow-y: auto; padding: 10px; }
+.item-modulo { padding: 12px; margin-bottom: 5px; border-radius: 5px; cursor: pointer; color: #aaa; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; transition: 0.2s; }
+.item-modulo:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.item-modulo.ativo { background: rgba(212, 175, 55, 0.1); color: var(--ouro-solar); border-left: 3px solid var(--ouro-solar); }
+.icone-status { width: 20px; text-align: center; }
+
+/* Área Central (Conteúdo) */
+.area-conteudo { background: #050508; overflow-y: auto; position: relative; display: flex; flex-direction: column; }
+#conteudo-dinamico { flex: 1; padding: 40px 60px; max-width: 900px; margin: 0 auto; }
+
+/* Estilo do Texto da Aula */
+.aula-header { text-align: center; margin-bottom: 40px; border-bottom: 1px solid #333; padding-bottom: 20px; }
+/*  NO PLAYER (Sala de Aula) */
+.aula-img-destaque { 
+    width: 100%; 
+    max-height: 350px; /* Aumentei um pouco para dar mais destaque */
+    object-fit: contain; /* <--- Garante que a imagem do módulo apareça inteira */
+    border-radius: 10px; 
+    margin-bottom: 20px; 
+    background: rgba(0,0,0,0.3); /* Fundo sutil caso a imagem não preencha tudo */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5); /* Sombra para destacar */
+}
+.aula-titulo { font-family: 'Cinzel'; font-size: 2.5rem; color: #fff; margin-bottom: 10px; }
+.aula-frase { font-style: italic; color: var(--ouro-solar); font-size: 1.1rem; }
+
+.aula-texto { font-family: 'Merriweather', serif; color: #ddd; line-height: 1.8; font-size: 1.1rem; text-align: justify; }
+.aula-texto h3 { color: var(--ouro-solar); font-family: 'Lato'; margin-top: 30px; margin-bottom: 10px; }
+.aula-texto p { margin-bottom: 15px; }
+
+.box-pratica { background: rgba(212, 175, 55, 0.1); border: 1px solid var(--ouro-solar); padding: 25px; border-radius: 10px; margin: 30px 0; }
+.box-pratica h4 { font-family: 'Cinzel'; color: var(--ouro-solar); font-size: 1.2rem; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+
+/* Navegação Rodapé */
+.nav-aulas { padding: 20px; border-top: 1px solid #333; display: flex; justify-content: space-between; background: #080810; }
+.nav-btn { padding: 10px 20px; background: transparent; border: 1px solid #555; color: #aaa; cursor: pointer; border-radius: 5px; }
+.nav-btn:hover { border-color: #fff; color: #fff; }
+.nav-btn.destaque { background: var(--ouro-solar); color: #000; border: none; font-weight: bold; }
+
+/* Sidebar Direita (Ferramentas) */
+.sidebar-ferramentas { background: #111; border-left: 1px solid #333; padding: 20px; }
+.ferramenta-box { margin-bottom: 30px; }
+.ferramenta-box h4 { color: #fff; font-family: 'Cinzel'; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+.btn-tool { display: block; width: 100%; padding: 10px; margin-bottom: 10px; background: #222; border: 1px solid #444; color: #ccc; text-align: left; cursor: pointer; border-radius: 5px; transition: 0.2s; font-size: 0.9rem; text-decoration: none; }
+.btn-tool:hover { background: #333; border-color: var(--ouro-solar); color: #fff; }
+
+/* Quiz */
+.quiz-pergunta { color: #fff; font-size: 0.9rem; margin-bottom: 10px; font-weight: bold; }
+.btn-opcao { display: block; width: 100%; padding: 8px; margin-bottom: 5px; background: #222; border: 1px solid #444; color: #aaa; cursor: pointer; text-align: left; border-radius: 3px; font-size: 0.85rem; }
+.btn-opcao:hover { background: #333; }
+.btn-opcao.correto { background: rgba(40, 200, 80, 0.2); border-color: #28c850; color: #fff; }
+.btn-opcao.errado { background: rgba(200, 40, 40, 0.2); border-color: #c82828; color: #fff; }
+#quiz-feedback { margin-top: 10px; font-size: 0.8rem; font-weight: bold; }
+
+/* Diário Flutuante */
+.modal-diario { position: fixed; bottom: 20px; right: 320px; width: 350px; background: #1a1a25; border: 1px solid var(--ouro-solar); border-radius: 10px; padding: 20px; box-shadow: 0 0 30px rgba(0,0,0,0.8); z-index: 100; display: flex; flex-direction: column; transition: 0.3s; }
+.modal-diario.oculto { transform: translateY(20px); opacity: 0; pointer-events: none; }
+.diario-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.diario-header h3 { color: var(--ouro-solar); font-family: 'Cinzel'; font-size: 1rem; margin: 0; }
+.diario-header button { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+#texto-diario { width: 100%; height: 200px; background: #000; border: 1px solid #444; color: #ddd; padding: 10px; font-family: 'Lato'; resize: none; margin-bottom: 10px; border-radius: 5px; }
+.btn-salvar-diario { width: 100%; padding: 8px; background: var(--ouro-solar); border: none; font-weight: bold; cursor: pointer; border-radius: 3px; }
+
+/* Mobile */
+@media (max-width: 1024px) {
+    .layout-player { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; height: 100vh; }
+    .sidebar-modulos { display: none; } /* Esconder sidebar no mobile por enquanto ou fazer menu hambúrguer */
+    .sidebar-ferramentas { display: none; }
+    #conteudo-dinamico { padding: 20px; }
+}
+/* css/cursos.css - ADIÇÃO: Tabelas e Acordeões */
+
+/* O Botão que abre a tabela */
+details.detalhes-curso {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 8px;
+    margin: 20px 0;
+    overflow: hidden;
+    transition: 0.3s;
+}
+details.detalhes-curso[open] {
+    border-color: var(--ouro-solar);
+    background: rgba(0,0,0,0.3);
+}
+
+summary.btn-ver-tabela {
+    padding: 15px 20px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    color: var(--ouro-solar);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    list-style: none; /* Remove seta padrão */
+    transition: 0.2s;
+}
+summary.btn-ver-tabela:hover {
+    background: rgba(212, 175, 55, 0.1);
+    color: #fff;
+}
+/* Seta personalizada */
+summary.btn-ver-tabela::after {
+    content: '+'; 
+    margin-left: auto; 
+    font-size: 1.2rem;
+}
+details[open] summary.btn-ver-tabela::after { content: '-'; }
+
+/* A Tabela em si */
+.tabela-wrapper {
+    overflow-x: auto; /* Permite rolagem lateral no celular */
+    padding: 20px;
+    border-top: 1px solid #333;
+    animation: abrirSuave 0.5s;
+}
+
+.tabela-curso {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 600px; /* Garante que não esmague no mobile */
+}
+
+.tabela-curso th {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 2px solid var(--ouro-solar);
+    color: var(--ouro-solar);
+    font-family: 'Cinzel';
+}
+
+.tabela-curso td {
+    padding: 12px;
+    border-bottom: 1px solid #444;
+    color: #ddd;
+    vertical-align: top;
+}
+
+.tabela-curso tr:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+@keyframes abrirSuave {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

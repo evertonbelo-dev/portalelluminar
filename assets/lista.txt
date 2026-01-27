@@ -1,0 +1,182 @@
+C:\PORTALELLUMINAR\assets\AurelianSeth
+C:\PORTALELLUMINAR\assets\cartas
+C:\PORTALELLUMINAR\assets\interface
+C:\PORTALELLUMINAR\assets\lista.txt
+C:\PORTALELLUMINAR\assets\Mestres
+C:\PORTALELLUMINAR\assets\Oracoes
+C:\PORTALELLUMINAR\assets\PortalElluminar
+C:\PORTALELLUMINAR\assets\Servicos
+C:\PORTALELLUMINAR\assets\AurelianSeth\Aurelianseth.png
+C:\PORTALELLUMINAR\assets\cartas\4-Elementos
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra
+C:\PORTALELLUMINAR\assets\cartas\Jornada
+C:\PORTALELLUMINAR\assets\cartas\Leitura do Taro
+C:\PORTALELLUMINAR\assets\cartas\lista_cartas.txt
+C:\PORTALELLUMINAR\assets\cartas\4-Elementos\0_RaioFogo_Siriano.png
+C:\PORTALELLUMINAR\assets\cartas\4-Elementos\1_RaioAgua_Siriano.png
+C:\PORTALELLUMINAR\assets\cartas\4-Elementos\3_RaioTerraSiriana.png
+C:\PORTALELLUMINAR\assets\cartas\4-Elementos\4_RaioAr_Siriano.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\AJornadadeSabbah_ArcanosCelestes.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_0_OSoprodoInicio.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_10_ARodaCosmica.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_11_AJusticaEstelar.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_12_OSuspendidoCosmico.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_13_ATranamutacaoSagrada.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_14_ATemperancaCosmica.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_15_AsombraDourada.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_16_ATorredaRevelacao.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_17_AEstrelaCelestial.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_18_ALuadasAlmas.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_19_OSolDivino.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_1_OmagodasEstrelas.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_20_ODespertardasAlmas.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_21_OMundoSagrado.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_2_AGuardiadoVeu.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_3_AMaeEstelar.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_4_O GuardiaodaTerra.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_5_O ConselheiroEstelar.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_6_OsAmantesEstelares.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_7_OCarrodeLuz.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_8_AForcadivina.png
+C:\PORTALELLUMINAR\assets\cartas\Arcanos Celestes\Arcano_9_OGuardiaodaLuzInterior.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\1-ApresencadeSirian.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\10-ApresencadeMaitreya.jpg
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\11-ApresencadeAngelica.jpg
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\12-ApresencadaChamaSolardeElRa.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\13-ApresencadaEstrelaCeleste.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\14-ApresencadaAmetista.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\15-ApresencadoMestreEl Morya.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\16-ApresencadeSaoMiguelArcanjo.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\17-ApresencadeMelquizedeck.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\18-ApresencadeGaya.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\19-ApresencadocomandanteArcturus.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\2-Apresencadesabbah.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\20-ApresencadaMestraNADA.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\21-ApresencadoMestreSaintGermain.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\22-ApresencadoMestreKuthumi.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\23-ApresencadaEsperanca.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\24-ApresencadoConselhoCosmico.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\25-ApresencadoAnjoDivino.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\26-ApresencadaCriancaEstelar.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\27-ApresencadoEspiritoSantoGalatico.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\28-ApresencadaNavedeLuzViva.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\29-ApresencadoComandodaLuz.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\3-Apresencadelumir.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\30-ApresencadaVerdade.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\31-ApresencadaEntrega.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\32-ApresencadoRetornoEstelar.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\33-ApresencadaAVozdaEstrelaCeleste.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\4-ApresencadoCristoCosmico.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\5-ApresencadoPaizinho.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\6-ApresencadosMestresAscensionados.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\7-ApresencadeBrahma.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\8-ApresencadaTrintadeViva.png
+C:\PORTALELLUMINAR\assets\cartas\Cartas da Essencia\9-ApresencadeMaria.jpg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_10_ADan‡adoOceanoUno.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_11_AMaedoSentir.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_12_OMensageirodoSentir.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_13_OMestredoSentir.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_14_OMestreSolardoSentir.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_1_OCalicedoSentir.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_2_AsDuasCorrentes.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_3_OVinculoSagrado.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_4_ORecipientedaAlma.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_5_AsLagrimasdoDespertar.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_6_ORetornodaTernura.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_7_ORiodaEntrega.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_8_OChamadodasProfundezas.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Agua\Menores_9_OSantuarioInterior.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_10_ALiberacaodoVoo.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_11_Aguardiadosventos.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_12_OMensageirodosceus.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_13_OMestredosCeus.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_14_OsoldaConsciencia.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_1_OPrimeiroSopro.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_2_OEspelhodoPensamento.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_3_APalavraqueCria.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_4_OTemplodaMenteSiriana.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_5_OVentodaVerdade.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_6_ATravessiadoCeuInterior.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_7_ARevela‡ÆodoInfinito.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_8_APrisaodosPensamentos.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Ar\Menores_9_OEcodosMedos.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_10_AConsagra‡ÆodaChama.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_11_MensageirodoFogo.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_12_CondutordoFogoArdente.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_13_GuardiaoFogo.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_14_SoberanodoFogo.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_1_ACentelhadaCriacaoFogoSiriano.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_2_DuasChamas.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_3_ATriadedaManifestacao.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_4_OPilarArdente.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_5_AForjadoEspirito.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_6_OEncontrodasChamas.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_7_OCaminhoArdente.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_8_ADancadoPoder.jpeg
+C:\PORTALELLUMINAR\assets\cartas\Elemento Fogo\Menores_9_ALampadaInterior.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_10_AcomunhaodosFrutos.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_11_AguardiadaManifestacao.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_12_OMensageirodaManifestacao.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_13_OMestredaManifestacao.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_14_OsoldaMateriaViva.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_1_ASementedoReal.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_2_OPortaldoEquilibrio.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_3_OAltardaColheira.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_4_OtemplodaEstabilidade.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_5_OChamadodaConsagracao.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_6_AsRaizesdoVinculo.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_7_OTempodaSemeadura.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_8_OPesodasEscolhas.png
+C:\PORTALELLUMINAR\assets\cartas\Elemento Terra\Menores_9_OJardimdoessencial.png
+C:\PORTALELLUMINAR\assets\cartas\Jornada\Jornada_sabbah.png
+C:\PORTALELLUMINAR\assets\cartas\Jornada\Jornada_sabbah_1.png
+C:\PORTALELLUMINAR\assets\cartas\Jornada\Jornada_Sabbah_2.png
+C:\PORTALELLUMINAR\assets\cartas\Jornada\Sabbah_LeaoCelestialeEscudoDourado.png
+C:\PORTALELLUMINAR\assets\cartas\Jornada\SelodeSabbahGuardiaoLeao.png
+C:\PORTALELLUMINAR\assets\cartas\Leitura do Taro\abertura das leituras.png
+C:\PORTALELLUMINAR\assets\cartas\Leitura do Taro\Mandala_Siriana.png
+C:\PORTALELLUMINAR\assets\cartas\Leitura do Taro\Metodos Sirianos de Leitura.png
+C:\PORTALELLUMINAR\assets\interface\Tar“ Divino Siriano - A Jornada do Sabbah.pdf
+C:\PORTALELLUMINAR\assets\interface\tiragem_triade.png
+C:\PORTALELLUMINAR\assets\interface\tiragem_unica.png
+C:\PORTALELLUMINAR\assets\Mestres\Alethira.png
+C:\PORTALELLUMINAR\assets\Mestres\Aurex.png
+C:\PORTALELLUMINAR\assets\Mestres\Brahma.png
+C:\PORTALELLUMINAR\assets\Mestres\Chama_Trina.png
+C:\PORTALELLUMINAR\assets\Mestres\CristoVivo.png
+C:\PORTALELLUMINAR\assets\Mestres\Elion.png
+C:\PORTALELLUMINAR\assets\Mestres\Kael.png
+C:\PORTALELLUMINAR\assets\Mestres\Leitura_Tarcisio_Everton_Pereira_Belo_Financeiro.pdf
+C:\PORTALELLUMINAR\assets\Mestres\Maria.png
+C:\PORTALELLUMINAR\assets\Mestres\Sabbah.png
+C:\PORTALELLUMINAR\assets\Mestres\Seraphion.png
+C:\PORTALELLUMINAR\assets\Mestres\Sirian.png
+C:\PORTALELLUMINAR\assets\Mestres\Yhanel.png
+C:\PORTALELLUMINAR\assets\Oracoes\Amareoqueviemosfazer.png
+C:\PORTALELLUMINAR\assets\Oracoes\Amareoqueviemosfazer_2.png
+C:\PORTALELLUMINAR\assets\Oracoes\Pai_Mae_Vida.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Portal_Bemvindo.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Portal_MensagemMissao.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Portal_Principal.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Portal_Principal_2.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Portal_SalaoReinodasEstrelas.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Portal_Trabalho1.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Portal_Trabalho2.png
+C:\PORTALELLUMINAR\assets\PortalElluminar\Simbolo_Portal.png
+C:\PORTALELLUMINAR\assets\Servicos\atendimento_terapeutico.png
+C:\PORTALELLUMINAR\assets\Servicos\atendimento_terapeutico_2.png
+C:\PORTALELLUMINAR\assets\Servicos\Capa.png
+C:\PORTALELLUMINAR\assets\Servicos\Capa_2.png
+C:\PORTALELLUMINAR\assets\Servicos\Capa_3.png
+C:\PORTALELLUMINAR\assets\Servicos\combo_sagrado.png
+C:\PORTALELLUMINAR\assets\Servicos\estudo_numerologico.png
+C:\PORTALELLUMINAR\assets\Servicos\leitura_energetica.png
+C:\PORTALELLUMINAR\assets\Servicos\mandala_divina.png
+C:\PORTALELLUMINAR\assets\Servicos\mandala_divina_2.png
+C:\PORTALELLUMINAR\assets\Servicos\mesas_radionicas.png
+C:\PORTALELLUMINAR\assets\Servicos\taro_terapeutico.png

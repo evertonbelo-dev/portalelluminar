@@ -1,0 +1,257 @@
+/* css/hawkins.css - O Templo da Frequência (CORRIGIDO) */
+
+/* Reset Básico para garantir que nada padrão atrapalhe */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #080810;
+    font-family: 'Lato', sans-serif;
+    color: #fff;
+    height: 100vh;
+    overflow: hidden; /* Evita barras de rolagem indesejadas */
+}
+
+/* CONTAINER PRINCIPAL (GRID) */
+.hawkins-container {
+    display: grid;
+    /* Define colunas fixas nas laterais e flexível no meio */
+    grid-template-columns: 350px 1fr 350px; 
+    height: 100vh;
+    width: 100%;
+    position: relative;
+    background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+}
+
+/* --- ESTRUTURA DOS PILARES --- */
+.pilar {
+    position: relative;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Alinha ao topo */
+    border-right: 1px solid rgba(255, 215, 0, 0.1);
+    height: 100%;
+}
+
+.pilar-centro {
+    justify-content: center; /* O centro fica alinhado no meio */
+    border-right: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.pilar-direita { border-right: none; }
+
+/* --- PILAR 1: MESA (ESQUERDA) --- */
+.mesa-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; opacity: 0.6;
+}
+
+.textura-mesa {
+    width: 100%; height: 100%; object-fit: cover;
+}
+
+.painel-identidade {
+    background: rgba(0, 0, 0, 0.7); /* Fundo mais escuro para leitura */
+    backdrop-filter: blur(10px);
+    padding: 30px;
+    border-radius: 15px;
+    border: 2px solid var(--ouro-solar, #d4af37); /* Fallback de cor */
+    width: 100%;
+    text-align: center;
+    position: relative;
+    z-index: 2; /* Garante que fique acima da mesa */
+    margin-top: 50px; /* Espaço do topo */
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
+}
+
+.titulo-pilar { 
+    font-family: 'Cinzel', serif; 
+    color: #d4af37; 
+    font-size: 1.8rem;
+    margin-bottom: 10px; 
+    text-shadow: 0 2px 5px black;
+}
+.desc-pilar { color: #ccc; font-size: 0.9rem; margin-bottom: 25px; }
+
+/* ESTILO DOS INPUTS (Forçando visual) */
+.input-radiestesia { margin-bottom: 20px; text-align: left; }
+.input-radiestesia label { 
+    display: block;
+    color: #d4af37; 
+    font-size: 0.8rem; 
+    text-transform: uppercase; 
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.input-radiestesia input {
+    width: 100%; 
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1); 
+    border: 1px solid #d4af37;
+    color: #fff; 
+    border-radius: 8px; 
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    outline: none;
+}
+.input-radiestesia input:focus {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 10px #d4af37;
+}
+
+.btn-cristal {
+    width: 100%; padding: 15px;
+    background: linear-gradient(45deg, #b8860b, #ffd700);
+    border: none; color: #000; 
+    font-family: 'Cinzel'; font-weight: bold; font-size: 1rem;
+    cursor: pointer; border-radius: 8px; transition: 0.3s;
+    text-transform: uppercase;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+.btn-cristal:hover { filter: brightness(1.2); transform: scale(1.02); }
+
+/* CRISTAL (Garante que não fique gigante) */
+.cristal-oculto {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: 1s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    pointer-events: none;
+    z-index: 10;
+    width: 200px; /* Tamanho fixo */
+}
+.cristal-oculto img { width: 100%; height: auto; filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8)); }
+.cristal-oculto.visivel { opacity: 1; transform: translate(-50%, -30%) scale(1); }
+.cristal-caindo { animation: cairCristal 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+@keyframes cairCristal { 0% { transform: translate(-50%, -300%) scale(2); opacity: 0; } 100% { transform: translate(-50%, -30%) scale(1); opacity: 1; } }
+
+
+/* --- PILAR 2: CENTRO --- */
+.area-pendulo {
+    flex: 1; width: 100%;
+    display: flex; justify-content: center; align-items: flex-start;
+    position: relative;
+    padding-top: 20px;
+}
+
+.pendulo-container {
+    width: 150px; /* Reduzi para não ocupar a tela toda */
+    transform-origin: top center;
+    transition: transform 0.5s;
+    z-index: 5;
+}
+.img-pendulo { width: 100%; height: auto; filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.4)); }
+.pendulo-buscando { animation: giroBusca 1.5s infinite ease-in-out alternate; }
+@keyframes giroBusca { from { transform: rotate(-25deg); } to { transform: rotate(25deg); } 
+}
+
+/* LISTA PARCIAL */
+.lista-resultados-live {
+    width: 90%; max-width: 400px;
+    
+    /* AJUSTE DE ESPAÇAMENTO AQUI: */
+    margin-top: 20px;      /* Espaço do pêndulo */
+    margin-bottom: 60px;   /* AUMENTEI para 60px para afastar do título de baixo */
+    margin-left: auto; margin-right: auto;
+    
+    display: flex; flex-direction: column; gap: 8px;
+    
+    /* Altura máxima controlada para não estourar a tela */
+    max-height: 220px; 
+    overflow-y: auto;
+    z-index: 5;
+    
+    /* Borda sutil para marcar a área */
+    padding-right: 5px; 
+}
+
+/* --- NOVO: BARRA DE ROLAGEM DOURADA (Para ficar elegante) --- */
+.lista-resultados-live::-webkit-scrollbar {
+    width: 6px; /* Bem fininha */
+}
+.lista-resultados-live::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.3); /* Fundo do trilho escuro */
+    border-radius: 3px;
+}
+.lista-resultados-live::-webkit-scrollbar-thumb {
+    background: #d4af37; /* A barra é dourada */
+    border-radius: 3px;
+}
+.lista-resultados-live::-webkit-scrollbar-thumb:hover {
+    background: #ffd700; /* Brilha ao passar o mouse */
+}
+
+/* Item da lista (mantém igual) */
+.item-parcial {
+    display: flex; justify-content: space-between;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 15px;
+    border-radius: 5px; border-left: 3px solid #d4af37;
+    font-size: 0.95rem; color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    flex-shrink: 0; /* Garante que o item não seja esmagado */
+}
+.item-parcial.surgir { animation: surgir 0.5s ease-out; }
+@keyframes surgir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.status-leitura { text-align: center; margin-bottom: 20px; z-index: 5; min-height: 100px; }
+#area-atual { font-family: 'Cinzel'; font-size: 1.8rem; color: #fff; margin-bottom: 5px; text-shadow: 0 0 10px #d4af37; }
+#status-vibracao { color: #d4af37; font-style: italic; }
+
+.btn-proximo {
+    margin-top: 15px; padding: 10px 25px;
+    background: #d4af37; color: #000; border: none;
+    border-radius: 20px; cursor: pointer; font-weight: bold;
+    animation: surgir 0.5s;
+}
+
+/* --- PILAR 3: PIRÂMIDE (DIREITA) --- */
+.piramide-container {
+    position: relative; width: 100%; max-width: 300px;
+    display: flex; justify-content: center;
+    margin-top: 50px;
+}
+.img-piramide { width: 100%; height: auto; opacity: 0.9; }
+
+.scanner-luz {
+    position: absolute; left: 10%; width: 80%; height: 4px;
+    background: #fff; box-shadow: 0 0 15px #fff;
+    opacity: 0; top: 100%;
+}
+.scanner-ativo { animation: scan 3s infinite alternate ease-in-out; opacity: 0.8; }
+@keyframes scan { from { top: 90%; } to { top: 10%; } }
+.scanner-parado { height: 6px; opacity: 1; transition: top 1s, background-color 0.5s; }
+
+.marcador-nivel {
+    position: absolute; right: -20px; top: 50%;
+    background: #fff; color: #000; padding: 5px 10px;
+    border-radius: 15px; font-weight: bold; font-size: 0.8rem;
+    box-shadow: 0 0 10px white; transform: translateY(-50%);
+    white-space: nowrap;
+}
+.oculto { display: none !important; }
+
+/* RELATÓRIO FINAL */
+.relatorio-final-container {
+    width: 90%; background: rgba(10,10,20,0.95);
+    padding: 20px; border: 1px solid #d4af37; border-radius: 10px;
+}
+.tabela-hawkins { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tabela-hawkins th, .tabela-hawkins td { padding: 10px; border-bottom: 1px solid #444; }
+.tabela-hawkins th { color: #d4af37; text-align: left; }
+
+/* RESPONSIVIDADE (MOBILE) */
+@media (max-width: 900px) {
+    .hawkins-container { 
+        grid-template-columns: 1fr; /* Vira uma coluna só */
+        height: auto; 
+        overflow-y: auto; 
+    }
+    .pilar { border-bottom: 1px solid #333; min-height: auto; padding: 40px 20px; }
+    .mesa-bg { opacity: 0.3; }
+    .painel-identidade { margin-top: 0; }
+    .cristal-oculto { width: 120px; }
+}

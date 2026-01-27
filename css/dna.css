@@ -1,0 +1,110 @@
+/* css/dna.css - Estilos da Câmara Solar (Versão Ajustada) */
+
+body {
+    background: radial-gradient(circle at center, #1a0b00 0%, #050510 80%);
+    overflow: hidden;
+}
+
+.dna-container-principal {
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; text-align: center; padding: 20px;
+    position: relative; z-index: 5;
+}
+
+.titulo-dna { font-family: 'Cinzel'; font-size: 2.5rem; color: var(--ouro-solar); text-shadow: 0 0 20px rgba(255, 170, 0, 0.5); margin-bottom: 10px; }
+.subtitulo-dna { color: #aaa; margin-bottom: 40px; font-size: 1.1rem; }
+
+/* NÚCLEO */
+.nucleo-ativacao {
+    width: 280px; height: 400px; margin: 0 auto;
+    border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 100px;
+    position: relative; background: rgba(0, 0, 0, 0.4);
+    cursor: pointer; transition: 0.5s; overflow: hidden;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5); z-index: 20;
+    pointer-events: auto;
+}
+.nucleo-ativacao:hover { border-color: var(--ouro-solar); box-shadow: 0 0 50px rgba(255, 170, 0, 0.2); transform: scale(1.02); }
+
+/* DNA Animação */
+.helice-container, .fita, .particulas-luz, .sensor-digital { pointer-events: none; }
+.helice-container { width: 100%; height: 100%; position: relative; display: flex; justify-content: center; }
+.fita { position: absolute; width: 4px; height: 100%; border-radius: 2px; animation: rotacaoDNA 3s infinite ease-in-out alternate; }
+.fita-a { background: linear-gradient(to bottom, transparent, var(--ouro-solar), transparent); left: 40%; animation-delay: 0s; }
+.fita-b { background: linear-gradient(to bottom, transparent, var(--chama-viva), transparent); right: 40%; animation-delay: 1.5s; }
+.helice-container::before { content: ""; position: absolute; width: 20%; height: 100%; background: repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(255, 170, 0, 0.2) 20px, rgba(255, 170, 0, 0.2) 22px); opacity: 0.5; }
+@keyframes rotacaoDNA { 0% { transform: translateX(-30px) scaleX(0.5); opacity: 0.3; } 100% { transform: translateX(30px) scaleX(1); opacity: 1; } }
+
+.sensor-digital { position: absolute; bottom: 30px; width: 100%; text-align: center; font-family: 'Cinzel'; color: #fff; font-size: 0.9rem; animation: piscar 2s infinite; }
+@keyframes piscar { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* --- NOVOS EFEITOS (Abaixo do Botão) --- */
+#area-feedback-ritual {
+    min-height: 100px; /* Reserva espaço para não pular */
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    position: relative;
+}
+
+.texto-ritual {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem; /* Tamanho bom para ler sem assustar */
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 15px var(--ouro-solar);
+    animation: zoomImpacto 0.5s ease-out;
+    margin-bottom: 10px;
+}
+
+.contador-ritual {
+    font-family: 'Courier New', monospace;
+    font-size: 1.5rem;
+    color: var(--ouro-solar);
+    border: 1px solid var(--ouro-solar);
+    padding: 5px 15px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.6);
+}
+
+/* ONDA DE CHOQUE (Explosão Global) */
+.onda {
+    position: fixed; /* Fica presa na tela */
+    top: 50%; left: 50%; /* Padrão, mas será mudado pelo JS */
+    width: 0; height: 0; border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    z-index: 10; /* Atrás do botão (20), mas na frente do fundo */
+    box-shadow: 0 0 50px 20px currentColor; /* Borda difusa brilhante */
+    border: 5px solid currentColor; /* Borda sólida */
+}
+
+.onda.emitindo {
+    animation: explosaoLuz 4s infinite ease-out;
+}
+
+@keyframes zoomImpacto { 0% { transform: scale(0); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes explosaoLuz { 
+    0% { width: 0; height: 0; opacity: 1; border-width: 50px; } 
+    100% { width: 150vmax; height: 150vmax; opacity: 0; border-width: 0; } 
+}
+
+/* RESULTADO */
+.resultado-box {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 90%; max-width: 500px;
+    background: rgba(10, 10, 25, 0.98); border: 2px solid var(--ouro-solar);
+    padding: 40px; border-radius: 20px; text-align: center; z-index: 1000;
+    box-shadow: 0 0 100px rgba(255, 170, 0, 0.4);
+    opacity: 0; pointer-events: none; transition: 0.5s;
+}
+.resultado-box.visivel { opacity: 1; pointer-events: all; animation: surgir 0.8s ease-out; }
+.oculto { display: none !important; }
+.codigo-visual { width: 80px; height: 80px; border-radius: 50%; margin: 20px auto; background: #fff; box-shadow: 0 0 30px currentColor; animation: pulsoFrequencia 3s infinite; }
+.texto-ativacao { font-size: 1.2rem; color: #ddd; margin-bottom: 20px; font-style: italic; }
+.mantra-container { background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 10px; border: 1px dashed #666; color: var(--ouro-solar); font-family: 'Cinzel'; font-size: 1.1rem; }
+.btn-reiniciar { margin-top: 30px; padding: 10px 20px; background: transparent; border: 1px solid #666; color: #aaa; cursor: pointer; border-radius: 20px; }
+.btn-reiniciar:hover { color: #fff; border-color: #fff; }
+@keyframes pulsoFrequencia { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); filter: brightness(1.5); } }

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala de Aula | A Linguagem da Luz</title>
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/cursos.css"> <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&family=Merriweather:wght@300;700&display=swap" rel="stylesheet">
+</head>
+<body class="modo-leitura">
+
+    <div class="layout-player">
+        
+        <aside class="sidebar-modulos">
+            <div class="sidebar-header">
+                <a href="cursos.html" class="voltar-btn">← Sair</a>
+                <h3>Módulos</h3>
+            </div>
+            <div id="lista-modulos" class="lista-modulos-scroll">
+                </div>
+        </aside>
+
+        <main class="area-conteudo">
+            <div id="conteudo-dinamico" class="papel-antigo">
+                </div>
+            
+            <div class="nav-aulas">
+                <button id="btn-anterior" class="nav-btn" onclick="mudarModulo(-1)">← Anterior</button>
+                <button id="btn-concluir" class="nav-btn destaque" onclick="concluirModulo()">Concluir Módulo ✅</button>
+                <button id="btn-proximo" class="nav-btn" onclick="mudarModulo(1)">Próximo →</button>
+            </div>
+        </main>
+
+        <aside class="sidebar-ferramentas">
+            <div class="ferramenta-box">
+                <h4>🛠️ Ferramentas</h4>
+                <button class="btn-tool" onclick="toggleDiario()">📝 Meu Diário de Luz</button>
+                <a href="assets/Cursos/ALinguagemdaLuz/Apostila/ALinguagemdaLuz.pdf" target="_blank" class="btn-tool">💾 Baixar Apostila PDF</a>
+            </div>
+
+            <div class="ferramenta-box quiz-box">
+                <h4>❓ Quiz Rápido</h4>
+                <div id="quiz-container">
+                    <p class="quiz-pergunta">Carregando pergunta...</p>
+                    <div class="quiz-opcoes" id="quiz-opcoes"></div>
+                    <p id="quiz-feedback"></p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div id="modal-diario" class="modal-diario oculto">
+        <div class="diario-header">
+            <h3>Meu Diário de Luz ✨</h3>
+            <button onclick="toggleDiario()">×</button>
+        </div>
+        <textarea id="texto-diario" placeholder="Escreva seus insights e sentimentos sobre este módulo..."></textarea>
+        <button class="btn-salvar-diario" onclick="salvarDiario()">Salvar Anotação</button>
+        <p id="status-diario" style="font-size: 0.8rem; color: #aaa; margin-top: 5px;"></p>
+    </div>
+
+    <script src="js/curso-dados.js"></script>
+    <script src="js/curso-player.js"></script>
+
+</body>
+</html>

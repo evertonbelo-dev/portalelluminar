@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNA Solar | Ativação Estelar</title>
+    
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/dna.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <a href="index.html" class="link-voltar-home">← Voltar ao Portal</a>
+
+    <div id="onda-choque" class="onda"></div>
+
+    <section class="dna-container-principal">
+        
+        <div class="conteudo-dna">
+            <h1 class="titulo-dna">Câmara de Ressonância Solar</h1>
+            <p class="subtitulo-dna">Toque no núcleo para iniciar o alinhamento frequencial.</p>
+
+            <div class="nucleo-ativacao" id="nucleo-interativo" onclick="iniciarRitual(event)">
+                <div class="helice-container">
+                    <div class="fita fita-a"></div>
+                    <div class="fita fita-b"></div>
+                    <div class="particulas-luz"></div>
+                </div>
+                <div class="sensor-digital">👆 Ativar Escaneamento</div>
+            </div>
+
+            <div id="area-feedback-ritual">
+                <div id="texto-impacto" class="texto-ritual oculto">PREPARE-SE...</div>
+                <div id="contador-progresso" class="contador-ritual oculto">0%</div>
+            </div>
+
+            <div id="resultado-ativacao" class="resultado-box oculto">
+                <h2 id="titulo-filamento">Analisando...</h2>
+                <div class="codigo-visual" id="cor-frequencia"></div>
+                <p id="mensagem-ativacao" class="texto-ativacao">...</p>
+                <div id="mantra-box" class="mantra-container">
+                    <span id="mantra-texto"></span>
+                </div>
+                <button onclick="location.reload()" class="btn-reiniciar">Nova Calibragem</button>
+            </div>
+
+        </div>
+
+    </section>
+
+    <script src="js/dna.js"></script>
+
+</body>
+</html>

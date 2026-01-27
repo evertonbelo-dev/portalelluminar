@@ -1,0 +1,130 @@
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra
+C:/TaroDivinoSiriano/assets/cartas/4-Elementos
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes
+C:/TaroDivinoSiriano/assets/cartas/Leitura do Taro
+C:/TaroDivinoSiriano/assets/cartas/Jornada
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/12-ApresencadaChamaSolardeElRa.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/13-ApresencadaEstrelaCeleste.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/14-ApresencadaAmetista.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/15-ApresencadoMestreEl Morya.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/16-ApresencadeSaoMiguelArcanjo.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/18-ApresencadeGaya.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/19-ApresencadocomandanteArcturus.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/1-ApresencadeSirian.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/20-ApresencadaMestraNADA.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/21-ApresencadoMestreSaintGermain.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/22-ApresencadoMestreKuthumi.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/23-ApresencadaEsperanca.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/24-ApresencadoConselhoCosmico.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/25-ApresencadoAnjoDivino.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/27-ApresencadoEspiritoSantoGalatico.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/28-ApresencadaNavedeLuzViva.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/29-ApresencadoComandodaLuz.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/2-Apresencadesabbah.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/30-ApresencadaVerdade.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/31-ApresencadaEntrega.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/32-ApresencadoRetornoEstelar.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/3-Apresencadelumir.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/5-ApresencadoPaizinho.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/6-ApresencadosMestresAscensionados.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/7-ApresencadeBrahma.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/7-ApresencadaTrintadeViva.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/33-ApresencadaAVozdaEstrelaCeleste.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/26-ApresencadaCriancaEstelar.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/4-ApresencadoCristoCosmico.png
+C:/TaroDivinoSiriano/assets/cartas/Cartas da Essencia/17-ApresencadeMelquizedeck.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_1_OCalicedoSentir.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_10_ADan‡adoOceanoUno.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_11_AMaedoSentir.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_12_OMensageirodoSentir.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_13_OMestredoSentir.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_14_OMestreSolardoSentir.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_2_AsDuasCorrentes.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_3_OVinculoSagrado.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_4_ORecipientedaAlma.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_5_AsLagrimasdoDespertar.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_6_ORetornodaTernura.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_7_ORiodaEntrega.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_8_OChamadodasProfundezas.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Agua/Menores_9_OSantuarioInterior.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_1_OPrimeiroSopro.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_10_ALiberacaodoVoo.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_11_Aguardiadosventos.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_12_OMensageirodosceus.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_13_OMestredosCeus.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_14_OsoldaConsciencia.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_2_OEspelhodoPensamento.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_3_APalavraqueCria.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_4_OTemplodaMenteSiriana.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_5_OVentodaVerdade.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_6_ATravessiadoCeuInterior.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_7_ARevela‡ÆodoInfinito.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_8_APrisaodosPensamentos.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Ar/Menores_9_OEcodosMedos.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_1_ACentelhadaCriacaoFogoSiriano.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_10_AConsagra‡ÆodaChama.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_11_MensageirodoFogo.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_12_CondutordoFogoArdente.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_13_GuardiaoFogo.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_14_SoberanodoFogo.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_2_DuasChamas.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_3_ATriadedaManifestacao.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_4_OPilarArdente.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_5_AForjadoEspirito.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_6_OEncontrodasChamas.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_7_OCaminhoArdente.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_8_ADancadoPoder.jpeg
+C:/TaroDivinoSiriano/assets/cartas/Elemento Fogo/Menores_9_ALampadaInterior.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_10_AcomunhaodosFrutos.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_11_AguardiadaManifestacao.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_12_OMensageirodaManifestacao.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_13_OMestredaManifestacao.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_14_OsoldaMateriaViva.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_2_OPortaldoEquilibrio.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_3_OAltardaColheira.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_5_OChamadodaConsagracao.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_6_AsRaizesdoVinculo.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_7_OTempodaSemeadura.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_8_OPesodasEscolhas.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_9_OJardimdoessencial.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_1_ASementedoReal.png
+C:/TaroDivinoSiriano/assets/cartas/Elemento Terra/Menores_4_OtemplodaEstabilidade.png
+C:/TaroDivinoSiriano/assets/cartas/4-Elementos/0_RaioFogo_Siriano.png
+C:/TaroDivinoSiriano/assets/cartas/4-Elementos/1_RaioAgua_Siriano.png
+C:/TaroDivinoSiriano/assets/cartas/4-Elementos/3_RaioTerraSiriana.png
+C:/TaroDivinoSiriano/assets/cartas/4-Elementos/4_RaioAr_Siriano.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_10_ARodaCosmica.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_11_AJusticaEstelar.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_12_OSuspendidoCosmico.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_13_ATranamutacaoSagrada.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_14_ATemperancaCosmica.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_15_AsombraDourada.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_16_ATorredaRevelacao.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_17_AEstrelaCelestial.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_18_ALuadasAlmas.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_19_OSolDivino.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_2_AGuardiadoVeu.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_20_ODespertardasAlmas.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_21_OMundoSagrado.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_3_AMaeEstelar.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_4_O GuardiaodaTerra.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_5_O ConselheiroEstelar.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_6_OsAmantesEstelares.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_7_OCarrodeLuz.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_8_AForcadivina.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_9_OGuardiaodaLuzInterior.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/AJornadadeSabbah_ArcanosCelestes.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_0_OSoprodoInicio.png
+C:/TaroDivinoSiriano/assets/cartas/Arcanos Celestes/Arcano_1_OmagodasEstrelas.png
+C:/TaroDivinoSiriano/assets/cartas/Leitura do Taro/abertura das leituras.png
+C:/TaroDivinoSiriano/assets/cartas/Leitura do Taro/Mandala_Siriana.png
+C:/TaroDivinoSiriano/assets/cartas/Leitura do Taro/Metodos Sirianos de Leitura.png
+C:/TaroDivinoSiriano/assets/cartas/Jornada/Jornada_sabbah.png
+C:/TaroDivinoSiriano/assets/cartas/Jornada/Jornada_sabbah_1.png
+C:/TaroDivinoSiriano/assets/cartas/Jornada/Jornada_Sabbah_2.png
+C:/TaroDivinoSiriano/assets/cartas/Jornada/Sabbah_LeaoCelestialeEscudoDourado.png
+C:/TaroDivinoSiriano/assets/cartas/Jornada/SelodeSabbahGuardiaoLeao.png
