@@ -1,4 +1,4 @@
-// js/app.js - Versão Restaurada e Limpa
+// js/app.js - Versão Restaurada, Completa e Sintonizada com o Servidor
 
 // 1. DADOS E NAVEGAÇÃO
 let consulente = { nome: "", nascimento: "", tarologo: "" };
@@ -42,7 +42,6 @@ function iniciarJornada() {
     
     mostrarTela('tela-sintonia');
     
-    // Animação Simples
     const msg = document.getElementById('msg-sintonia');
     msg.innerText = "Consultando a Egrégora...";
     
@@ -84,11 +83,12 @@ function realizarLeitura() {
     tiragemAtual = [];
     essenciaAtual = null; 
     mesa.className = `mesa-cartas-grid layout-${tipoTiragem}`;
+    
     let deck = [...ARCANOS_CELESTES, ...CARTAS_REINO];
-    // Define quantas cartas puxar
     let qtdCartas = 1;
     if (tipoTiragem === 'triade') qtdCartas = 3;
     if (tipoTiragem === 'cruz') qtdCartas = 5;
+    
     let titulos = CONFIG_LEITURAS[tipoTiragem].titulos;
     for(let i=0; i<qtdCartas; i++) {
         const indice = Math.floor(Math.random() * deck.length);
@@ -140,41 +140,45 @@ function gerarInterpretacaoLocal(pergunta, cartas) {
     }, 1500);
 }
 
-// --- FUNÇÃO DE CONEXÃO DIRETA COM O GEMINI ---
+// --- FUNÇÃO FINALIZAR COM ESSÊNCIA (PRESERVADA E COMPLETA) ---
 async function finalizarComEssencia() {
     mostrarTela('tela-essencia');
     if (typeof CARTAS_ESSENCIA !== 'undefined' && CARTAS_ESSENCIA.length > 0) {
         const indice = Math.floor(Math.random() * CARTAS_ESSENCIA.length);
         essenciaAtual = CARTAS_ESSENCIA[indice];
         const caminhoImagem = `assets/cartas/${essenciaAtual.imagem}`;
+        
+        // Mantendo exatamente a exibição de detalhes que você solicitou
         document.getElementById('carta-essencia-display').innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
                 <img src="${caminhoImagem}" style="width:140px; border-radius:50%; border:3px solid var(--ouro-solar); box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);">
                 <h3 style="color:var(--ouro-solar); font-family:'Cinzel'; margin-top:15px; font-size:1.5rem;">${essenciaAtual.nome}</h3>
                 <p style="color:#aaa;">${essenciaAtual.titulo || ''}</p>
             </div>`;
+        
         let htmlDetalhes = "";
         if(essenciaAtual.sinais) htmlDetalhes += `<p><strong>✨ Sinais:</strong> ${essenciaAtual.sinais}</p>`;
         if(essenciaAtual.bencao) htmlDetalhes += `<p><strong>🙏 Bênção:</strong> ${essenciaAtual.bencao}</p>`;
         if(essenciaAtual.desafio) htmlDetalhes += `<p><strong>⚔️ Desafio:</strong> ${essenciaAtual.desafio}</p>`;
         if(essenciaAtual.afirmacao) htmlDetalhes += `<div class="afirmacao-final" style="margin-top:20px; font-style:italic; border:1px solid #d4af37; padding:15px; border-radius:10px; color: var(--ouro-solar);">"${essenciaAtual.afirmacao}"</div>`;
+        
         document.getElementById('msg-essencia').innerHTML = `
             <p style="font-size:1.1rem; font-style:italic; text-align:center; margin-bottom:20px;">"${essenciaAtual.canalizacao || essenciaAtual.msg}"</p>
             ${htmlDetalhes}`;
-        // DISPARO AUTOMÁTICO PARA O GEMINI
+        
+        // DISPARO AUTOMÁTICO PARA O GEMINI VIA SERVIDOR
         chamarOraculoSiriano();
     }
 }
 
-// --- FUNÇÃO DE CONEXÃO DIRETA COM O GEMINI ---
+// --- FUNÇÃO DE CONEXÃO SEGURA COM O SERVIDOR (AI LOGIC) ---
 async function chamarOraculoSiriano() {
     const outputIA = document.getElementById('retorno-ia');
     const pergunta = document.getElementById('pergunta-consulente').value;
-    const API_KEY = "AIzaSyC-55LbWYmENZ4wdwT3BCIRvitmfZgzwXg"; 
 
-    outputIA.value = "Sintonizando a frequência do Criamor para a síntese final...";
+    outputIA.value = "Sintonizando a frequência do Criamor no servidor... Aguarde a canalização.";
 
-    // Concatenando os dados da leitura (sua lógica original de resumo)
+    // Lógica de concatenação dos dados da leitura
     let resumoLeitura = `Oráculo do Tarô Siriano | Consulente: ${consulente.nome} | Pergunta: "${pergunta}"\n\nCARTAS:\n`;
     tiragemAtual.forEach((c, i) => { 
         resumoLeitura += `Posição ${i+1}: ${c.nome} - "${c.canalizacao || c.msg}"\n`; 
@@ -191,27 +195,20 @@ async function chamarOraculoSiriano() {
     ${resumoLeitura}`;
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: promptFinal }] }] })
-        });
-
-        const data = await response.json();
+        // Chamada segura usando o modelo inicializado no taro2.html
+        const result = await window.modeloGemini.generateContent(promptFinal);
+        const response = await result.response;
         
-        if (response.ok) {
-            // Preenche o quadro do Oráculo Digital com a resposta da IA
-            outputIA.value = data.candidates[0].content.parts[0].text;
-        } else {
-            outputIA.value = "Interferência: " + data.error.message;
-        }
+        // Preenche o quadro do Oráculo Digital com a resposta da IA
+        outputIA.value = response.text();
     } catch (e) {
-        outputIA.value = "Erro na conexão estelar. Verifique se o portal está online.";
+        console.error("Erro AI Logic:", e);
+        outputIA.value = "Interferência técnica no servidor. Verifique a ativação do Firebase AI Logic.";
     }
 }
 
 function gerarPDFReal() {
-    // 1. PREENCHER DADOS DA CAPA DE LUXO
+    // 1. PREENCHER DADOS DA CAPA
     document.getElementById('pdf-nome-consulente').innerText = consulente.nome || "Consulente";
     document.getElementById('pdf-nasc-consulente').innerText = consulente.nascimento || "-";
     document.getElementById('pdf-pergunta').innerText = document.getElementById('pergunta-consulente').value || "Busca Interior";
@@ -242,8 +239,7 @@ function gerarPDFReal() {
                     <p style="font-style:italic; font-size:1rem; color:#000; margin-bottom:10px;">"${carta.canalizacao || carta.msg}"</p>
                     ${dadosExtrasPDF}
                 </div>
-            </div>
-        `;
+            </div>`;
     });
 
     // 3. RENDERIZAR ESSÊNCIA
@@ -251,12 +247,10 @@ function gerarPDFReal() {
     areaEssencia.innerHTML = "";
     if (essenciaAtual) {
         let extrasEssencia = "";
-        
         if(essenciaAtual.palavra) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#b8860b;"><strong>⚡ Palavra:</strong> ${essenciaAtual.palavra}</p>`;
         if(essenciaAtual.sinais) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#000;"><strong>👁️ Sinais:</strong> ${essenciaAtual.sinais}</p>`;
         if(essenciaAtual.desafio) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#800000;"><strong>⚔️ Desafio:</strong> ${essenciaAtual.desafio}</p>`;
         if(essenciaAtual.bencao) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#005580;"><strong>✨ Bênção:</strong> ${essenciaAtual.bencao}</p>`;
-        
         if(essenciaAtual.afirmacao) extrasEssencia += `<div style="font-weight:bold; margin-top:10px; color:#b8860b; background:#fff; padding:5px;">"${essenciaAtual.afirmacao}"</div>`;
 
         areaEssencia.innerHTML = `
@@ -265,8 +259,7 @@ function gerarPDFReal() {
                 <h3 style="color:#b8860b; margin:0;">${essenciaAtual.nome}</h3>
                 <p style="font-style:italic; margin:10px 0; font-size:1.1rem; color:#000;">"${essenciaAtual.canalizacao}"</p>
                 ${extrasEssencia}
-            </div>
-        `;
+            </div>`;
     }
 
     // 4. TEXTOS FINAIS
@@ -274,7 +267,5 @@ function gerarPDFReal() {
     document.getElementById('pdf-texto-tarologo').innerText = document.getElementById('notas-tarologo').value || "Bênçãos do Guardião.";
 
     // 5. ACIONAR IMPRESSÃO
-    setTimeout(() => {
-        window.print();
-    }, 500);
+    setTimeout(() => { window.print(); }, 500);
 }
