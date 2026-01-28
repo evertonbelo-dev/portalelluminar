@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tarô Divino Siriano - A Jornada</title>    
+    <title>Tarô Divino Siriano - A Jornada</title>   
+    <link rel="icon" href="data:,"> 
     <link rel="stylesheet" href="css/portal.css"> 
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
 </head>
@@ -178,9 +179,9 @@
             </div>
         </div>
     </div>
-    <footer style="position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.85); padding: 8px 20px; text-align: right; z-index: 9999; border-top: 1px solid rgba(212,175,55,0.3);">
-        <span style="font-size: 0.75rem; color: #d4af37; font-family: 'Lato', sans-serif; letter-spacing: 1px;">
-            Portal El'Luminar v1.2.6 (Sintonizado: Gemini 2.5 Flash)
+    <footer style="position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); padding: 5px 15px; text-align: right; z-index: 9999; border-top: 1px solid rgba(212,175,55,0.2);">
+        <span style="font-size: 0.7rem; color: rgba(212,175,55,0.7); font-family: 'Lato', sans-serif;">
+            Portal El'Luminar v1.2.7 (Gemini 2.5 Flash Ativo)
         </span>
     </footer>
 
@@ -188,13 +189,14 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
         
-        import { firebaseConfig } from './js/config.js?v=1.2.6';
+        // Mantendo o Cache Busting para garantir que o navegador não use o código antigo
+        import { firebaseConfig } from './js/config.js?v=1.2.7';
 
         try {
             const app = initializeApp(firebaseConfig);
             const vertexAI = getVertexAI(app);
             
-            // ATUALIZAÇÃO PARA A FREQUÊNCIA 2.5 - ESTÁVEL E POTENTE
+            // Frequência 2.5 Flash confirmada e ativa
             window.modeloGemini = getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
             console.log("Criamor: Oráculo Digital sintonizado na frequência 2.5 Flash.");
         } catch (error) {
@@ -202,8 +204,8 @@
         }
     </script>
 
-    <script src="js/dados.js?v=1.2.6"></script>
-    <script src="js/app.js?v=1.2.6"></script>
+    <script src="js/dados.js?v=1.2.7"></script>
+    <script src="js/app.js?v=1.2.7"></script>
     
 </body>
 </html>
