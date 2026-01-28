@@ -140,8 +140,6 @@ function gerarInterpretacaoLocal(pergunta, cartas) {
     }, 1500);
 }
 
-// ... (mantenha as funções de navegação e leitura inicial iguais) ...
-
 // --- FUNÇÃO FINALIZAR COM ESSÊNCIA (PRESERVADA COM SEUS DETALHES) ---
 async function finalizarComEssencia() {
     mostrarTela('tela-essencia');
@@ -189,16 +187,16 @@ async function chamarOraculoSiriano() {
 
     const promptFinal = `Você é o Oráculo Siriano do Portal El'Luminar. 
     Analise os dados abaixo e crie uma síntese espiritual profunda e amorosa para o consulente.
-    Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.\n\nDADOS DA LEITURA:\n${resumoLeitura}`;
+    Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.\n\n${resumoLeitura}`;
 
     try {
-        // Chamada via Firebase AI Logic (sem expor a chave no código)
+        // Agora o modeloGemini estará definido corretamente
         const result = await window.modeloGemini.generateContent(promptFinal);
         const response = await result.response;
         outputIA.value = response.text();
     } catch (e) {
         console.error("Erro AI Logic:", e);
-        outputIA.value = "Interferência técnica no servidor. Verifique se o portal está rodando em um servidor local ou hospedado (Live Server).";
+        outputIA.value = "Interferência técnica no servidor. Verifique a ativação do Firebase Vertex AI.";
     }
 }
 

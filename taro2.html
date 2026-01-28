@@ -180,17 +180,16 @@
     </div>
 
     <script type="module">
-        // Usando a versão estável 11.1.0 e o nome correto da biblioteca
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        // Corrigindo o nome da biblioteca para firebase-vertexai.js
         import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
         
-        // Importando a configuração do escudo externo (js/config.js)
         import { firebaseConfig } from './js/config.js';
     
         const app = initializeApp(firebaseConfig);
         const vertexAI = getVertexAI(app);
         
-        // Ativando o modelo Gemini 1.5 Flash (Recomendado para estabilidade no seu console)
+        // Usando gemini-1.5-flash conforme a recomendação do seu painel
         window.modeloGemini = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
     </script>
 
