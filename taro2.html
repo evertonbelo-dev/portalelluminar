@@ -179,22 +179,25 @@
         </div>
     </div>
 
+    <div style="position: fixed; bottom: 10px; right: 10px; font-size: 0.7rem; color: rgba(212,175,55,0.4); font-family: 'Lato', sans-serif; z-index: 9999;">
+        Portal El'Luminar - Versão 1.1.0 (Vertex AI)
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        // Corrigindo o nome da biblioteca para firebase-vertexai.js
         import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
         
-        import { firebaseConfig } from './js/config.js';
-    
+        // Importando a configuração com cache busting também no import
+        import { firebaseConfig } from './js/config.js?v=1.1.0';
+
         const app = initializeApp(firebaseConfig);
         const vertexAI = getVertexAI(app);
         
-        // Usando gemini-1.5-flash conforme a recomendação do seu painel
+        // Ativando o modelo 1.5 Flash estável
         window.modeloGemini = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
     </script>
 
-    <script src="js/dados.js"></script>
-    <script src="js/app.js"></script>
-
+    <script src="js/dados.js?v=1.1.0"></script>
+    <script src="js/app.js?v=1.1.0"></script>
 </body>
 </html>
