@@ -190,13 +190,13 @@ async function chamarOraculoSiriano() {
     Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.\n\n${resumoLeitura}`;
 
     try {
-        // Agora o modeloGemini estará definido corretamente
+        // Agora o modeloGemini estará definido corretamente através do SDK VertexAI
         const result = await window.modeloGemini.generateContent(promptFinal);
         const response = await result.response;
         outputIA.value = response.text();
     } catch (e) {
         console.error("Erro AI Logic:", e);
-        outputIA.value = "Interferência técnica no servidor. Verifique a ativação do Firebase Vertex AI.";
+        outputIA.value = "Interferência técnica no servidor. Verifique se o arquivo js/config.js foi enviado no deploy.";
     }
 }
 

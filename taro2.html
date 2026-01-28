@@ -179,26 +179,33 @@
         </div>
     </div>
 
-    <div style="position: fixed; bottom: 10px; right: 10px; font-size: 0.7rem; color: rgba(212,175,55,0.4); z-index: 9999;">
-        Portal El'Luminar - v1.2.0
-    </div>
+    <footer style="position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.7); padding: 5px 15px; text-align: right; z-index: 9999; pointer-events: none;">
+        <span style="font-size: 0.7rem; color: rgba(212,175,55,0.6); font-family: 'Lato', sans-serif;">
+            Portal El'Luminar v1.2.4 (Vertex AI 1.5)
+        </span>
+    </footer>
 
     <script type="module">
-        // Importando as versões estáveis e corretas
+        // Importando a biblioteca oficial e correta (vertexai) para eliminar o erro 404
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
         
-        // Carregando a configuração (certifique-se de que o arquivo existe no servidor de deploy)
-        import { firebaseConfig } from './js/config.js?v=1.2.0';
+        // Importação da configuração com 'Cache Busting' para forçar a leitura da chave nova
+        import { firebaseConfig } from './js/config.js?v=1.2.4';
 
-        const app = initializeApp(firebaseConfig);
-        const vertexAI = getVertexAI(app);
-        
-        // Usando Gemini 1.5 Flash conforme recomendação do console
-        window.modeloGemini = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
+        try {
+            const app = initializeApp(firebaseConfig);
+            const vertexAI = getVertexAI(app);
+            
+            // Sintonizado com Gemini 1.5 Flash para estabilidade permanente
+            window.modeloGemini = getGenerativeModel(vertexAI, { model: "gemini-1.5-flash" });
+            console.log("Criamor: Oráculo Digital Sintonizado com Sucesso.");
+        } catch (error) {
+            console.error("Erro na sintonização do Firebase:", error);
+        }
     </script>
 
-    <script src="js/dados.js?v=1.2.0"></script>
-    <script src="js/app.js?v=1.2.0"></script>
+    <script src="js/dados.js?v=1.2.4"></script>
+    <script src="js/app.js?v=1.2.4"></script>
 </body>
 </html>
