@@ -140,7 +140,8 @@ function gerarInterpretacaoLocal(pergunta, cartas) {
     }, 1500);
 }
 
-function finalizarComEssencia() {
+// --- FUNÇÃO DE CONEXÃO DIRETA COM O GEMINI ---
+async function finalizarComEssencia() {
     mostrarTela('tela-essencia');
     if (typeof CARTAS_ESSENCIA !== 'undefined' && CARTAS_ESSENCIA.length > 0) {
         const indice = Math.floor(Math.random() * CARTAS_ESSENCIA.length);
@@ -160,19 +161,53 @@ function finalizarComEssencia() {
         document.getElementById('msg-essencia').innerHTML = `
             <p style="font-size:1.1rem; font-style:italic; text-align:center; margin-bottom:20px;">"${essenciaAtual.canalizacao || essenciaAtual.msg}"</p>
             ${htmlDetalhes}`;
+        // DISPARO AUTOMÁTICO PARA O GEMINI
+        chamarOraculoSiriano();
     }
 }
 
-function copiarPromptIA() {
-    if (tiragemAtual.length === 0) return alert("Nenhuma leitura ativa.");
-    let prompt = `Oráculo do Tarô Siriano | Consulente: ${consulente.nome} | Pergunta: "${document.getElementById('pergunta-consulente').value}"\n\nCARTAS:\n`;
-    tiragemAtual.forEach((c, i) => { prompt += `Posição ${i+1}: ${c.nome} - "${c.canalizacao || c.msg}"\n`; });
-    if (essenciaAtual) prompt += `\nESSÊNCIA: ${essenciaAtual.nome} - "${essenciaAtual.canalizacao}"`;
-    prompt += `\n\nCrie uma síntese espiritual profunda.`;
-    navigator.clipboard.writeText(prompt).then(() => {
-        alert("Copiado! Cole no GPT.");
-        document.getElementById('retorno-ia').focus();
+// --- FUNÇÃO DE CONEXÃO DIRETA COM O GEMINI ---
+async function chamarOraculoSiriano() {
+    const outputIA = document.getElementById('retorno-ia');
+    const pergunta = document.getElementById('pergunta-consulente').value;
+    const API_KEY = "AIzaSyC-55LbWYmENZ4wdwT3BCIRvitmfZgzwXg"; 
+
+    outputIA.value = "Sintonizando a frequência do Criamor para a síntese final...";
+
+    // Concatenando os dados da leitura (sua lógica original de resumo)
+    let resumoLeitura = `Oráculo do Tarô Siriano | Consulente: ${consulente.nome} | Pergunta: "${pergunta}"\n\nCARTAS:\n`;
+    tiragemAtual.forEach((c, i) => { 
+        resumoLeitura += `Posição ${i+1}: ${c.nome} - "${c.canalizacao || c.msg}"\n`; 
     });
+    if (essenciaAtual) {
+        resumoLeitura += `\nBÊNÇÃO DA ESSÊNCIA: ${essenciaAtual.nome} - "${essenciaAtual.canalizacao || essenciaAtual.msg}"`;
+    }
+
+    const promptFinal = `Você é o Oráculo Siriano do Portal El'Luminar. 
+    Analise os dados abaixo e crie uma síntese espiritual profunda e amorosa para o consulente.
+    Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.
+    
+    DADOS DA LEITURA:
+    ${resumoLeitura}`;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: promptFinal }] }] })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Preenche o quadro do Oráculo Digital com a resposta da IA
+            outputIA.value = data.candidates[0].content.parts[0].text;
+        } else {
+            outputIA.value = "Interferência: " + data.error.message;
+        }
+    } catch (e) {
+        outputIA.value = "Erro na conexão estelar. Verifique se o portal está online.";
+    }
 }
 
 function gerarPDFReal() {
