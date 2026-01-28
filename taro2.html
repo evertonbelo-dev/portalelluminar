@@ -183,14 +183,14 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-ai.js";
         
-        // Importando a configuração do escudo externo
+        // Importando a configuração do escudo externo (js/config.js)
         import { firebaseConfig } from './js/config.js';
-    
+
         const app = initializeApp(firebaseConfig);
         const ai = getAI(app);
         
-        // Ativando o mentor digital Gemini 2.0 Flash
-        window.modeloGemini = getGenerativeModel(ai, { model: "gemini-2.0-flash" });
+        // Usando gemini-1.5-flash conforme recomendação do seu console para estabilidade
+        window.modeloGemini = getGenerativeModel(ai, { model: "gemini-1.5-flash" });
     </script>
 
     <script src="js/dados.js"></script>

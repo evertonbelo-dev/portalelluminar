@@ -140,7 +140,9 @@ function gerarInterpretacaoLocal(pergunta, cartas) {
     }, 1500);
 }
 
-// --- FUNÇÃO FINALIZAR COM ESSÊNCIA (PRESERVADA E COMPLETA) ---
+// ... (mantenha as funções de navegação e leitura inicial iguais) ...
+
+// --- FUNÇÃO FINALIZAR COM ESSÊNCIA (PRESERVADA COM SEUS DETALHES) ---
 async function finalizarComEssencia() {
     mostrarTela('tela-essencia');
     if (typeof CARTAS_ESSENCIA !== 'undefined' && CARTAS_ESSENCIA.length > 0) {
@@ -148,7 +150,6 @@ async function finalizarComEssencia() {
         essenciaAtual = CARTAS_ESSENCIA[indice];
         const caminhoImagem = `assets/cartas/${essenciaAtual.imagem}`;
         
-        // Mantendo exatamente a exibição de detalhes que você solicitou
         document.getElementById('carta-essencia-display').innerHTML = `
             <div style="text-align:center; margin-bottom:20px;">
                 <img src="${caminhoImagem}" style="width:140px; border-radius:50%; border:3px solid var(--ouro-solar); box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);">
@@ -171,14 +172,13 @@ async function finalizarComEssencia() {
     }
 }
 
-// --- FUNÇÃO DE CONEXÃO SEGURA COM O SERVIDOR (AI LOGIC) ---
+// --- CONEXÃO SEGURA COM O SERVIDOR (SUBSTITUI O ANTIGO FETCH) ---
 async function chamarOraculoSiriano() {
     const outputIA = document.getElementById('retorno-ia');
     const pergunta = document.getElementById('pergunta-consulente').value;
 
     outputIA.value = "Sintonizando a frequência do Criamor no servidor... Aguarde a canalização.";
 
-    // Lógica de concatenação dos dados da leitura
     let resumoLeitura = `Oráculo do Tarô Siriano | Consulente: ${consulente.nome} | Pergunta: "${pergunta}"\n\nCARTAS:\n`;
     tiragemAtual.forEach((c, i) => { 
         resumoLeitura += `Posição ${i+1}: ${c.nome} - "${c.canalizacao || c.msg}"\n`; 
@@ -189,21 +189,16 @@ async function chamarOraculoSiriano() {
 
     const promptFinal = `Você é o Oráculo Siriano do Portal El'Luminar. 
     Analise os dados abaixo e crie uma síntese espiritual profunda e amorosa para o consulente.
-    Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.
-    
-    DADOS DA LEITURA:
-    ${resumoLeitura}`;
+    Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.\n\nDADOS DA LEITURA:\n${resumoLeitura}`;
 
     try {
-        // Chamada segura usando o modelo inicializado no taro2.html
+        // Chamada via Firebase AI Logic (sem expor a chave no código)
         const result = await window.modeloGemini.generateContent(promptFinal);
         const response = await result.response;
-        
-        // Preenche o quadro do Oráculo Digital com a resposta da IA
         outputIA.value = response.text();
     } catch (e) {
         console.error("Erro AI Logic:", e);
-        outputIA.value = "Interferência técnica no servidor. Verifique a ativação do Firebase AI Logic.";
+        outputIA.value = "Interferência técnica no servidor. Verifique se o portal está rodando em um servidor local ou hospedado (Live Server).";
     }
 }
 
