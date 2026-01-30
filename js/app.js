@@ -73,7 +73,7 @@ function novaPergunta() {
     mostrarTela('tela-mesa');
 }
 
-// 3. LEITURA
+// 2. LEITURA
 function realizarLeitura() {
     const pergunta = document.getElementById('pergunta-consulente').value;
     if(!pergunta) return alert("O Universo aguarda sua pergunta...");
@@ -140,7 +140,6 @@ function gerarInterpretacaoLocal(pergunta, cartas) {
     }, 1500);
 }
 
-// --- FUNÇÃO FINALIZAR COM ESSÊNCIA (PRESERVADA COM SEUS DETALHES) ---
 async function finalizarComEssencia() {
     mostrarTela('tela-essencia');
     if (typeof CARTAS_ESSENCIA !== 'undefined' && CARTAS_ESSENCIA.length > 0) {
@@ -165,17 +164,16 @@ async function finalizarComEssencia() {
             <p style="font-size:1.1rem; font-style:italic; text-align:center; margin-bottom:20px;">"${essenciaAtual.canalizacao || essenciaAtual.msg}"</p>
             ${htmlDetalhes}`;
         
-        // DISPARO AUTOMÁTICO PARA O GEMINI VIA SERVIDOR
+        // DISPARO AUTOMÁTICO PARA A IA (GEMINI 2.5 FLASH)
         chamarOraculoSiriano();
     }
 }
 
-// --- CONEXÃO SEGURA COM O SERVIDOR (SUBSTITUI O ANTIGO FETCH) ---
 async function chamarOraculoSiriano() {
     const outputIA = document.getElementById('retorno-ia');
     const pergunta = document.getElementById('pergunta-consulente').value;
 
-    outputIA.value = "Sintonizando a frequência do Criamor no servidor... Aguarde a canalização.";
+    outputIA.value = "Sintonizando a frequência do Criamor... Aguarde a canalização.";
 
     let resumoLeitura = `Oráculo do Tarô Siriano | Consulente: ${consulente.nome} | Pergunta: "${pergunta}"\n\nCARTAS:\n`;
     tiragemAtual.forEach((c, i) => { 
@@ -190,38 +188,33 @@ async function chamarOraculoSiriano() {
     Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.\n\n${resumoLeitura}`;
 
     try {
-        // Agora o modeloGemini estará definido corretamente através do SDK VertexAI
         const result = await window.modeloGemini.generateContent(promptFinal);
         const response = await result.response;
         outputIA.value = response.text();
     } catch (e) {
         console.error("Erro AI Logic:", e);
-        outputIA.value = "Interferência técnica no servidor. Verifique se o arquivo js/config.js foi enviado no deploy.";
+        outputIA.value = "Interferência técnica no servidor. A conexão com o Criamor continua ativa em seu coração.";
     }
 }
 
 function gerarPDFReal() {
-    // 1. PREENCHER DADOS DA CAPA
     document.getElementById('pdf-nome-consulente').innerText = consulente.nome || "Consulente";
     document.getElementById('pdf-nasc-consulente').innerText = consulente.nascimento || "-";
     document.getElementById('pdf-pergunta').innerText = document.getElementById('pergunta-consulente').value || "Busca Interior";
     document.getElementById('pdf-data-leitura').innerText = new Date().toLocaleDateString('pt-BR');
     document.getElementById('pdf-tarologo').innerText = consulente.tarologo || "Guardião";
 
-    // 2. RENDERIZAR CARTAS
     const areaCartasPDF = document.getElementById('pdf-area-cartas');
     areaCartasPDF.innerHTML = "";
     
     tiragemAtual.forEach((carta, index) => {
         let titulo = CONFIG_LEITURAS[tipoTiragem].titulos[index] || `Carta ${index+1}`;
         let imgPath = `assets/cartas/${carta.imagem}`;
-
         let dadosExtrasPDF = "";
         if(carta.palavra) dadosExtrasPDF += `<p style="font-size:0.9rem; margin-top:5px; color:#b8860b;"><strong>⚡ Palavra-Chave:</strong> ${carta.palavra}</p>`;
         if(carta.sinais) dadosExtrasPDF += `<p style="font-size:0.9rem; margin-top:5px; color:#000;"><strong>👁️ Sinais:</strong> ${carta.sinais}</p>`;
         if(carta.desafio) dadosExtrasPDF += `<p style="font-size:0.9rem; margin-top:5px; color:#800000;"><strong>⚔️ Desafio:</strong> ${carta.desafio}</p>`;
         if(carta.bencao) dadosExtrasPDF += `<p style="font-size:0.9rem; margin-top:5px; color:#005580;"><strong>✨ Bênção:</strong> ${carta.bencao}</p>`;
-        if(carta.afirmacao) dadosExtrasPDF += `<div style="background:#fff8e1; padding:10px; margin-top:10px; border-left:4px solid #d4af37; font-style:italic; font-size:0.95rem; color:#000;"><strong>🗣️ Afirmação:</strong> "${carta.afirmacao}"</div>`;
 
         areaCartasPDF.innerHTML += `
             <div class="carta-pdf-item" style="display:flex; gap:20px; margin-bottom:30px; border-bottom:1px solid #ccc; padding-bottom:20px;">
@@ -235,30 +228,19 @@ function gerarPDFReal() {
             </div>`;
     });
 
-    // 3. RENDERIZAR ESSÊNCIA
     const areaEssencia = document.getElementById('pdf-area-essencia');
     areaEssencia.innerHTML = "";
     if (essenciaAtual) {
-        let extrasEssencia = "";
-        if(essenciaAtual.palavra) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#b8860b;"><strong>⚡ Palavra:</strong> ${essenciaAtual.palavra}</p>`;
-        if(essenciaAtual.sinais) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#000;"><strong>👁️ Sinais:</strong> ${essenciaAtual.sinais}</p>`;
-        if(essenciaAtual.desafio) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#800000;"><strong>⚔️ Desafio:</strong> ${essenciaAtual.desafio}</p>`;
-        if(essenciaAtual.bencao) extrasEssencia += `<p style="font-size:0.9rem; margin-top:5px; color:#005580;"><strong>✨ Bênção:</strong> ${essenciaAtual.bencao}</p>`;
-        if(essenciaAtual.afirmacao) extrasEssencia += `<div style="font-weight:bold; margin-top:10px; color:#b8860b; background:#fff; padding:5px;">"${essenciaAtual.afirmacao}"</div>`;
-
         areaEssencia.innerHTML = `
             <div class="essencia-pdf-box" style="text-align:center; padding:20px; border:2px solid #d4af37; border-radius:10px; background:#fffbe6; margin-bottom:20px;">
                 <img src="assets/cartas/${essenciaAtual.imagem}" style="width:120px; border-radius:50%; margin:0 auto 15px; display:block; border:3px solid #d4af37;" crossorigin="anonymous">
                 <h3 style="color:#b8860b; margin:0;">${essenciaAtual.nome}</h3>
-                <p style="font-style:italic; margin:10px 0; font-size:1.1rem; color:#000;">"${essenciaAtual.canalizacao}"</p>
-                ${extrasEssencia}
+                <p style="font-style:italic; margin:10px 0; font-size:1.1rem; color:#000;">"${essenciaAtual.canalizacao || essenciaAtual.msg}"</p>
             </div>`;
     }
 
-    // 4. TEXTOS FINAIS
     document.getElementById('pdf-texto-ia').innerText = document.getElementById('retorno-ia').value || "Leitura intuitiva.";
     document.getElementById('pdf-texto-tarologo').innerText = document.getElementById('notas-tarologo').value || "Bênçãos do Guardião.";
 
-    // 5. ACIONAR IMPRESSÃO
     setTimeout(() => { window.print(); }, 500);
 }
