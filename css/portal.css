@@ -228,6 +228,7 @@ body::before {
 /* INPUTS FINAIS */
 .painel-integracao { background: rgba(20, 20, 40, 0.8); border: 1px solid var(--dourado-antigo); padding: 25px; border-radius: 15px; margin-top: 30px; text-align: left; }
 .input-area-larga { width: 100%; height: 150px; background: #fff; color: #000; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #ccc; font-family: 'Lato', sans-serif; }
+.textarea-essencia { height: 120px; width: 100%; }
 
 /* MESTRES & FOOTER */
 .mestres-section { padding: 60px 20px 100px; max-width: 1000px; margin: 0 auto; text-align: center; }
