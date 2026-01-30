@@ -31,6 +31,30 @@ body::before {
     z-index: -2;
 }
 
+/* Link de retorno destacado */
+.link-voltar-home {
+    display: inline-block;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 8px 15px;
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--ouro-solar);
+    text-decoration: none;
+    border-radius: 20px;
+    border: 1px solid var(--dourado-antigo);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    z-index: 101; /* Garante que fique acima do header */
+}
+
+.link-voltar-home:hover {
+    background: var(--dourado-antigo);
+    color: #000;
+    transform: scale(1.05);
+}
+
+
 .container-vozes-unificadas {
     display: flex;
     gap: 30px; /* Espaçamento entre os dois painéis */
@@ -245,8 +269,23 @@ body::before {
 
 /* INPUTS FINAIS */
 .painel-integracao { background: rgba(20, 20, 40, 0.8); border: 1px solid var(--dourado-antigo); padding: 25px; border-radius: 15px; margin-top: 30px; text-align: left; }
-.input-area-larga { width: 100%; height: 150px; background: #fff; color: #000; padding: 15px; border-radius: 10px; margin-top: 10px; border: 1px solid #ccc; font-family: 'Lato', sans-serif; }
-.textarea-essencia { height: 120px; width: 100%; }
+
+.area-texto-sagrada {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    color: #000;
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--dourado-antigo);
+    font-family: 'Lato', sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    flex-grow: 1; /* Permite que o textarea cresça */
+}
+
+.textarea-essencia {
+    height: 150px; /* Altura aumentada */
+}
 
 /* MESTRES & FOOTER */
 .mestres-section { padding: 60px 20px 100px; max-width: 1000px; margin: 0 auto; text-align: center; }
@@ -259,9 +298,31 @@ body::before {
 .card-mestre:hover img { filter: brightness(1.1) sepia(0); }
 .card-mestre h3 { font-family: 'Cinzel', serif; color: #ccc; margin-top: 15px; font-size: 1.1rem; }
 
-.portal-footer { text-align: center; padding: 40px 20px; background: linear-gradient(to top, #000000, rgba(10, 26, 60, 0.9)); border-top: 1px solid rgba(212, 175, 55, 0.3); margin-top: auto; }
+.portal-footer {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(to top, #000000, rgba(10, 26, 60, 0.9));
+    border-top: 1px solid rgba(212, 175, 55, 0.3);
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.copyright {
+    flex-grow: 1;
+    text-align: center;
+}
+
+.footer-versao {
+    font-family: monospace;
+    color: var(--ouro-solar);
+}
+
 .afirmacao-final { font-family: 'Cinzel', serif; font-size: 1.3rem; color: var(--ouro-solar); margin-bottom: 20px; background: rgba(212, 175, 55, 0.1); display: inline-block; padding: 15px 30px; border-radius: 50px; border: 1px solid rgba(212, 175, 55, 0.3); }
-.copyright { font-size: 0.8rem; color: #666; }
+
 
 /* ==========================================================================
    IMPRESSÃO PDF (CAPA DE LUXO + NATIVO)
