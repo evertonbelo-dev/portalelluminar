@@ -1,4 +1,4 @@
-// js/numerologia.js - v1.4.1 (Alinhado ao novo Layout)
+// js/numerologia.js - v1.4.4 (Lapidação do Layout)
 
 // --- DADOS CENTRAIS (Constantes do Universo) ---
 const MESTRES_RAIOS = {
@@ -32,17 +32,15 @@ function iniciarTransmutacao() {
         return;
     }
 
-    const painelEntrada = document.getElementById('fase-entrada');
-    painelEntrada.style.transition = 'opacity 0.5s ease-out';
-    painelEntrada.style.opacity = '0';
+    // Primeiro, realizamos os cálculos sagrados
+    calcularEMostrarMapa(nomeInput.value, dataInput.value);
 
-    setTimeout(() => {
-        painelEntrada.classList.add('oculto');
-        calcularEMostrarMapa(nomeInput.value, dataInput.value);
-        
-        const painelResultado = document.getElementById('fase-resultado');
-        painelResultado.classList.remove('oculto');
-    }, 500); // Aguarda a animação de fade-out
+    // Agora, transmutamos a visão, trocando as telas
+    const painelEntrada = document.getElementById('fase-entrada');
+    const painelResultado = document.getElementById('fase-resultado');
+
+    painelEntrada.classList.add('oculto');
+    painelResultado.classList.remove('oculto');
 }
 
 // --- CÁLCULOS DA ALMA (A Lógica Sagrada) ---

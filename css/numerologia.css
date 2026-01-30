@@ -1,49 +1,68 @@
-/* css/numerologia.css - v1.4.1 (Layout em Grid) */
+/* css/numerologia.css - v1.4.4 (Lapidação do Layout) */
 
 :root {
     --ouro-solar: #ffaa00;     
     --dourado-antigo: #d4af37; 
 }
 
-body { 
-    background: #050510; 
-    overflow-x: hidden; 
-    font-family: 'Lato', sans-serif; 
-    perspective: 1000px; 
+/* --- ANCORAGENS VISUAIS FIXAS E VISÍVEIS --- */
+.metatron-badge {
+    position: fixed;
+    top: 80px; /* Abaixo do link de voltar */
+    right: 30px;
+    width: 80px;
+    height: 80px;
+    z-index: 12; /* Elevado para ficar acima do conteúdo */
+    opacity: 0.3;
+    filter: drop-shadow(0 0 10px var(--ouro-solar));
+    animation: giroLento 60s linear infinite;
 }
 
-/* --- ANCORAGENS VISUAIS (MENORES E SUTIS) --- */
-.metatron-badge { position: fixed; top: 20px; right: 20px; width: 80px; height: 80px; z-index: 5; opacity: 0.4; filter: drop-shadow(0 0 10px var(--ouro-solar)); animation: giroLento 60s linear infinite; }
-.fundo-geometrico { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%); overflow: hidden; }
-.cena-cubo { position: absolute; bottom: 5%; right: 5%; width: 120px; height: 120px; perspective: 600px; z-index: 1; }
+.fundo-geometrico {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: -1;
+    background: radial-gradient(circle at center, #1a1a2e 0%, #050510 100%);
+    overflow: hidden;
+}
+
+.cena-cubo {
+    position: fixed; /* Fixado na tela */
+    bottom: 80px; /* Acima do rodapé */
+    right: 30px;
+    width: 100px;
+    height: 100px;
+    perspective: 600px;
+    z-index: 12; /* Elevado para ficar acima do conteúdo */
+    opacity: 0.8;
+}
+
 .cubo-wireframe { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; animation: rotacaoCubo 20s infinite linear; }
-.face { position: absolute; width: 120px; height: 120px; border: 1px solid rgba(255, 170, 0, 0.2); background: rgba(255, 170, 0, 0.01); }
-.face.frente  { transform: rotateY(0deg) translateZ(60px); }
-.face.tras    { transform: rotateY(180deg) translateZ(60px); }
-.face.direita { transform: rotateY(90deg) translateZ(60px); }
-.face.esquerda{ transform: rotateY(-90deg) translateZ(60px); }
-.face.topo    { transform: rotateX(90deg) translateZ(60px); }
-.face.fundo   { transform: rotateX(-90deg) translateZ(60px); }
+.face { position: absolute; width: 100px; height: 100px; border: 1px solid rgba(255, 170, 0, 0.2); background: rgba(255, 170, 0, 0.01); }
+.face.frente  { transform: rotateY(0deg) translateZ(50px); }
+.face.tras    { transform: rotateY(180deg) translateZ(50px); }
+.face.direita { transform: rotateY(90deg) translateZ(50px); }
+.face.esquerda{ transform: rotateY(-90deg) translateZ(50px); }
+.face.topo    { transform: rotateX(90deg) translateZ(50px); }
+.face.fundo   { transform: rotateX(-90deg) translateZ(50px); }
 @keyframes rotacaoCubo { from { transform: rotateX(0) rotateY(0); } to { transform: rotateX(360deg) rotateY(360deg); } }
 
-.circuito-borda { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: hidden; }
+.circuito-borda {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 11; /* Elevado para ficar acima do conteúdo */
+    overflow: hidden;
+}
+
 .feixe-luz { position: absolute; width: 150px; height: 2px; background: linear-gradient(90deg, transparent, var(--ouro-solar)); box-shadow: 0 0 10px var(--ouro-solar); border-radius: 50%; opacity: 0; animation: percorrerCaminho 12s linear infinite; }
 @keyframes percorrerCaminho { 0% { top: 60px; right: 60px; opacity: 0; transform: rotate(180deg); } 5% { opacity: 1; } 30% { top: 60px; right: auto; left: 40px; } 35% { transform: rotate(90deg); } 60% { top: 80%; left: 40px; } 65% { transform: rotate(0deg); } 95% { left: auto; right: 10%; opacity: 1; } 100% { right: 8%; opacity: 0; } }
 
 /* --- LAYOUTS GERAIS E PAINÉIS --- */
-.num-container-principal { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 80px 20px; position: relative; z-index: 10; }
+.num-container-principal { min-height: calc(100vh - 60px); display: flex; align-items: center; justify-content: center; padding: 80px 20px; position: relative; z-index: 10; }
 .painel-central { width: 100%; max-width: 650px; text-align: center; animation: surgir 1s ease-out; }
 
-/* --- 6. LAYOUT DO RESULTADO EM GRID (NOVO) --- */
-.painel-resultado-grid {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr; /* Coluna de texto um pouco maior */
-    gap: 50px;
-    width: 100%;
-    max-width: 1400px; /* Layout mais largo */
-    align-items: flex-start;
-    padding: 20px;
-}
+.painel-resultado-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 50px; width: 100%; max-width: 1400px; align-items: flex-start; padding: 20px; }
 
 .painel-geometria {
     background: rgba(10, 10, 20, 0.7);
@@ -51,16 +70,16 @@ body {
     border-radius: 15px;
     padding: 30px 40px;
     animation: surgir 1.2s ease-out;
+    max-height: calc(100vh - 200px); /* Altura máxima para permitir rolagem interna */
+    overflow-y: auto; /* Ativa a rolagem apenas para este painel */
 }
 
-.painel-visualizacao {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: sticky; /* Fica fixo ao rolar a coluna de texto */
-    top: 80px;
-    animation: surgir 1.5s ease-out;
-}
+/* Customização da barra de rolagem */
+.painel-geometria::-webkit-scrollbar { width: 8px; }
+.painel-geometria::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+.painel-geometria::-webkit-scrollbar-thumb { background-color: var(--dourado-antigo); border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+
+.painel-visualizacao { display: flex; flex-direction: column; align-items: center; position: sticky; top: 80px; animation: surgir 1.5s ease-out; }
 
 .titulo-num-interno { font-family: 'Cinzel'; font-size: 2rem; color: var(--dourado-antigo); margin-bottom: 30px; text-align: center; }
 
@@ -69,18 +88,9 @@ body {
 .campo-revelado h3 span { font-family: 'Lato'; }
 
 .texto-explicativo { font-size: 0.9rem; color: #bbb; line-height: 1.6; margin-bottom: 15px; font-style: italic; }
+.texto-canalizado { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; color: #e0e0e0; font-size: 1rem; line-height: 1.7; min-height: 80px; }
 
-.texto-canalizado {
-    background: rgba(0,0,0,0.3);
-    padding: 15px;
-    border-radius: 8px;
-    color: #e0e0e0;
-    font-size: 1rem;
-    line-height: 1.7;
-    min-height: 80px; /* Espaço para o texto da IA */
-}
-
-/* --- ELEMENTOS DE INPUT (FASE 1) --- */
+/* --- DEMAIS ESTILOS --- */
 .titulo-num { font-family: 'Cinzel'; font-size: 2.8rem; color: var(--dourado-antigo); }
 .subtitulo-num { color: #ccc; margin-bottom: 40px; font-size: 1.1rem; }
 .input-group-mistico { margin-bottom: 30px; text-align: left; }
@@ -88,7 +98,6 @@ body {
 .input-group-mistico input { width: 100%; padding: 15px; background: rgba(0,0,0,0.6); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 8px; color: #fff; font-size: 1.2rem; }
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8) sepia(1) saturate(3) hue-rotate(30deg); cursor: pointer; }
 
-/* --- ELEMENTOS VISUAIS (PAINEL DIREITO) --- */
 .painel-visualizacao .triangulo-container { margin-top: 20px; width: 300px; height: 300px; }
 .ponta { width: 80px; height: 80px; }
 .numero-ponta { font-size: 2rem; }
@@ -98,7 +107,6 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8) sepi
 .conteudo-mestre h2 { font-size: 1.8rem; }
 .painel-visualizacao .cta-mapa-completo { margin-top: 30px; padding-bottom: 20px; }
 
-/* HERANÇAS E UTILITÁRIOS */
 .oculto { display: none !important; }
 @keyframes surgir { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes giroLento { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -107,11 +115,11 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8) sepi
 @media (max-width: 1024px) {
     .painel-resultado-grid { grid-template-columns: 1fr; } /* Empilha as colunas */
     .painel-visualizacao { position: relative; top: auto; margin-top: 50px; }
+    .metatron-badge, .cena-cubo { display: none; } /* Oculta em telas menores para não sobrecarregar */
 }
 
 @media (max-width: 768px) {
     .num-container-principal { padding: 60px 15px; }
     .titulo-num { font-size: 2.2rem; }
-    .painel-geometria { padding: 25px; }
-    .circuito-borda, .metatron-badge, .cena-cubo { display: none; } /* Oculta animações pesadas */
+    .painel-geometria { padding: 25px; max-height: none; overflow-y: visible; } /* Remove rolagem interna no mobile */
 }
