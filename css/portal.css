@@ -1,4 +1,4 @@
-/* css/portal.css - O TRONO SOLAR (VERSÃO 1.2.9) */
+/* css/portal.css - O TRONO SOLAR (INTEGRIDADE TOTAL E EXPANSÃO v1.2.9) */
 
 :root {
     --ouro-solar: #ffaa00;     
@@ -20,6 +20,7 @@ body {
     overflow-x: hidden; 
 }
 
+/* Fundo Astral Global */
 body::before {
     content: "";
     position: fixed;
@@ -30,19 +31,59 @@ body::before {
     z-index: -2;
 }
 
-/* TELA E ESTRUTURA */
+/* ==========================================================================
+   1. CABEÇALHO E HERO (PRESERVADOS)
+   ========================================================================== */
+.portal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 40px; background: rgba(0, 0, 0, 0.8);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(5px);
+}
+.logo-area { display: flex; align-items: center; gap: 15px; }
+.simbolo-img { height: 50px; width: auto; filter: drop-shadow(0 0 5px var(--ouro-solar)); }
+.portal-header h1 { font-family: 'Cinzel', serif; color: var(--dourado-antigo); font-size: 1.4rem; text-transform: uppercase; }
+.chave-ativacao { font-family: monospace; color: var(--ouro-solar); border: 1px solid var(--ouro-solar); padding: 5px 10px; border-radius: 5px; }
+
+.hero-section { text-align: center; padding: 80px 20px; max-width: 900px; margin: 0 auto; }
+.hero-section h2 { font-family: 'Cinzel', serif; font-size: 3rem; background: linear-gradient(to right, var(--dourado-antigo), #fff, var(--dourado-antigo)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+.canalizacao-portal { background: rgba(255, 170, 0, 0.05); border-left: 3px solid var(--ouro-solar); padding: 20px; font-style: italic; font-size: 1.1rem; color: #fceecb; margin: 30px auto; max-width: 700px; }
+.btn-scroll { display: inline-block; margin-top: 30px; color: var(--dourado-antigo); border: 1px solid var(--dourado-antigo); padding: 10px 20px; border-radius: 30px; text-decoration: none; transition: 0.3s; }
+.btn-scroll:hover { background: var(--dourado-antigo); color: #000; }
+
+.modulos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px; padding: 60px 20px; max-width: 1200px; margin: 0 auto; }
+.card-modulo { background: rgba(10, 10, 20, 0.8); border: 1px solid rgba(212, 175, 55, 0.3); padding: 40px; border-radius: 20px; text-align: center; text-decoration: none; color: #fff; transition: 0.4s; display: flex; flex-direction: column; align-items: center; }
+.card-modulo:hover { transform: translateY(-10px); border-color: var(--ouro-solar); }
+.icon-modulo { font-size: 3rem; margin-bottom: 20px; }
+.btn-acessar { margin-top: auto; padding: 10px 25px; background: var(--dourado-antigo); color: #000; font-weight: bold; border-radius: 30px; }
+
+/* Carrossel */
+.carrossel-section { padding: 40px 0; background: rgba(0, 0, 0, 0.4); overflow: hidden; text-align: center; border-top: 1px solid rgba(212, 175, 55, 0.1); border-bottom: 1px solid rgba(212, 175, 55, 0.1); }
+.titulo-carrossel { font-family: 'Cinzel', serif; color: var(--dourado-antigo); margin-bottom: 30px; font-size: 1.5rem; text-transform: uppercase; }
+.carrossel-container { width: 100%; overflow: hidden; display: flex; padding: 10px 0; }
+.carrossel-trilho { display: flex; gap: 40px; animation: rolarInfinito 40s linear infinite; width: max-content; padding-left: 50px; }
+.carrossel-trilho:hover { animation-play-state: paused; }
+.item-carrossel { display: flex; flex-direction: column; align-items: center; width: 200px; height: 320px; text-decoration: none; transition: transform 0.3s ease; }
+.item-carrossel:hover { transform: scale(1.05); }
+.item-carrossel img { width: 100%; height: 280px; object-fit: contain; filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.5)); }
+.legenda { color: #e0e0e0; margin-top: 10px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+@keyframes rolarInfinito { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+/* ==========================================================================
+   2. O APP DE TARÔ (PRESERVADO)
+   ========================================================================== */
 .tela { display: none; opacity: 0; transition: opacity 0.5s ease; width: 100%; max-width: 1200px; margin: 0 auto; padding-top: 20px; }
 .tela.ativa { display: block; opacity: 1; animation: surgimento 0.8s ease-out; }
 @keyframes surgimento { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
 .conteudo-central { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; padding: 20px; width: 100%; }
 
-/* FORMULÁRIO */
+/* INPUTS E BOTÕES */
 .formulario { background: rgba(0,0,0,0.6); padding: 30px; border-radius: 15px; border: 1px solid var(--dourado-antigo); width: 100%; max-width: 400px; }
 .btn-luz { background: linear-gradient(45deg, var(--dourado-antigo), #b8860b); border: none; padding: 12px 30px; color: #000; font-weight: bold; font-family: 'Cinzel', serif; border-radius: 30px; cursor: pointer; box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); transition: 0.3s; margin-top: 10px; }
 .btn-luz:hover { transform: scale(1.05); }
 
-/* MESA DE JOGO */
+/* (MESA DE CARTAS E CRUZ ESTELAR PRESERVADAS AQUI) */
 .mesa-cartas-grid { display: grid; justify-content: center; gap: 30px; padding: 40px 0; width: 100%; }
 .layout-triade { grid-template-columns: repeat(3, 1fr); max-width: 900px; margin: 0 auto; }
 .layout-cruz { display: grid; grid-template-columns: repeat(3, 160px); grid-template-rows: repeat(3, 240px); gap: 20px; justify-content: center; grid-template-areas: ". top ." "left center right" ". bottom ."; max-width: 1000px; margin: 0 auto; }
@@ -52,45 +93,54 @@ body::before {
 .layout-cruz .slot-carta:nth-child(4) { grid-area: top; }
 .layout-cruz .slot-carta:nth-child(5) { grid-area: right; }
 
-/* EXPANSÃO DOS CAMPOS DE LEITURA (SOLICITADO) */
-.container-vozes-unificadas {
+/* ==========================================================================
+   4. HARMONIZAÇÃO DOS QUADROS (ORÁCULO E GUARDIÃO - EXPANSÃO REAL)
+   ========================================================================== */
+.painel-respostas-duplas {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 40px;
     width: 100%;
-    max-width: 1000px; /* Maior largura horizontal */
+    max-width: 1000px; /* Expansão horizontal máxima */
     margin: 30px auto;
 }
 
-.painel-integracao-v2 {
+.painel-integracao-ampla {
     width: 100%;
-    text-align: left;
+    text-align: center;
 }
 
-.area-texto-sagrada {
+.input-area-harmonizada {
     width: 100%;
-    min-height: 250px; /* Pelo menos 5-8 linhas de altura */
+    min-height: 450px; /* Expansão vertical significativa */
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid rgba(212, 175, 55, 0.5);
     border-radius: 12px;
     color: #ffffff;
-    padding: 25px;
+    padding: 30px;
     font-family: 'Lato', sans-serif;
-    font-size: 1.15rem;
+    font-size: 1.2rem;
     line-height: 1.8;
     resize: vertical;
     outline: none;
     transition: all 0.4s ease;
+    margin-top: 15px;
     box-shadow: inset 0 0 25px rgba(0,0,0,0.7);
 }
 
-.area-texto-sagrada:focus {
+.input-area-harmonizada:focus {
     border-color: var(--ouro-solar);
     background: rgba(255, 255, 255, 0.05);
     box-shadow: 0 0 25px rgba(255, 170, 0, 0.2);
 }
 
-/* RODAPÉ DE VERSÃO FIXO (SISTEMA ÚNICO) */
+/* ==========================================================================
+   5. MESTRES, FOOTER E PDF (INTEGRIDADE TOTAL PRESERVADA)
+   ========================================================================== */
+.mestres-section { padding: 60px 20px 100px; max-width: 1000px; margin: 0 auto; text-align: center; }
+.portal-footer { text-align: center; padding: 40px 20px; background: linear-gradient(to top, #000000, rgba(10, 26, 60, 0.9)); border-top: 1px solid rgba(212, 175, 55, 0.3); margin-top: auto; }
+
+/* RODAPÉ DE VERSÃO FIXO */
 .portal-footer-versao {
     position: fixed;
     bottom: 0; left: 0; width: 100%;
@@ -102,19 +152,28 @@ body::before {
 }
 .portal-footer-versao span { font-size: 0.75rem; color: var(--dourado-antigo); letter-spacing: 1px; }
 
-/* IMPRESSÃO PDF */
+/* IMPRESSÃO PDF (PRESERVADO INTEGRALMENTE) */
 #container-pdf-oculto { display: none; }
 @media print {
     body::before { display: none !important; background: none !important; }
-    body { background-color: white !important; }
+    body { background-color: white !important; background-image: none !important; }
     body * { visibility: hidden; }
     #container-pdf-oculto, #container-pdf-oculto * { visibility: visible; }
     #container-pdf-oculto { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background-color: white !important; }
     @page { size: A4 portrait; margin: 10mm; }
     .capa-pdf { width: 100% !important; height: 100vh; display: flex; justify-content: center; align-items: center; page-break-after: always; text-align: center; border: 5px double #d4af37 !important; padding: 40px !important; }
     .logo-capa { width: 120px; margin-bottom: 30px; }
-    .titulo-capa { font-family: 'Cinzel', serif; font-size: 3rem !important; color: #b8860b !important; }
-    .dados-capa { text-align: left; display: inline-block; margin: 0 auto; width: 80%; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 20px 0; }
+    .titulo-capa { font-family: 'Cinzel', serif; font-size: 3rem !important; color: #b8860b !important; margin-bottom: 10px; text-transform: uppercase; }
+    .subtitulo-capa { font-family: 'Cinzel', serif; font-size: 1.5rem !important; color: #666 !important; margin-bottom: 60px; text-transform: uppercase; }
+    .dados-capa { text-align: left; display: inline-block; margin: 0 auto; font-size: 1.1rem; line-height: 2; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 30px 0; width: 80%; }
+    .footer-capa { margin-top: 80px; font-style: italic; color: #888 !important; font-size: 0.9rem; }
+
+    .pagina-pdf { width: 100% !important; border: none !important; page-break-after: always; padding: 20px 0 !important; }
+    img, .carta-pdf-item { break-inside: avoid; }
+    h1, h2, h3, h4, strong { color: #b8860b !important; }
+    p, span, div { color: #000000 !important; }
+    .essencia-pdf-box { background-color: #fffbf0 !important; border: 2px solid #d4af37 !important; }
+    
     .assinatura-box { margin-top: 60px; text-align: center; page-break-inside: avoid; }
     .linha-assinatura { width: 300px; border-top: 1px solid #000; margin: 0 auto 10px auto; }
     .texto-assinatura { font-family: 'Cinzel', serif; color: #b8860b !important; font-weight: bold; }

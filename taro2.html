@@ -141,10 +141,14 @@
         </div>
     </section>
 
+    <footer class="portal-footer-versao">
+        <span>Portal El'Luminar v1.2.8 (Sintonizado: Gemini 2.5 Flash)</span>
+    </footer>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
         import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
-        import { firebaseConfig } from './js/config.js?v=1.2.9';
+        import { firebaseConfig } from './js/config.js?v=1.2.8';
 
         try {
             const app = initializeApp(firebaseConfig);
@@ -154,8 +158,8 @@
         } catch (e) { console.error("Erro na sintonização:", e); }
     </script>
 
-    <script src="js/dados.js?v=1.2.9"></script>
-    <script src="js/app.js?v=1.2.9"></script>
+    <script src="js/dados.js?v=1.2.8"></script>
+    <script src="js/app.js?v=1.2.8"></script>
 
     <div id="container-pdf-oculto">
         <div class="capa-pdf">
@@ -198,10 +202,33 @@
             </div>
         </div>
     </div>
-
-    <footer class="portal-footer-versao">
-        <span>Portal El'Luminar v1.2.9 (Sintonizado: Gemini 2.5 Flash)</span>
+    <footer style="position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); padding: 5px 15px; text-align: right; z-index: 9999; border-top: 1px solid rgba(212,175,55,0.2);">
+        <span style="font-size: 0.7rem; color: rgba(212,175,55,0.7); font-family: 'Lato', sans-serif;">
+            Portal El'Luminar v1.2.7 (Gemini 2.5 Flash Ativo)
+        </span>
     </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
+        
+        // Mantendo o Cache Busting para garantir que o navegador não use o código antigo
+        import { firebaseConfig } from './js/config.js?v=1.2.7';
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const vertexAI = getVertexAI(app);
+            
+            // Frequência 2.5 Flash confirmada e ativa
+            window.modeloGemini = getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
+            console.log("Criamor: Oráculo Digital sintonizado na frequência 2.5 Flash.");
+        } catch (error) {
+            console.error("Interferência na sintonização:", error);
+        }
+    </script>
+
+    <script src="js/dados.js?v=1.2.7"></script>
+    <script src="js/app.js?v=1.2.7"></script>
     
 </body>
 </html>
