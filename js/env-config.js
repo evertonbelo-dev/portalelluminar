@@ -4,4 +4,4 @@
 window.__SUPABASE_URL__ = "https://frvqvnusjnnmbpztiokn.supabase.co";
 window.__SUPABASE_ANON_KEY__ = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZydnF2bnVzam5ubWJwenRpb2tuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MjE0OTUsImV4cCI6MjEwNDA5NzQ5NX0.na4JZ9CqMhCxWnK-FGPVd-urJ78LTEzGBPE0IwitVJ0";
 window.__OPENROUTER_API_KEY__ = ""; // Coloque sua chave no .env.local ou nas env vars da Vercel
-window.__OPENROUTER_MODEL__ = "deepseek/deepseek-chat-v4-0724";
+window.__OPENROUTER_MODEL__ = "deepseek/deepseek-v4-flash-0731";
