@@ -1,15 +1,9 @@
 {
   "version": 2,
-  "buildCommand": null,
-  "outputDirectory": ".",
+  "buildCommand": "node build.js",
+  "outputDirectory": "dist",
   "framework": null,
   "routes": [
     { "src": "/(.*)", "dest": "/$1" }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "@supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key",
-    "VITE_OPENROUTER_API_KEY": "@openrouter_api_key",
-    "VITE_OPENROUTER_MODEL": "google/gemini-2.5-flash"
-  }
+  ]
 }

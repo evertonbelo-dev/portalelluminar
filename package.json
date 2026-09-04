@@ -1,0 +1,10 @@
+{
+  "name": "portal-elluminar",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Abra os arquivos HTML diretamente no navegador'",
+    "build": "node build.js",
+    "preview": "npx serve dist"
+  }
+}
