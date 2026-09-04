@@ -86,11 +86,13 @@ for (const file of htmlFiles) {
 
     let content = fs.readFileSync(filePath, 'utf-8');
 
-    // Adiciona o script env-config antes de qualquer outro script
-    content = content.replace(
-        '</head>',
-        '    <script src="js/env-config.js"></script>\n</head>'
-    );
+    // Adiciona o script env-config antes de qualquer outro script (se já não existir)
+    if (!content.includes('js/env-config.js')) {
+        content = content.replace(
+            '</head>',
+            '    <script src="js/env-config.js"></script>\n</head>'
+        );
+    }
 
     // Atualiza cachebusters
     content = content.replace(/\?v=(\d+\.\d+\.\d+)/g, '?v=' + Date.now());
