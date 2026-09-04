@@ -168,6 +168,18 @@
         }
 
         renderDashboard();
+
+        // Mostra link admin se for admin
+        (async () => {
+            try {
+                const { isAdmin } = await import("./js/admin-config.js");
+                const sess = (await supabase.auth.getSession()).data.session;
+                if (sess?.user?.id && await isAdmin(sess.user.id)) {
+                    const area = document.getElementById("admin-link-area");
+                    if (area) area.style.display = "block";
+                }
+            } catch(e) { console.warn("Admin check:", e); }
+        })();
     </script>
 </body>
 </html>
