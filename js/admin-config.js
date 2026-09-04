@@ -74,27 +74,52 @@ export async function isAdmin(userId) {
 
 // SQL SETUP (para exibir ao admin)
 export function getSqlSetup() {
-    return '-- Portal El\'Luminar - Setup do Banco (execute no SQL Editor do Supabase)\n\n' +
-    'CREATE TABLE IF NOT EXISTS user_roles (\n' +
-    '    user_id UUID PRIMARY KEY REFERENCES auth.users(id),\n' +
-    '    role TEXT NOT NULL DEFAULT \'user\' CHECK (role IN (\'user\', \'admin\', \'master\')),\n' +
-    '    created_at TIMESTAMPTZ DEFAULT NOW()\n' +
-    ');\n\n' +
-    'ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;\n\n' +
-    'CREATE TABLE IF NOT EXISTS site_config (\n' +
-    '    key TEXT PRIMARY KEY,\n' +
-    '    value JSONB NOT NULL DEFAULT \'{}\',\n' +
-    '    updated_at TIMESTAMPTZ DEFAULT NOW(),\n' +
-    '    updated_by UUID REFERENCES auth.users(id)\n' +
-    ');\n\n' +
-    'ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;\n\n' +
-    'CREATE POLICY "Todos leem config" ON site_config FOR SELECT USING (true);\n' +
-    'CREATE POLICY "Admins gerenciam config" ON site_config FOR ALL USING (\n' +
-    '    auth.uid() IN (SELECT user_id FROM user_roles WHERE role IN (\'admin\', \'master\'))\n' +
-    ');\n\n' +
-    'INSERT INTO site_config (key, value) VALUES\n' +
-    '    (\'modelo_ia\', \'{"id": "deepseek/deepseek-v4-flash-0731", "nome": "DeepSeek V4 Flash"}\'),\n' +
-    '    (\'afirmacao_footer\', \'{"valor": "\\"Que a Luz de Sirius guie teus passos.\\""}\'),\n' +
-    '    (\'cores\', \'{"ouro_solar": "#ffaa00", "dourado_antigo": "#d4af37", "azul_profundo": "#050510"}\')\n' +
-    'ON CONFLICT (key) DO NOTHING;';
+    const sql = 
+-- Portal El'Luminar - Setup do Banco
+-- Agora com DROP POLICY IF EXISTS - pode rodar quantas vezes quiser!
+
+-- 1. Tabela de papéis dos usu�rios
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'master')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Usuarios podem ver proprio papel" ON user_roles;
+CREATE POLICY "Usuarios podem ver proprio papel" ON user_roles FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Admins podem ver todos" ON user_roles;
+CREATE POLICY "Admins podem ver todos" ON user_roles FOR SELECT USING (
+    auth.uid() IN (SELECT user_id FROM user_roles WHERE role IN ('admin', 'master'))
+);
+
+-- 2. Tabela de configura��es do site
+CREATE TABLE IF NOT EXISTS site_config (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_by UUID REFERENCES auth.users(id)
+);
+
+ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Todos leem config" ON site_config;
+CREATE POLICY "Todos leem config" ON site_config FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins gerenciam config" ON site_config;
+CREATE POLICY "Admins gerenciam config" ON site_config FOR ALL USING (
+    auth.uid() IN (SELECT user_id FROM user_roles WHERE role IN ('admin', 'master'))
+);
+
+-- 3. Inserir configura��es padr�o
+INSERT INTO site_config (key, value) VALUES
+    ('modelo_ia', '{"id": "deepseek/deepseek-v4-flash-0731", "nome": "DeepSeek V4 Flash"}'),
+    ('afirmacao_footer', '{"valor": "\"Que a Luz de Sirius guie teus passos.\""}'),
+    ('cores', '{"ouro_solar": "#ffaa00", "dourado_antigo": "#d4af37", "azul_profundo": "#050510"}')
+ON CONFLICT (key) DO NOTHING;
+
+-- 4. Para se tornar admin (troque pelo seu email):
+-- INSERT INTO user_roles (user_id, role)
+-- SELECT id, 'admin' FROM auth.users WHERE email = 'seu@email.com'
+-- ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
+;
+    return sql;
 }
