@@ -21,6 +21,7 @@
         
         <nav class="portal-nav">
             <div class="chave-ativacao" title="Chave de Ativação">ElLuminar_</div>
+            <a href="login.html" id="btn-login-nav" class="btn-login-portal" style="color: var(--ouro-solar); text-decoration: none; margin-left: 15px; padding: 6px 14px; border: 1px solid var(--dourado-antigo); border-radius: 20px; font-size: 0.8rem; transition: all 0.3s;">🔮 Entrar</a>
         </nav>
     </header>
 
@@ -185,5 +186,26 @@
         <span class="footer-versao">v1.3.0</span>
     </footer>
 
+<script type="module">
+        // Verifica se o usuário está logado e atualiza o botão de login
+        (async () => {
+            try {
+                const { supabase } = await import('./js/supabase-config.js?v=2.0.0');
+                const client = await supabase;
+                if (!client) return;
+
+                const { data: { session } } = await client.auth.getSession();
+                const btn = document.getElementById('btn-login-nav');
+                
+                if (session) {
+                    const nome = session.user.user_metadata?.name || session.user.email?.split('@')[0] || '';
+                    btn.innerHTML = '🌟 ' + nome;
+                    btn.href = '/dashboard.html';
+                }
+            } catch (e) {
+                // Supabase não configurado ainda
+            }
+        })();
+    </script>
 </body>
 </html>

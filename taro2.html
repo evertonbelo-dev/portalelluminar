@@ -146,20 +146,45 @@
     </footer>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-        import { getVertexAI, getGenerativeModel } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-vertexai.js";
-        import { firebaseConfig } from './js/config.js?v=1.3.0';
+        import { OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_API_URL, OPENROUTER_SITE_URL, OPENROUTER_APP_NAME } from './js/config.js?v=2.1.0';
+        import { SYSTEM_PROMPT } from './js/taro-api.js?v=2.1.0';
 
         try {
-            const app = initializeApp(firebaseConfig);
-            const vertexAI = getVertexAI(app);
-            window.modeloGemini = getGenerativeModel(vertexAI, { model: "gemini-2.5-flash" });
-            console.log("Criamor: Oráculo Digital sintonizado na frequência 2.5 Flash.");
+            // Expõe a chave e dados do OpenRouter globalmente
+            window.__OPENROUTER_API_KEY__ = OPENROUTER_API_KEY;
+            window.__OPENROUTER_MODEL__ = OPENROUTER_MODEL;
+
+            // Função que chama o OpenRouter (compatível com vários modelos: Gemini, GPT, Claude, etc.)
+            async function chamarOpenRouter(prompt, systemPrompt) {
+                const response = await fetch(OPENROUTER_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
+                        'HTTP-Referer': OPENROUTER_SITE_URL,
+                        'X-Title': OPENROUTER_APP_NAME
+                    },
+                    body: JSON.stringify({
+                        model: OPENROUTER_MODEL,
+                        messages: [
+                            { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
+                            { role: 'user', content: prompt }
+                        ]
+                    })
+                });
+                const data = await response.json();
+                return data.choices?.[0]?.message?.content || "";
+            }
+
+            // Expõe globalmente para uso no app.js
+            window.chamarOpenRouter = chamarOpenRouter;
+            window.modeloAtivo = { tipo: 'openrouter', modelo: OPENROUTER_MODEL };
+            console.log("Criamor: Oráculo Digital sintonizado via OpenRouter (" + OPENROUTER_MODEL + ").");
         } catch (e) { console.error("Erro na sintonização:", e); }
     </script>
 
-    <script src="js/dados.js?v=1.3.0"></script>
-    <script src="js/app.js?v=1.3.0"></script>
+    <script src="js/dados.js?v=2.0.0"></script>
+    <script src="js/app.js?v=2.0.0"></script>
 
     <div id="container-pdf-oculto">
         <div class="capa-pdf">

@@ -1,0 +1,15 @@
+tree c5c177cd1332d15767112c9dc53d1e660e8787e6
+parent c47cb280d2bd2796a236e69216aa8fd4ad5845e7
+author evertonbelo-dev <everton.belo@gmail.com> 1788530465 -0300
+committer evertonbelo-dev <everton.belo@gmail.com> 1788530465 -0300
+
+Migração Firebase -> Supabase + Vercel + OpenRouter
+
+- Substitui Firebase Hosting por Vercel (vercel.json)
+- Substitui Firebase Vertex AI SDK por OpenRouter API (js/config.js, js/taro-api.js)
+- Substitui Firebase Auth por Supabase Auth (login.html, js/supabase-auth.js)
+- Adiciona Supabase Database (supabase-schema.sql, js/supabase-db.js, js/supabase-config.js)
+- Adiciona painel do usuário (dashboard.html)
+- Atualiza app.js e curso-player.js para salvar dados no Supabase
+- Remove firebase.json e .firebaserc
+- Atualiza gitignore

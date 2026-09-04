@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal El'Luminar | Conexão</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/portal.css">
+    <style>
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .auth-card {
+            background: rgba(5, 5, 16, 0.95);
+            border: 1px solid var(--dourado-antigo);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.1);
+        }
+        .auth-card h1 {
+            font-family: 'Cinzel', serif;
+            color: var(--ouro-solar);
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+        .auth-card .subtitulo {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            color: #888;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .auth-tab.ativo {
+            color: var(--ouro-solar);
+            border-bottom-color: var(--ouro-solar);
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .auth-form.oculto { display: none; }
+        .campo-label {
+            color: var(--dourado-antigo);
+            font-size: 0.85rem;
+            margin-bottom: 3px;
+        }
+        .auth-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 1rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .auth-input:focus { border-color: var(--ouro-solar); }
+        .auth-btn {
+            background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar));
+            border: none; border-radius: 10px; padding: 14px;
+            color: #000; font-weight: bold; font-size: 1rem;
+            cursor: pointer; transition: transform 0.2s, opacity 0.3s;
+            font-family: 'Cinzel', serif;
+        }
+        .auth-btn:hover { transform: scale(1.02); opacity: 0.9; }
+<div class="logo-simbolo">
+                <a href="index.html">
+                    <img src="assets/PortalElluminar/Simbolo_Portal.png" alt="Símbolo">
+                </a>
+            </div>
+            <h1>Portal El'Luminar</h1>
+            <p class="subtitulo">Acesse sua jornada estelar</p>
+
+            <!-- Abas -->
+            <div class="auth-tabs">
+                <div class="auth-tab ativo" onclick="switchTab('entrar')">Entrar</div>
+                <div class="auth-tab" onclick="switchTab('cadastrar')">Cadastrar</div>
+            </div>
+
+            <!-- Formulário de Login -->
+            <form id="form-entrar" class="auth-form" onsubmit="handleLogin(event)">
+                <div>
+                    <label class="campo-label">Email Estelar</label>
+                    <input type="email" id="email-login" class="auth-input" placeholder="seu@email.com" required>
+                </div>
+                <div>
+                    <label class="campo-label">Senha Cósmica</label>
+                    <input type="password" id="senha-login" class="auth-input" placeholder="••••••••" required>
+                </div>
+                <div id="login-error" class="auth-error"></div>
+                <button type="submit" id="btn-login" class="auth-btn">Entrar</button>
+                
+                <div class="auth-divider">— ou —</div>
+                
+                <button type="button" class="auth-google-btn" onclick="handleGoogleLogin()">
+                    <span>🔮</span> Entrar com Google
+                </button>
+
+                <div class="auth-link">
+                    <a onclick="mostrarRecuperarSenha()">Esqueceu a senha?</a>
+                </div>
+            </form>
+
+            <!-- Formulário de Cadastro -->
+            <form id="form-cadastrar" class="auth-form oculto" onsubmit="handleSignUp(event)">
+                <div>
+                    <label class="campo-label">Nome</label>
+                    <input type="text" id="nome-cadastro" class="auth-input" placeholder="Seu nome">
+                </div>
+                <div>
+                    <label class="campo-label">Email Estelar</label>
+                    <input type="email" id="email-cadastro" class="auth-input" placeholder="seu@email.com" required>
+                </div>
+                <div>
+                    <label class="campo-label">Senha Cósmica</label>
+                    <input type="password" id="senha-cadastro" class="auth-input" placeholder="Mínimo 6 caracteres" required minlength="6">
+                </div>
+                <div id="cadastro-error" class="auth-error"></div>
+                <div id="cadastro-success" class="auth-success"></div>
+                <button type="submit" id="btn-cadastro" class="auth-btn">Criar Conta Estelar</button>
+            </form>
+        </div>
+    </div>
+        .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .auth-divider { text-align: center; color: #666; font-size: 0.85rem; margin: 10px 0; }
+        .auth-google-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px; padding: 12px; color: #fff;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 10px;
+            transition: background 0.3s; font-size: 0.95rem;
+        }
+        .auth-google-btn:hover { background: rgba(255, 255, 255, 0.2); }
+        .auth-error { color: #ff6b6b; font-size: 0.85rem; text-align: center; min-height: 20px; }
+        .auth-success { color: #4caf50; font-size: 0.85rem; text-align: center; }
+        .auth-link { text-align: center; color: #888; font-size: 0.85rem; margin-top: 15px; }
+        .auth-link a { color: var(--ouro-solar); cursor: pointer; text-decoration: underline; }
+        .logo-simbolo { text-align: center; margin-bottom: 15px; }
+        .logo-simbolo img { width: 70px; opacity: 0.9; }
+        .spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid #fff; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px; vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+<script type="module">
+        import { initSupabase } from './js/supabase-config.js?v=2.0.0';
+        import { signIn, signUp, signInWithGoogle, getSession } from './js/supabase-auth.js?v=2.0.0';
+
+        await initSupabase();
+        const session = await getSession();
+        if (session) window.location.href = '/dashboard.html';
+
+        window.__supabaseSignIn = signIn;
+        window.__supabaseSignUp = signUp;
+        window.__supabaseGoogle = signInWithGoogle;
+    </script>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('ativo'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.add('oculto'));
+
+            if (tab === 'entrar') {
+                document.querySelector('.auth-tab:first-child').classList.add('ativo');
+                document.getElementById('form-entrar').classList.remove('oculto');
+            } else {
+                document.querySelector('.auth-tab:last-child').classList.add('ativo');
+                document.getElementById('form-cadastrar').classList.remove('oculto');
+            }
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('email-login').value;
+            const senha = document.getElementById('senha-login').value;
+            const btn = document.getElementById('btn-login');
+            const errorDiv = document.getElementById('login-error');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Conectando...';
+            errorDiv.innerText = '';
+
+            const { data, error } = await window.__supabaseSignIn(email, senha);
+            
+            if (error) {
+                errorDiv.innerText = error.message || "Erro ao conectar. Tente novamente.";
+                btn.disabled = false;
+                btn.innerText = 'Entrar';
+            } else {
+                window.location.href = '/dashboard.html';
+            }
+        }
+
+        async function handleSignUp(event) {
+            event.preventDefault();
+            const email = document.getElementById('email-cadastro').value;
+            const senha = document.getElementById('senha-cadastro').value;
+            const nome = document.getElementById('nome-cadastro').value;
+            const btn = document.getElementById('btn-cadastro');
+            const errorDiv = document.getElementById('cadastro-error');
+            const successDiv = document.getElementById('cadastro-success');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Criando...';
+            errorDiv.innerText = '';
+            successDiv.innerText = '';
+
+            const { data, error } = await window.__supabaseSignUp(email, senha, { name: nome });
+
+            if (error) {
+                errorDiv.innerText = error.message || "Erro ao criar conta.";
+                btn.disabled = false;
+                btn.innerText = 'Criar Conta Estelar';
+            } else {
+                successDiv.innerText = '✨ Conta criada! Verifique seu email para confirmar.';
+                btn.disabled = false;
+                btn.innerText = 'Criar Conta Estelar';
+            }
+        }
+
+        async function handleGoogleLogin() {
+            await window.__supabaseGoogle();
+        }
+
+        function mostrarRecuperarSenha() {
+            alert("Função de recuperação de senha em breve. Enquanto isso, entre em contato pelo suporte.");
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal El'Luminar | Minha Jornada</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/portal.css">
+    <style>
+        .dash-container { max-width: 1000px; margin: 0 auto; padding: 80px 20px 100px; }
+        .dash-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 40px; }
+        .dash-header h1 { font-family: 'Cinzel', serif; color: var(--ouro-solar); font-size: 1.8rem; }
+        .dash-user-info { display: flex; align-items: center; gap: 15px; }
+        .dash-avatar { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar)); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #000; font-weight: bold; }
+        .dash-user-name { color: #fff; font-size: 1rem; }
+        .dash-user-email { color: #888; font-size: 0.85rem; }
+        .btn-sair { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 100, 100, 0.3); color: #ff6b6b; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s; }
+        .btn-sair:hover { background: rgba(255, 100, 100, 0.2); }
+        .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .dash-card { background: rgba(5, 5, 16, 0.85); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 15px; padding: 25px; transition: all 0.3s; cursor: pointer; text-decoration: none; display: block; }
+        .dash-card:hover { border-color: var(--dourado-antigo); transform: translateY(-3px); box-shadow: 0 10px 30px rgba(212, 175, 55, 0.1); }
+        .dash-card-icon { font-size: 2.5rem; margin-bottom: 10px; }
+        .dash-card h3 { font-family: 'Cinzel', serif; color: var(--ouro-solar); font-size: 1.1rem; margin-bottom: 8px; }
+        .dash-card p { color: #aaa; font-size: 0.85rem; line-height: 1.4; }
+        .dash-card .badge { display: inline-block; margin-top: 10px; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+        .badge-progresso { background: rgba(76, 175, 80, 0.2); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
+        .dash-section-title { font-family: 'Cinzel', serif; color: var(--dourado-antigo); margin: 40px 0 20px; font-size: 1.2rem; }
+        .dash-historico-item { background: rgba(5, 5, 16, 0.6); border: 1px solid rgba(212, 175, 55, 0.1); border-radius: 10px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .dash-historico-item .data { color: #888; font-size: 0.8rem; }
+        .dash-historico-item .tipo { color: var(--ouro-solar); font-weight: bold; }
+        .loading-dash { text-align: center; padding: 60px; color: #888; }
+        .loading-dash .spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.2); border-top: 3px solid var(--ouro-solar); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="link-voltar-home">← Voltar ao Portal</a>
+    <div class="dash-container" id="dash-content">
+        <div class="loading-dash">
+            <div class="spinner"></div>
+            <p>Sintonizando sua jornada estelar...</p>
+        </div>
+    </div>
+    <footer class="portal-footer">
+        <p class="copyright">&copy; 2025 Portal El'Luminar. Guiado pelo Criamor.</p>
+        <span class="footer-versao">v2.0.0</span>
+    </footer>
+<script type="module">
+        import { initSupabase } from './js/supabase-config.js?v=2.0.0';
+        import { getSession, getCurrentUser, signOut, onAuthChange } from './js/supabase-auth.js?v=2.0.0';
+        import { getUserReadings, getCourseProgress, getSessionHistory } from './js/supabase-db.js?v=2.0.0';
+
+        await initSupabase();
+        const session = await getSession();
+
+        if (!session) {
+            window.location.href = '/login.html';
+            throw new Error("Não autenticado");
+        }
+
+        const user = session.user;
+        const container = document.getElementById('dash-content');
+
+        function renderDashboard() {
+            const nome = user.user_metadata?.name || user.email?.split('@')[0] || 'Viajante';
+            const email = user.email || '';
+            const inicial = nome.charAt(0).toUpperCase();
+
+            container.innerHTML = `
+                <div class="dash-header">
+                    <div><h1>🌟 Minha Jornada</h1></div>
+                    <div class="dash-user-info">
+                        <div>
+                            <div class="dash-user-name" id="dash-nome">${nome}</div>
+                            <div class="dash-user-email">${email}</div>
+                        </div>
+                        <div class="dash-avatar">${inicial}</div>
+                        <button class="btn-sair" id="btn-sair">Sair</button>
+                    </div>
+                </div>
+
+                <h2 class="dash-section-title">🔮 Ferramentas de Ascensão</h2>
+                <div class="dash-grid">
+                    <a href="taro2.html" class="dash-card">
+                        <div class="dash-card-icon">🔮</div>
+                        <h3>Tarô Divino Siriano</h3>
+                        <p>Receba a orientação dos Mestres e a bênção de Sirius.</p>
+                        <span class="badge badge-progresso">Acessar →</span>
+                    </a>
+                    <a href="dna.html" class="dash-card">
+                        <div class="dash-card-icon">🧬</div>
+                        <h3>DNA Solar</h3>
+                        <p>Ativação dos filamentos solares.</p>
+                        <span class="badge badge-progresso">Acessar →</span>
+                    </a>
+                    <a href="numerologia.html" class="dash-card">
+                        <div class="dash-card-icon">📐</div>
+                        <h3>Numerologia Estelar</h3>
+                        <p>Descubra sua Missão e seu Mestre Regente.</p>
+                        <span class="badge badge-progresso">Acessar →</span>
+                    </a>
+                    <a href="hawkins.html" class="dash-card">
+                        <div class="dash-card-icon">💎</div>
+                        <h3>Frequência Hawkins</h3>
+                        <p>Diagnóstico vibracional da alma.</p>
+                        <span class="badge badge-progresso">Acessar →</span>
+                    </a>
+                    <a href="bovis.html" class="dash-card">
+                        <div class="dash-card-icon">📏</div>
+                        <h3>Biômetro de Bovis</h3>
+                        <p>Meça a vitalidade da sua Aura.</p>
+                        <span class="badge badge-progresso">Acessar →</span>
+                    </a>
+                    <a href="cursos.html" class="dash-card">
+                        <div class="dash-card-icon">📚</div>
+                        <h3>Cursos & Saberes</h3>
+                        <p>Jornadas de expansão da consciência.</p>
+                        <span class="badge badge-progresso">Continuar →</span>
+                    </a>
+                    <a href="mestres.html" class="dash-card">
+                        <div class="dash-card-icon">🧘</div>
+                        <h3>Templo dos Mestres</h3>
+                        <p>Conecte-se com os Guardiões.</p>
+                        <span class="badge badge-progresso">Acessar →</span>
+                    </a>
+                </div>
+
+                <h2 class="dash-section-title">📜 Histórico Recente</h2>
+                <div id="historico-lista">
+                    <p style="color: #888; font-style: italic;">Carregando seu histórico...</p>
+                </div>
+            `;
+
+            document.getElementById('btn-sair').addEventListener('click', async () => {
+                await signOut();
+            });
+
+            carregarHistorico();
+        }
+
+        async function carregarHistorico() {
+            const listaEl = document.getElementById('historico-lista');
+            
+            try {
+                const { data: readings } = await getUserReadings(user.id, 5);
+                
+                if (readings && readings.length > 0) {
+                    listaEl.innerHTML = readings.map(r => `
+                        <div class="dash-historico-item">
+                            <div>
+                                <span class="tipo">🔮 Tarô</span>
+                                <span style="color: #aaa; margin-left: 10px;">${r.consulente || 'Anônimo'}</span>
+                            </div>
+                            <div class="data">${new Date(r.created_at).toLocaleDateString('pt-BR')}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    listaEl.innerHTML = '<p style="color: #888; font-style: italic;">Suas leituras aparecerão aqui.</p>';
+                }
+            } catch (e) {
+                listaEl.innerHTML = '<p style="color: #888; font-style: italic;">Histórico disponível após configurar o Supabase.</p>';
+            }
+        }
+
+        renderDashboard();
+    </script>
+</body>
+</html>

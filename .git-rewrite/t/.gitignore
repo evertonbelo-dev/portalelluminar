@@ -1,0 +1,8 @@
+# Portal El'Luminar — .gitignore
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.firebase/
+.firebaserc

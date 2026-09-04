@@ -170,7 +170,7 @@ async function finalizarComEssencia() {
     }
 }
 
-// --- CONEXÃO SEGURA COM O SERVIDOR (SUBSTITUI O ANTIGO FETCH) ---
+// --- CONEXÃO SEGURA COM O SERVIDOR (REST API) ---
 async function chamarOraculoSiriano() {
     const outputIA = document.getElementById('retorno-ia');
     const pergunta = document.getElementById('pergunta-consulente').value;
@@ -190,13 +190,54 @@ async function chamarOraculoSiriano() {
     Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.\n\n${resumoLeitura}`;
 
     try {
-        // Agora o modeloGemini estará definido corretamente através do SDK VertexAI
-        const result = await window.modeloGemini.generateContent(promptFinal);
-        const response = await result.response;
-        outputIA.value = response.text();
+        let textoCanalizado = "";
+
+        // Tenta usar o OpenRouter (principal)
+        if (window.chamarOpenRouter) {
+            textoCanalizado = await window.chamarOpenRouter(promptFinal, "Você é o Oráculo Siriano do Portal El'Luminar. Analise os dados abaixo e crie uma síntese espiritual profunda e amorosa para o consulente. Use o termo 'Criamor'. Seja direto, mas mantenha a vibração elevada.");
+        } else if (window.chamarGemini) {
+            textoCanalizado = await window.chamarGemini(promptFinal);
+        } else if (window.realizarLeituraOnline) {
+            const cartasStr = tiragemAtual.map(c => c.nome).join(', ');
+            textoCanalizado = await window.realizarLeituraOnline(consulente.nome, pergunta, cartasStr);
+        } else {
+            textoCanalizado = "A Egrégora está em silêncio. Tente novamente em instantes.";
+        }
+
+        outputIA.value = textoCanalizado;
+        
+        // Salva a leitura no Supabase
+        await salvarLeituraNoBackend(pergunta, textoCanalizado);
     } catch (e) {
         console.error("Erro AI Logic:", e);
-        outputIA.value = "Interferência técnica no servidor. Verifique se o arquivo js/config.js foi enviado no deploy.";
+        outputIA.value = "Interferência técnica no servidor. Verifique a chave da API Gemini.";
+    }
+}
+
+// --- SALVAR LEITURA NO SUPABASE (FUNÇÃO NOVA) ---
+async function salvarLeituraNoBackend(pergunta, interpretacao) {
+    try {
+        const { supabase } = await import('./supabase-config.js?v=2.0.0');
+        const client = await supabase;
+        if (!client) return;
+
+        const { data: { session } } = await client.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId) return;
+
+        const { saveReading } = await import('./supabase-db.js?v=2.0.0');
+        await saveReading({
+            user_id: userId,
+            consulente: consulente.nome,
+            tipo_tiragem: tipoTiragem,
+            cartas: tiragemAtual.map(c => c.nome),
+            pergunta: pergunta,
+            interpretacao: interpretacao,
+            essencia: essenciaAtual?.nome || null
+        });
+        console.log("🔮 Leitura salva no Supabase!");
+    } catch (e) {
+        console.warn("Não foi possível salvar a leitura no Supabase:", e);
     }
 }
 

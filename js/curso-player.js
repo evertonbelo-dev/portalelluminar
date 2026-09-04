@@ -1,36 +1,82 @@
-// js/curso-player.js - Motor da Sala de Aula
+// js/curso-player.js - Motor da Sala de Aula (v2.0 - Supabase)
+// Agora sincroniza progresso com Supabase quando logado
 
 let moduloAtual = 0;
 let progresso = { concluidos: [], anotacoes: {} };
 const STORAGE_KEY = 'curso_progresso_linguagem_luz';
+const CURSO_ID = 'linguagem_luz';
 
 // --- INICIALIZAÇÃO ---
-document.addEventListener('DOMContentLoaded', () => {
-    carregarProgresso();
+document.addEventListener('DOMContentLoaded', async () => {
+    await carregarProgresso();
     renderizarMenuLateral();
-    carregarModulo(moduloAtual); // Carrega o último salvo ou o primeiro
+    carregarModulo(moduloAtual);
 });
 
-// --- CARREGAR DADOS ---
-function carregarProgresso() {
+// --- CARREGAR DADOS (Supabase + localStorage) ---
+async function carregarProgresso() {
+    // 1. Tenta carregar do Supabase
+    try {
+        const { supabase } = await import('./supabase-config.js?v=2.0.0');
+        const client = await supabase;
+        
+        if (client) {
+            const { data: { session } } = await client.auth.getSession();
+            if (session?.user?.id) {
+                const { getCourseProgress } = await import('./supabase-db.js?v=2.0.0');
+                const dados = await getCourseProgress(session.user.id, CURSO_ID);
+                if (dados && dados.concluidos) {
+                    progresso = {
+                        concluidos: dados.concluidos || [],
+                        anotacoes: dados.anotacoes || {}
+                    };
+                    // Atualiza localStorage como cache
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(progresso));
+                    console.log("📚 Progresso carregado do Supabase!");
+                    return;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Supabase não disponível, usando localStorage:", e);
+    }
+
+    // 2. Fallback: carrega do localStorage
     const salvo = localStorage.getItem(STORAGE_KEY);
     if (salvo) {
         progresso = JSON.parse(salvo);
-        // Tenta voltar onde parou (último concluído + 1, ou o 0)
-        let ultimo = Math.max(...progresso.concluidos);
-        if (ultimo >= 0 && ultimo < CURSO_DADOS.modulos.length - 1) {
-            moduloAtual = ultimo + 1; // Vai para o próximo não feito
-        } else if (ultimo === CURSO_DADOS.modulos.length - 1) {
-            moduloAtual = ultimo; // Se acabou, fica no último
-        } else {
-            moduloAtual = 0;
-        }
+    }
+
+    // Define o módulo atual baseado no progresso
+    let ultimo = progresso.concluidos.length > 0 ? Math.max(...progresso.concluidos) : -1;
+    if (ultimo >= 0 && ultimo < CURSO_DADOS.modulos.length - 1) {
+        moduloAtual = ultimo + 1;
+    } else if (ultimo === CURSO_DADOS.modulos.length - 1) {
+        moduloAtual = ultimo;
+    } else {
+        moduloAtual = 0;
     }
 }
 
-function salvarProgresso() {
+async function salvarProgresso() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progresso));
-    renderizarMenuLateral(); // Atualiza ícones
+    
+    // Tenta sincronizar com Supabase
+    try {
+        const { supabase } = await import('./supabase-config.js?v=2.0.0');
+        const client = await supabase;
+        if (client) {
+            const { data: { session } } = await client.auth.getSession();
+            if (session?.user?.id) {
+                const { saveCourseProgress } = await import('./supabase-db.js?v=2.0.0');
+                await saveCourseProgress(session.user.id, CURSO_ID, progresso.concluidos, progresso.anotacoes);
+            }
+        }
+    } catch (e) {
+        // Silencioso - localStorage já salvo como fallback
+    }
+    
+    renderizarMenuLateral();
 }
 
 // --- RENDERIZAÇÃO ---
