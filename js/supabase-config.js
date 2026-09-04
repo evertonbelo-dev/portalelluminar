@@ -5,9 +5,9 @@
 //   import { supabase } from './supabase-config.js';
 //   const { data, error } = await supabase.from('tabela').select('*');
 
-// Configuração via variáveis de ambiente (Vite) ou fallback manual
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || window.__SUPABASE_URL__;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY__;
+// Configuração via variáveis injetadas pelo build.js (window.__*__)
+const SUPABASE_URL = window.__SUPABASE_URL__ || '';
+const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY__ || '';
 
 // Importação dinâmica do cliente Supabase via CDN (para sites estáticos)
 // Se estiver usando npm, troque por: import { createClient } from '@supabase/supabase-js'
