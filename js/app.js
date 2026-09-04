@@ -1,4 +1,4 @@
-// js/app.js - Versão Restaurada, Completa e Sintonizada com o Servidor
+﻿// js/app.js - Versão Restaurada, Completa e Sintonizada com o Servidor
 
 // 1. DADOS E NAVEGAÇÃO
 let consulente = { nome: "", nascimento: "", tarologo: "" };
@@ -175,72 +175,63 @@ async function chamarOraculoSiriano() {
     const outputIA = document.getElementById('retorno-ia');
     const pergunta = document.getElementById('pergunta-consulente').value;
 
-    outputIA.value = "Sintonizando a frequência do Criamor no servidor... Aguarde a canalização.";
+    outputIA.value = "✧ Sintonizando a frequência do Criamor... Aguarde a canalização.";
 
-    let resumoLeitura = `Oráculo do Tarô Siriano | Consulente: ${consulente.nome} | Pergunta: "${pergunta}"\n\nCARTAS:\n`;
-    tiragemAtual.forEach((c, i) => { 
-        resumoLeitura += `Posição ${i+1}: ${c.nome} - "${c.canalizacao || c.msg}"\n`; 
+    let resumoLeitura = ## Dados da Leitura
+**Consulente:** {consulente.nome}
+**Pergunta:** "{pergunta}"
+
+### Cartas Sorteadas:
+;
+    tiragemAtual.forEach((c, i) => {
+        const tituloPosicao = CONFIG_LEITURAS[tipoTiragem]?.titulos[i] || Posição {i+1};
+        resumoLeitura += **{tituloPosicao}:** {c.nome}
+Mensagem: "{c.canalizacao || c.msg}"
+
+;
     });
     if (essenciaAtual) {
-        resumoLeitura += `\nBÊNÇÃO DA ESSÊNCIA: ${essenciaAtual.nome} - "${essenciaAtual.canalizacao || essenciaAtual.msg}"`;
+        resumoLeitura += ### Bênção da Essência:
+**{essenciaAtual.nome}**
+"{essenciaAtual.canalizacao || essenciaAtual.msg}"
+;
     }
 
-    const promptFinal = `Você é o Oráculo Siriano do Portal El'Luminar. 
-    Analise os dados abaixo e crie uma síntese espiritual profunda e amorosa para o consulente.
-    Use o termo "Criamor". Seja direto, mas mantenha a vibração elevada.\n\n${resumoLeitura}`;
+    const promptFinal = Consulente: {consulente.nome}
+Pergunta: "{pergunta}"
+
+Cartas do Tarô Divino Siriano:
+{resumoLeitura}
+
+Por favor, realize a canalização completa agora.;
 
     try {
         let textoCanalizado = "";
 
-        // Tenta usar o OpenRouter (principal)
+        // Usa o OpenRouter (principal) com timeout
         if (window.chamarOpenRouter) {
-            textoCanalizado = await window.chamarOpenRouter(promptFinal, "Você é o Oráculo Siriano do Portal El'Luminar. Analise os dados abaixo e crie uma síntese espiritual profunda e amorosa para o consulente. Use o termo 'Criamor'. Seja direto, mas mantenha a vibração elevada.");
-        } else if (window.chamarGemini) {
-            textoCanalizado = await window.chamarGemini(promptFinal);
-        } else if (window.realizarLeituraOnline) {
-            const cartasStr = tiragemAtual.map(c => c.nome).join(', ');
-            textoCanalizado = await window.realizarLeituraOnline(consulente.nome, pergunta, cartasStr);
+            const systemMsg = Você é o Oráculo Siriano do Portal El'Luminar. Seu tom é amoroso e direto.
+Use o termo "Criamor". Responda em português. Seja sintético(a) e profundo(a) — no máximo 4 parágrafos.
+Mencione as cartas com naturalidade. Encerre com uma afirmação de poder.;
+
+            textoCanalizado = await window.chamarOpenRouter(promptFinal, systemMsg);
         } else {
             textoCanalizado = "A Egrégora está em silêncio. Tente novamente em instantes.";
         }
 
         outputIA.value = textoCanalizado;
-        
+
         // Salva a leitura no Supabase
         await salvarLeituraNoBackend(pergunta, textoCanalizado);
     } catch (e) {
-        console.error("Erro AI Logic:", e);
-        outputIA.value = "Interferência técnica no servidor. Verifique a chave da API Gemini.";
+        console.error("Erro no Oráculo:", e);
+        if (e.name === 'AbortError') {
+            outputIA.value = "⏳ A conexão com os Mestres está demorando. Tente novamente em instantes.";
+        } else {
+            outputIA.value = "🔮 Interferência na comunicação estelar. O Criamor aguarda sua nova tentativa.";
+        }
     }
 }
-
-// --- SALVAR LEITURA NO SUPABASE (FUNÇÃO NOVA) ---
-async function salvarLeituraNoBackend(pergunta, interpretacao) {
-    try {
-        const { supabase } = await import('./supabase-config.js?v=2.0.0');
-        const client = await supabase;
-        if (!client) return;
-
-        const { data: { session } } = await client.auth.getSession();
-        const userId = session?.user?.id;
-        if (!userId) return;
-
-        const { saveReading } = await import('./supabase-db.js?v=2.0.0');
-        await saveReading({
-            user_id: userId,
-            consulente: consulente.nome,
-            tipo_tiragem: tipoTiragem,
-            cartas: tiragemAtual.map(c => c.nome),
-            pergunta: pergunta,
-            interpretacao: interpretacao,
-            essencia: essenciaAtual?.nome || null
-        });
-        console.log("🔮 Leitura salva no Supabase!");
-    } catch (e) {
-        console.warn("Não foi possível salvar a leitura no Supabase:", e);
-    }
-}
-
 function gerarPDFReal() {
     // 1. PREENCHER DADOS DA CAPA
     document.getElementById('pdf-nome-consulente').innerText = consulente.nome || "Consulente";

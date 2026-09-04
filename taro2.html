@@ -160,73 +160,39 @@
             window.__OPENROUTER_API_KEY__ = OPENROUTER_API_KEY;
             window.__OPENROUTER_MODEL__ = OPENROUTER_MODEL;
 
-            // Debug: painel visível para diagnóstico
-            const debugDiv = document.createElement('div');
-            debugDiv.id = 'openrouter-debug';
-            debugDiv.style.cssText = 'display:none; background:#111; border:1px solid #d4af37; border-radius:10px; padding:15px; margin:20px; max-width:800px; margin:0 auto; font-size:0.8rem; font-family:monospace; color:#0f0; text-align:left;';
-            debugDiv.innerHTML = '<strong style="color:#ffaa00;">🔮 DEBUG OpenRouter</strong><div id="debug-content"></div>';
-            document.body.appendChild(debugDiv);
-
-            function atualizarDebug(html) {
-                const dc = document.getElementById('debug-content');
-                if (dc) dc.innerHTML += html + '<br>';
-                console.log("OpenRouter:", html.replace(/<[^>]*>/g, ''));
-            }
-
-            // Função que chama o OpenRouter (compatível com vários modelos: Gemini, GPT, Claude, etc.)
+            // Função que chama o OpenRouter
             async function chamarOpenRouter(prompt, systemPrompt) {
-                const keyPreview = OPENROUTER_API_KEY ? OPENROUTER_API_KEY.substring(0, 12) + '...' : 'VAZIA';
-                atualizarDebug('🔑 Chave: ' + keyPreview);
-                atualizarDebug('📡 Modelo: ' + OPENROUTER_MODEL);
-                atualizarDebug('📡 API URL: ' + OPENROUTER_API_URL);
-                atualizarDebug('📡 Referer: ' + OPENROUTER_SITE_URL);
+                const response = await fetch(OPENROUTER_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
+                        'HTTP-Referer': OPENROUTER_SITE_URL,
+                        'X-Title': OPENROUTER_APP_NAME
+                    },
+                    body: JSON.stringify({
+                        model: OPENROUTER_MODEL,
+                        messages: [
+                            { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
+                            { role: 'user', content: prompt }
+                        ]
+                    })
+                });
 
-                try {
-                    const response = await fetch(OPENROUTER_API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
-                            'HTTP-Referer': OPENROUTER_SITE_URL,
-                            'X-Title': OPENROUTER_APP_NAME
-                        },
-                        body: JSON.stringify({
-                            model: OPENROUTER_MODEL,
-                            messages: [
-                                { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
-                                { role: 'user', content: prompt }
-                            ]
-                        })
-                    });
-
-                    atualizarDebug('📥 Status HTTP: ' + response.status + ' ' + response.statusText);
-
-                    const data = await response.json();
-                    atualizarDebug('📦 Resposta: ' + JSON.stringify(data).substring(0, 500));
-
-                    if (data.error) {
-                        atualizarDebug('❌ Erro API: ' + JSON.stringify(data.error));
-                        throw new Error(data.error.message || 'Erro na API');
-                    }
-
-                    return data.choices?.[0]?.message?.content || "";
-                } catch (e) {
-                    atualizarDebug('❌ Exceção: ' + e.message);
-                    throw e;
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error?.message || 'Erro HTTP ' + response.status);
                 }
+
+                const data = await response.json();
+                return data.choices?.[0]?.message?.content || "";
             }
 
             // Expõe globalmente para uso no app.js
             window.chamarOpenRouter = chamarOpenRouter;
             window.modeloAtivo = { tipo: 'openrouter', modelo: OPENROUTER_MODEL };
-            atualizarDebug('✅ Oráculo Digital sintonizado via OpenRouter (' + OPENROUTER_MODEL + ').');
-
-            // Cria um botão para mostrar/esconder debug no final da página
-            const btnDebug = document.createElement('div');
-            btnDebug.style.cssText = 'text-align:center; margin:10px; cursor:pointer; color:#888; font-size:0.7rem;';
-            btnDebug.innerHTML = '<span onclick="var d=document.getElementById(\'openrouter-debug\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';this.innerText=d.style.display===\'none\'?\'🔍 Mostrar Debug\':\'🔍 Ocultar Debug\'">🔍 Mostrar Debug</span>';
-            document.body.appendChild(btnDebug);
-        } catch (e) { console.error("Erro na sintonização:", e); }
+            console.log("🔮 Oráculo Digital sintonizado via OpenRouter (" + OPENROUTER_MODEL + ").");
+        } catch (e) { console.error("🔮 Erro na sintonização do Oráculo:", e); }
     </script>
 
     <script src="js/dados.js?v=2.0.0"></script>
