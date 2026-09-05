@@ -36,8 +36,7 @@
         .custo-medio { background: rgba(255,193,7,0.2); color: #ffc107; }
         .sql-box { background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 0.75rem; color: #0f0; white-space: pre-wrap; max-height: 300px; overflow-y: auto; margin-top: 10px; }
         .sql-copy { background: rgba(255,255,255,0.1); border: 1px solid #555; color: #fff; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; margin-top: 5px; }
-        .admin-log { background: #111; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-family: monospace; font-size: 0.75rem; color: #0f0; max-height: 200px; overflow-y: auto; white-space: pre-wrap; display: none; }
-    </style>
+        </style>
 </head>
 <body>
     <a href="index.html" class="link-voltar-home">&larr; Voltar ao Portal</a>
@@ -46,18 +45,13 @@
             <div class="spin"></div>
             <p>Verificando permissoes estelares...</p>
         </div>
-    </div>
-    <div class="admin-container" style="padding-top:0;">
-        <div id="admin-log" class="admin-log"></div>
-    </div>
-    <script type="module">
+    </div><script type="module">
         import { initSupabase, getSupabase } from './js/supabase-config.js?v=2.0.0';
         import { isAdmin, carregarConfig, salvarConfig, getSqlSetup } from './js/admin-config.js?v=1.0.0';
         import { MODELOS_DISPONIVEIS } from './js/modelos.js?v=1.0.0';
 
 const container = document.getElementById('admin-content');
-        const log = document.getElementById('admin-log');
-        function addLog(msg) { if (log) { log.style.display = 'block'; log.innerHTML += '> ' + msg + '\n'; } console.log('[Admin]', msg); }
+        function addLog(msg) { console.log('[Admin]', msg); }
 
         // Captura erro global
         window.onerror = function(msg, src, line) {
