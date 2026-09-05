@@ -77,57 +77,57 @@ export async function isAdmin(userId) {
         return false;
     }
 }export function getSqlSetup() {
-    const sql = [
-        "-- Portal El'Luminar - Setup do Banco (CORRIGIDO - sem recursao RLS)",
-        "--",
-        "-- 1. Funcao segura SECURITY DEFINER (ignora RLS, sem recursao)",
-        "CREATE OR REPLACE FUNCTION public.is_admin(check_user_id uuid)",
-        "RETURNS boolean",
-        "LANGUAGE sql",
-        "SECURITY DEFINER",
-        "SET search_path = public",
-        "AS $$",
-        "  SELECT EXISTS (SELECT 1 FROM user_roles WHERE user_roles.user_id = $1 AND role IN ('admin', 'master'))",
-        "$$;",
-        "",
-        "-- 2. Tabela de papeis",
-        "CREATE TABLE IF NOT EXISTS user_roles (",
-        "    user_id UUID PRIMARY KEY REFERENCES auth.users(id),",
-        "    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'master')),",
-        "    created_at TIMESTAMPTZ DEFAULT NOW()",
-        ");",
-        "",
-        "ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;",
-        "DROP POLICY IF EXISTS "Usuarios podem ver proprio papel" ON user_roles;",
-        "CREATE POLICY "Usuarios podem ver proprio papel" ON user_roles FOR SELECT USING (auth.uid() = user_id);",
-        "DROP POLICY IF EXISTS "Admins podem ver todos" ON user_roles;",
-        "CREATE POLICY "Admins podem ver todos" ON user_roles FOR SELECT USING (public.is_admin(auth.uid()));",
-        "",
-        "-- 3. Tabela de configuracoes",
-        "CREATE TABLE IF NOT EXISTS site_config (",
-        "    key TEXT PRIMARY KEY,",
-        "    value JSONB NOT NULL DEFAULT '{}',",
-        "    updated_at TIMESTAMPTZ DEFAULT NOW(),",
-        "    updated_by UUID REFERENCES auth.users(id)",
-        ");",
-        "",
-        "ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;",
-        "DROP POLICY IF EXISTS "Todos leem config" ON site_config;",
-        "CREATE POLICY "Todos leem config" ON site_config FOR SELECT USING (true);",
-        "DROP POLICY IF EXISTS "Admins gerenciam config" ON site_config;",
-        "CREATE POLICY "Admins gerenciam config" ON site_config FOR ALL USING (public.is_admin(auth.uid()));",
-        "",
-        "-- 4. Inserir configuracoes padrao",
-        "INSERT INTO site_config (key, value) VALUES",
-        "    ('modelo_ia', '{"id": "deepseek/deepseek-v4-flash-0731", "nome": "DeepSeek V4 Flash"}'),",
-        "    ('afirmacao_footer', '{"valor": "\"Que a Luz de Sirius guie teus passos.\""}'),",
-        "    ('cores', '{"ouro_solar": "#ffaa00", "dourado_antigo": "#d4af37", "azul_profundo": "#050510"}')",
-        "ON CONFLICT (key) DO NOTHING;",
-        "",
-        "-- 5. Para se tornar admin (troque pelo seu email):",
-        "-- INSERT INTO user_roles (user_id, role)",
-        "-- SELECT id, 'admin' FROM auth.users WHERE email = 'seu@email.com'",
-        "-- ON CONFLICT (user_id) DO UPDATE SET role = 'admin';"
-    ].join('\n');
+    const sql = `-- Portal El'Luminar - Setup do Banco (CORRIGIDO - sem erro de sintaxe)
+-- Agora usa template literal no JS, aceita aspas duplas no SQL sem conflito
+
+-- 1. Funcao segura SECURITY DEFINER (ignora RLS, sem recursao)
+CREATE OR REPLACE FUNCTION public.is_admin(check_user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (SELECT 1 FROM user_roles WHERE user_roles.user_id = $1 AND role IN ('admin', 'master'))
+$$;
+
+-- 2. Tabela de papeis dos usuarios
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin', 'master')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Usuarios podem ver proprio papel" ON user_roles;
+CREATE POLICY "Usuarios podem ver proprio papel" ON user_roles FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Admins podem ver todos" ON user_roles;
+CREATE POLICY "Admins podem ver todos" ON user_roles FOR SELECT USING (public.is_admin(auth.uid()));
+
+-- 3. Tabela de configuracoes do site
+CREATE TABLE IF NOT EXISTS site_config (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_by UUID REFERENCES auth.users(id)
+);
+
+ALTER TABLE site_config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Todos leem config" ON site_config;
+CREATE POLICY "Todos leem config" ON site_config FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins gerenciam config" ON site_config;
+CREATE POLICY "Admins gerenciam config" ON site_config FOR ALL USING (public.is_admin(auth.uid()));
+
+-- 4. Inserir configuracoes padrao
+INSERT INTO site_config (key, value) VALUES
+    ('modelo_ia', '{"id": "deepseek/deepseek-v4-flash-0731", "nome": "DeepSeek V4 Flash"}'),
+    ('afirmacao_footer', '{"valor": "\"Que a Luz de Sirius guie teus passos.\""}'),
+    ('cores', '{"ouro_solar": "#ffaa00", "dourado_antigo": "#d4af37", "azul_profundo": "#050510"}')
+ON CONFLICT (key) DO NOTHING;
+
+-- 5. Para se tornar admin (troque pelo seu email):
+-- INSERT INTO user_roles (user_id, role)
+-- SELECT id, 'admin' FROM auth.users WHERE email = 'seu@email.com'
+-- ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
+`;
     return sql;
 }
