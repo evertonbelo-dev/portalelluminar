@@ -128,7 +128,7 @@
                         <p>Conecte-se com os Guardiões.</p>
                         <span class="badge badge-progresso">Acessar →</span>
                     </a>
-                    <a href="admin.html" id="admin-link-area" class="dash-card" style="display:none;">
+                    <a href="admin.html" id="admin-link-area" class="dash-card">
                         <div class="dash-card-icon">⚙️</div>
                         <h3>Painel Admin</h3>
                         <p>Configurações do Portal.</p>
@@ -175,17 +175,7 @@
 
         renderDashboard();
 
-        // Mostra link admin se for admin
-        (async () => {
-            try {
-                const { isAdmin } = await import("./js/admin-config.js");
-                const sess = (await supabase.auth.getSession()).data.session;
-                if (sess?.user?.id && await isAdmin(sess.user.id)) {
-                    const area = document.getElementById("admin-link-area");
-                    if (area) area.style.display = "block";
-                }
-            } catch(e) { console.warn("Admin check:", e); }
-        })();
+        // Link admin visivel para todos (acesso controlado na pagina)
     </script>
 </body>
 </html>
