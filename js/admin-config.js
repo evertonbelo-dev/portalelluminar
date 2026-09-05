@@ -61,12 +61,22 @@ export async function isAdmin(userId) {
     const supabase = await getSupabase();
     if (!supabase) return false;
     try {
-        const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId).single();
-        if (error) return false;
+        const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+        if (error) {
+            console.warn('[isAdmin] Erro na consulta:', error.message);
+            return false;
+        }
+        if (!data) {
+            console.warn('[isAdmin] Nenhum registro para user_id:', userId);
+            return false;
+        }
+        console.log('[isAdmin] Role:', data.role);
         return data.role === 'admin' || data.role === 'master';
-    } catch { return false; }
-}
-export function getSqlSetup() {
+    } catch (e) {
+        console.warn('[isAdmin] Excecao:', e.message);
+        return false;
+    }
+}export function getSqlSetup() {
     const sql = [
         "-- Portal El'Luminar - Setup do Banco",
         "-- Com DROP POLICY IF EXISTS - pode rodar varias vezes",
