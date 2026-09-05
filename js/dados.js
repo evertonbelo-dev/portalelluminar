@@ -1,3 +1,4 @@
+(function() {
 // js/dados.js - O Coração dos Dados do Tarô Divino Siriano
 
 /* ==========================================================================
@@ -1576,3 +1577,10 @@ const ASSETS_VISUAIS = {
     jornada1: "Jornada/Jornada_sabbah.png",
     fundoLeitura: "Leitura do Taro/abertura das leituras.png"
 };
+// Exporta para uso no app.js e outros scripts
+window.ARCANOS_CELESTES = ARCANOS_CELESTES;
+window.CARTAS_REINO = CARTAS_REINO;
+window.CARTAS_ESSENCIA = CARTAS_ESSENCIA;
+window.ASSETS_VISUAIS = ASSETS_VISUAIS;
+
+})();

@@ -85,7 +85,7 @@ function realizarLeitura() {
     essenciaAtual = null; 
     mesa.className = `mesa-cartas-grid layout-${tipoTiragem}`;
     
-    let deck = [...ARCANOS_CELESTES, ...CARTAS_REINO];
+    let deck = [...window.ARCANOS_CELESTES, ...window.CARTAS_REINO];
     let qtdCartas = 1;
     if (tipoTiragem === 'triade') qtdCartas = 3;
     if (tipoTiragem === 'cruz') qtdCartas = 5;
@@ -178,20 +178,20 @@ async function chamarOraculoSiriano() {
 
     outputIA.value = "✧ Sintonizando a frequência do Criamor... Aguarde a canalização.";
 
-    let resumoLeitura = ## Dados da Leitura
-**Consulente:** {consulente.nome}
-**Pergunta:** "{pergunta}"
+    let resumoLeitura = `## Dados da Leitura
+**Consulente:** ${consulente.nome}
+**Pergunta:** "${pergunta}"
 
 ### Cartas Sorteadas:
-;
+`;
     tiragemAtual.forEach((c, i) => {
-        const tituloPosicao = CONFIG_LEITURAS[tipoTiragem]?.titulos[i] || Posição {i+1};
-        resumoLeitura += **{tituloPosicao}:** {c.nome}
-Mensagem: "{c.canalizacao || c.msg}"
+        const tituloPosicao = CONFIG_LEITURAS[tipoTiragem]?.titulos[i] || `Posicao ${i+1}`;
+        resumoLeitura += `**${tituloPosicao}:** ${c.nome}
+Mensagem: "${c.canalizacao || c.msg}"
 
-;
+`;
     });
-    if (essenciaAtual) {
+ {
         resumoLeitura += ### Bênção da Essência:
 **{essenciaAtual.nome}**
 "{essenciaAtual.canalizacao || essenciaAtual.msg}"
