@@ -6,6 +6,7 @@
     <title>Admin - Portal El'Luminar</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/portal.css">
+<script src="js/env-config.js"></script>
     <style>
         .admin-container { max-width: 900px; margin: 0 auto; padding: 100px 20px; }
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
@@ -13,25 +14,18 @@
         .admin-card { background: rgba(5,5,16,0.95); border: 1px solid rgba(212,175,55,0.3); border-radius: 15px; padding: 30px; margin-bottom: 25px; }
         .admin-card h2 { font-family: 'Cinzel'; color: var(--dourado-antigo); font-size: 1.2rem; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid rgba(212,175,55,0.2); }
         .admin-card label { display: block; color: #aaa; font-size: 0.85rem; margin-bottom: 5px; margin-top: 15px; }
-        .admin-card label:first-child { margin-top: 0; }
-        .admin-card select, .admin-card input, .admin-card textarea {
-            width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3);
-            border-radius: 8px; color: #fff; font-size: 0.95rem; font-family: 'Lato', sans-serif; outline: none;
-            transition: border-color .3s;
-        }
+        .admin-card select, .admin-card input, .admin-card textarea { width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; color: #fff; font-size: 0.95rem; outline: none; }
         .admin-card select:focus, .admin-card input:focus, .admin-card textarea:focus { border-color: var(--ouro-solar); }
-        .admin-card select option { background: #111; color: #fff; }
         .admin-card textarea { min-height: 80px; resize: vertical; }
-        .btn-admin-save { background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar)); border: none; padding: 12px 30px; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; font-family: 'Cinzel'; margin-top: 15px; transition: transform .2s; }
+        .btn-admin-save { background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar)); border: none; padding: 12px 30px; border-radius: 8px; color: #000; font-weight: bold; cursor: pointer; font-family: 'Cinzel'; margin-top: 15px; }
         .btn-admin-save:hover { transform: scale(1.02); }
-        .btn-admin-save:disabled { opacity: .5; cursor: not-allowed; }
         .admin-status { padding: 10px 15px; border-radius: 8px; margin-top: 10px; font-size: 0.85rem; display: none; }
         .admin-status.success { display: block; background: rgba(76,175,80,0.15); border: 1px solid rgba(76,175,80,0.3); color: #4caf50; }
         .admin-status.error { display: block; background: rgba(255,100,100,0.15); border: 1px solid rgba(255,100,100,0.3); color: #ff6b6b; }
         .admin-loading { text-align: center; padding: 60px; color: #888; }
         .admin-loading .spin { display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.2); border-top: 3px solid var(--ouro-solar); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .admin-modelo-item { display: flex; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; transition: all .3s; }
+        .admin-modelo-item { display: flex; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; }
         .admin-modelo-item:hover { border-color: rgba(212,175,55,0.3); }
         .admin-modelo-item.selecionado { border-color: var(--ouro-solar); background: rgba(255,170,0,0.05); }
         .admin-modelo-item input { width: auto; margin-right: 10px; }
@@ -42,177 +36,199 @@
         .custo-medio { background: rgba(255,193,7,0.2); color: #ffc107; }
         .sql-box { background: #0a0a0a; border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 0.75rem; color: #0f0; white-space: pre-wrap; max-height: 300px; overflow-y: auto; margin-top: 10px; }
         .sql-copy { background: rgba(255,255,255,0.1); border: 1px solid #555; color: #fff; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; margin-top: 5px; }
+        .admin-log { background: #111; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 20px; font-family: monospace; font-size: 0.75rem; color: #0f0; max-height: 200px; overflow-y: auto; white-space: pre-wrap; display: none; }
     </style>
-    <script src="js/env-config.js"></script>
 </head>
 <body>
-    <a href="index.html" class="link-voltar-home">← Voltar ao Portal</a>
+    <a href="index.html" class="link-voltar-home">&larr; Voltar ao Portal</a>
     <div class="admin-container" id="admin-content">
         <div class="admin-loading">
             <div class="spin"></div>
-            <p>Verificando permissões estelares...</p>
+            <p>Verificando permissoes estelares...</p>
         </div>
     </div>
-
+    <div class="admin-container" style="padding-top:0;">
+        <div id="admin-log" class="admin-log"></div>
+    </div>
     <script type="module">
         import { initSupabase, getSupabase } from './js/supabase-config.js?v=2.0.0';
-        import { isAdmin, tornarAdmin, carregarConfig, salvarConfig, getSqlSetup } from './js/admin-config.js?v=1.0.0';
+        import { isAdmin, carregarConfig, salvarConfig, getSqlSetup } from './js/admin-config.js?v=1.0.0';
         import { MODELOS_DISPONIVEIS } from './js/modelos.js?v=1.0.0';
 
-        await initSupabase();
+const container = document.getElementById('admin-content');
+        const log = document.getElementById('admin-log');
+        function addLog(msg) { if (log) { log.style.display = 'block'; log.innerHTML += '> ' + msg + '\n'; } console.log('[Admin]', msg); }
 
-        const supabase = await getSupabase();
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        const userEmail = session?.user?.email;
-        const adminStatus = await isAdmin(userId);
+        // Captura erro global
+        window.onerror = function(msg, src, line) {
+            addLog('ERRO GLOBAL: ' + msg + ' (' + src + ':' + line + ')');
+            if (container) container.innerHTML = '<div class="admin-card" style="text-align:center;padding:60px;"><h2>⚠ Erro no Portal</h2><p style="color:#ff6b6b;margin:20px 0;font-size:0.85rem;font-family:monospace;">' + msg + '<br><em>' + src + ':' + line + '</em></p><a href="index.html" class="btn-admin-save" style="text-decoration:none;">Voltar</a></div>';
+        };
 
-        const container = document.getElementById('admin-content');
+        // Tudo protegido
+        (async function main() {
+            try {
+                addLog('Iniciando...');
 
-        function render() {
-            if (!session) {
-                container.innerHTML = '<div class="admin-card" style="text-align:center;padding:60px;"><h2>🔮 Acesso Restrito</h2><p style="color:#aaa;margin:20px 0;">Você precisa estar logado como administrador para acessar este painel.</p><a href="login.html" class="btn-admin-save" style="text-decoration:none;">Fazer Login</a></div>';
-                return;
+                await initSupabase();
+                addLog('Supabase inicializado');
+
+                const supabase = await getSupabase();
+                if (!supabase) {
+                    addLog('ERRO: Supabase indisponivel');
+                    container.innerHTML = '<div class="admin-card" style="text-align:center;padding:60px;"><h2>🔮 Conexao Indisponivel</h2><p style="color:#aaa;margin:20px 0;">Supabase nao respondeu. Verifique as credenciais em <code>js/env-config.js</code>.</p><p style="color:#888;font-size:0.8rem;margin-bottom:15px;">window.__SUPABASE_URL__ = ' + (window.__SUPABASE_URL__ ? 'definido' : 'VAZIO') + '</p><a href="index.html" class="btn-admin-save" style="text-decoration:none;">Voltar</a></div>';
+                    return;
+                }
+
+                addLog('Buscando sessao...');
+                const sesh = await supabase.auth.getSession();
+                const session = sesh.data.session;
+                const userId = session?.user?.id;
+                const userEmail = session?.user?.email;
+                addLog('Session: ' + (session ? 'OK (' + userEmail + ')' : 'NENHUMA'));
+                addLog('UserId: ' + (userId || 'NENHUM'));
+
+                if (!session) {
+                    container.innerHTML = '<div class="admin-card" style="text-align:center;padding:60px;"><h2>🔮 Acesso Restrito</h2><p style="color:#aaa;margin:20px 0;">Voce precisa estar logado como administrador.</p><a href="login.html" class="btn-admin-save" style="text-decoration:none;">Fazer Login</a></div>';
+                    return;
+                }
+
+                addLog('Verificando permissoes...');
+                const adminStatus = userId ? await isAdmin(userId) : false;
+                addLog('isAdmin: ' + adminStatus);
+
+                if (!adminStatus) {
+                    container.innerHTML = '<div class="admin-card" style="text-align:center;padding:60px;"><h2>🙏 Acesso Negado</h2><p style="color:#aaa;margin:20px 0;">Ola, <strong>' + userEmail + '</strong>. Voce nao tem permissao de administrador.</p><p style="color:#888;font-size:0.85rem;">Para se tornar admin, execute no SQL Editor do Supabase:</p><code style="background:#222;padding:10px;display:block;border-radius:5px;color:#0f0;font-size:0.75rem;word-break:break-all;">INSERT INTO user_roles (user_id, role)<br>SELECT id, \'admin\' FROM auth.users WHERE email = \'' + userEmail + '\'<br>ON CONFLICT (user_id) DO UPDATE SET role = \'admin\';</code><br><a href="index.html" class="btn-admin-save" style="text-decoration:none;">Voltar ao Portal</a></div>';
+                    return;
+                }
+
+                window._adminUserId = userId;
+                await renderPainel();
+            } catch (err) {
+                addLog('ERRO FATAL: ' + err.message);
+                addLog('Stack: ' + (err.stack || 'sem stack'));
+                console.error('[Admin] Fatal:', err);
+                if (container) {
+                    container.innerHTML = '<div class="admin-card" style="text-align:center;padding:60px;"><h2>⚠ Erro Inesperado</h2><p style="color:#ff6b6b;margin:20px 0;font-size:0.85rem;">' + err.message + '</p><p style="color:#888;font-size:0.8rem;font-family:monospace;word-break:break-all;">Stack: ' + (err.stack || '') + '</p><a href="admin.html" class="btn-admin-save" style="text-decoration:none;">🔄 Tentar Novamente</a></div>';
+                }
             }
-
-            if (!adminStatus) {
-                container.innerHTML = <div class="admin-card" style="text-align:center;padding:60px;"><h2>🙏 Acesso Negado</h2><p style="color:#aaa;margin:20px 0;">Olá, <strong></strong>. Você não tem permissão de administrador.</p><p style="color:#888;font-size:0.85rem;">Solicite ao mestre do portal que te conceda acesso.</p><a href="index.html" class="btn-admin-save" style="text-decoration:none;">Voltar ao Portal</a></div>;
-                return;
-            }
-
-            // Admin logado - renderizar painel
-            renderPainel();
-        }
+        })();
 
         async function renderPainel() {
-            const config = await carregarConfig();
-            const modeloAtivoId = config.modelo_ia?.id || window.__OPENROUTER_MODEL__ || '';
-
-            let modelosHtml = '';
+            addLog("Renderizando painel admin...");
+            const config = await carregarConfig() || {};
+            addLog("Config carregada");
+            const modeloAtivoId = config.modelo_ia?.id || window.__OPENROUTER_MODEL__ || "";
+            let modelosHtml = "";
             const grupos = {};
-            MODELOS_DISPONIVEIS.forEach(m => {
+            MODELOS_DISPONIVEIS.forEach(function(m) {
                 if (!grupos[m.provedor]) grupos[m.provedor] = [];
                 grupos[m.provedor].push(m);
             });
-            for (const [prov, lista] of Object.entries(grupos)) {
-                modelosHtml += <h4 style="color:var(--dourado-antigo);font-size:0.9rem;margin:15px 0 8px;"></h4>;
-                lista.forEach(m => {
-                    const sel = m.id === modeloAtivoId ? 'selecionado' : '';
-                    const badgeCusto = m.custo === 'baixo' ? 'custo-baixo' : 'custo-medio';
-                    modelosHtml += <label class="admin-modelo-item " data-modelo="">
-                        <input type="radio" name="modelo-ia" value="" >
-                        <span class="nome"></span>
-                        <span class="desc"> — ctx: </span>
-                        <span class="custo "></span>
-                        
-                    </label>;
+            var provedores = Object.keys(grupos);
+            for (var p = 0; p < provedores.length; p++) {
+                var prov = provedores[p];
+                var lista = grupos[prov];
+                modelosHtml += "<h4 style=\"color:var(--dourado-antigo);font-size:0.9rem;margin:15px 0 8px;\">" + prov + "</h4>";
+                for (var i = 0; i < lista.length; i++) {
+                    var m = lista[i];
+                    var sel = m.id === modeloAtivoId ? "selecionado" : "";
+                    var badgeCusto = m.custo === "baixo" ? "custo-baixo" : "custo-medio";
+                    var checked = m.id === modeloAtivoId ? "checked" : "";
+                    var rec = m.recomendado ? "<span style=\"background:var(--ouro-solar);color:#000;font-size:0.65rem;padding:2px 8px;border-radius:8px;margin-left:6px;\">&#9733;</span>" : "";
+                    modelosHtml += "<label class=\"admin-modelo-item " + sel + "\">";
+                    modelosHtml += "<input type=\"radio\" name=\"modelo-ia\" value=\"" + m.id + "\"" + checked + ">";
+                    modelosHtml += "<span class=\"nome\">" + m.nome + "</span>";
+                    modelosHtml += "<span class=\"desc\">" + m.descricao + " &mdash; ctx: " + m.contexto + "</span>";
+                    modelosHtml += "<span class=\"custo " + badgeCusto + "\">" + m.custo + "</span>";
+                    modelosHtml += rec + "</label>";
+                }
+            }
+            container.innerHTML = "";
+            container.innerHTML += "<div class=\"admin-header\"><h1>&#9881; Portal da Administracao</h1>";
+            container.innerHTML += "<span style=\"color:#888;font-size:0.85rem;\">&#128100; " + userEmail + "</span></div>";
+            container.innerHTML += "<div class=\"admin-card\"><h2>&#128302; Oraculo &mdash; Modelo de IA</h2>";
+            container.innerHTML += "<p style=\"color:#888;font-size:0.85rem;margin-bottom:15px;\">Escolha o modelo do Oraculo Siriano.</p>";
+            container.innerHTML += "<div id=\"modelos-lista\">" + modelosHtml + "</div>";
+            container.innerHTML += "<div id=\"status-modelo\" class=\"admin-status\"></div>";
+            container.innerHTML += "<button class=\"btn-admin-save\" id=\"btn-salvar-modelo\" disabled>&#128188; Salvar Modelo</button></div>";
+            container.innerHTML += "<div class=\"admin-card\"><h2>&#10024; Frase do Rodape</h2>";
+            container.innerHTML += "<label>Frase de Afirmacao</label>";
+            container.innerHTML += "<textarea id=\"input-afirmacao\">" + (config.afirmacao_footer || "") + "</textarea>";
+            container.innerHTML += "<div id=\"status-afirmacao\" class=\"admin-status\"></div>";
+            container.innerHTML += "<button class=\"btn-admin-save\" id=\"btn-salvar-afirmacao\">&#128188; Salvar Frase</button></div>";
+            container.innerHTML += "<div class=\"admin-card\"><h2>&#127912; Cores do Portal</h2>";
+            container.innerHTML += "<div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;\">";
+            container.innerHTML += "<div><label>Ouro Solar</label><input type=\"color\" id=\"cor-ouro\" value=\"" + (config.cores?.ouro_solar || "#ffaa00") + "\" style=\"height:50px;padding:5px;\"></div>";
+            container.innerHTML += "<div><label>Dourado Antigo</label><input type=\"color\" id=\"cor-dourado\" value=\"" + (config.cores?.dourado_antigo || "#d4af37") + "\" style=\"height:50px;padding:5px;\"></div>";
+            container.innerHTML += "<div><label>Azul Profundo</label><input type=\"color\" id=\"cor-azul\" value=\"" + (config.cores?.azul_profundo || "#050510") + "\" style=\"height:50px;padding:5px;\"></div>";
+            container.innerHTML += "</div><div id=\"status-cores\" class=\"admin-status\"></div>";
+            container.innerHTML += "<button class=\"btn-admin-save\" id=\"btn-salvar-cores\">&#128188; Salvar Cores</button></div>";
+            container.innerHTML += "<div class=\"admin-card\"><h2>&#128203; Setup do Banco</h2>";
+            container.innerHTML += "<p style=\"color:#888;font-size:0.85rem;margin-bottom:10px;\">SQL para criar tabelas:</p>";
+            container.innerHTML += "<div class=\"sql-box\" id=\"sql-setup\"></div>";
+            container.innerHTML += "<button class=\"sql-copy\" onclick=\"navigator.clipboard.writeText(document.getElementById('sql-setup').innerText)\">&#128203; Copiar SQL</button></div>";
+            document.getElementById("sql-setup").innerText = getSqlSetup();
+            addLog("Painel renderizado");
+            var radios = document.querySelectorAll('input[name="modelo-ia"]');
+            for (var j = 0; j < radios.length; j++) {
+                radios[j].addEventListener("change", function() {
+                    document.getElementById("btn-salvar-modelo").disabled = false;
                 });
             }
-
-            container.innerHTML = 
-                <div class="admin-header">
-                    <h1>⚙️ Portal da Administração</h1>
-                    <span style="color:#888;font-size:0.85rem;">👤 </span>
-                </div>
-
-                <div class="admin-card">
-                    <h2>🔮 Oráculo — Modelo de IA</h2>
-                    <p style="color:#888;font-size:0.85rem;margin-bottom:15px;">Escolha qual modelo alimenta o Oráculo Siriano. A alteração é imediata.</p>
-                    <div id="modelos-lista"></div>
-                    <div id="status-modelo" class="admin-status"></div>
-                    <button class="btn-admin-save" id="btn-salvar-modelo" disabled>💾 Salvar Modelo</button>
-                </div>
-
-                <div class="admin-card">
-                    <h2>✨ Frase do Rodapé</h2>
-                    <label>Frase de Afirmação</label>
-                    <textarea id="input-afirmacao"></textarea>
-                    <div id="status-afirmacao" class="admin-status"></div>
-                    <button class="btn-admin-save" id="btn-salvar-afirmacao">💾 Salvar Frase</button>
-                </div>
-
-                <div class="admin-card">
-                    <h2>🎨 Cores do Portal</h2>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;">
-                        <div><label>Ouro Solar</label><input type="color" id="cor-ouro" value="" style="height:50px;padding:5px;cursor:pointer;"></div>
-                        <div><label>Dourado Antigo</label><input type="color" id="cor-dourado" value="" style="height:50px;padding:5px;cursor:pointer;"></div>
-                        <div><label>Azul Profundo</label><input type="color" id="cor-azul" value="" style="height:50px;padding:5px;cursor:pointer;"></div>
-                    </div>
-                    <div id="status-cores" class="admin-status"></div>
-                    <button class="btn-admin-save" id="btn-salvar-cores">💾 Salvar Cores</button>
-                </div>
-
-                <div class="admin-card">
-                    <h2>📋 Setup do Banco</h2>
-                    <p style="color:#888;font-size:0.85rem;margin-bottom:10px;">Execute este SQL no SQL Editor do Supabase para criar as tabelas de configuração:</p>
-                    <div class="sql-box" id="sql-setup"></div>
-                    <button class="sql-copy" onclick="navigator.clipboard.writeText(document.getElementById('sql-setup').innerText).then(()=>this.innerText='✔ Copiado!').catch(()=>{})">📋 Copiar SQL</button>
-                </div>
-            ;
-
-            // Preenche SQL
-            document.getElementById('sql-setup').innerText = getSqlSetup();
-
-            // Eventos
-            document.querySelectorAll('input[name="modelo-ia"]').forEach(el => {
-                el.addEventListener('change', () => {
-                    document.getElementById('btn-salvar-modelo').disabled = false;
-                });
-            });
-
-            document.getElementById('btn-salvar-modelo').addEventListener('click', async () => {
-                const selected = document.querySelector('input[name="modelo-ia"]:checked');
+            document.getElementById("btn-salvar-modelo").addEventListener("click", async function() {
+                var selected = document.querySelector('input[name="modelo-ia"]:checked');
                 if (!selected) return;
-                const modelo = MODELOS_DISPONIVEIS.find(m => m.id === selected.value);
-                const btn = document.getElementById('btn-salvar-modelo');
-                btn.disabled = true; btn.innerText = '💾 Salvando...';
-                const result = await salvarConfig('modelo_ia', { id: modelo.id, nome: modelo.nome }, userId);
-                if (result.success) {
-                    document.getElementById('status-modelo').className = 'admin-status success';
-                    document.getElementById('status-modelo').innerText = '✅ Modelo atualizado com sucesso!';
+                var modelo = MODELOS_DISPONIVEIS.find(function(m) { return m.id === selected.value; });
+                var btn = document.getElementById("btn-salvar-modelo");
+                btn.disabled = true; btn.innerText = "Salvando...";
+                var result = await salvarConfig("modelo_ia", { id: modelo.id, nome: modelo.nome }, window._adminUserId);
+                var st = document.getElementById("status-modelo");
+                if (result.success || result.local) {
+                    st.className = "admin-status success";
+                    st.innerText = "\u2705 Modelo atualizado!";
                     window.__OPENROUTER_MODEL__ = modelo.id;
                 } else {
-                    document.getElementById('status-modelo').className = 'admin-status error';
-                    document.getElementById('status-modelo').innerText = '❌ Erro ao salvar.';
+                    st.className = "admin-status error";
+                    st.innerText = "\u274c Erro: " + JSON.stringify(result.error);
                 }
-                btn.innerText = '💾 Salvar Modelo';
+                btn.innerText = "&#128188; Salvar Modelo";
             });
-
-            document.getElementById('btn-salvar-afirmacao').addEventListener('click', async () => {
-                const val = document.getElementById('input-afirmacao').value;
-                const btn = document.getElementById('btn-salvar-afirmacao');
-                btn.disabled = true; btn.innerText = '💾 Salvando...';
-                const result = await salvarConfig('afirmacao_footer', val, userId);
-                if (result.success) {
-                    document.getElementById('status-afirmacao').className = 'admin-status success';
-                    document.getElementById('status-afirmacao').innerText = '✅ Frase salva!';
+            document.getElementById("btn-salvar-afirmacao").addEventListener("click", async function() {
+                var val = document.getElementById("input-afirmacao").value;
+                var btn = document.getElementById("btn-salvar-afirmacao");
+                btn.disabled = true; btn.innerText = "Salvando...";
+                var result = await salvarConfig("afirmacao_footer", val, window._adminUserId);
+                var st = document.getElementById("status-afirmacao");
+                if (result.success || result.local) {
+                    st.className = "admin-status success";
+                    st.innerText = "\u2705 Frase salva!";
                 } else {
-                    document.getElementById('status-afirmacao').className = 'admin-status error';
-                    document.getElementById('status-afirmacao').innerText = '❌ Erro ao salvar.';
+                    st.className = "admin-status error";
+                    st.innerText = "\u274c Erro: " + JSON.stringify(result.error);
                 }
-                btn.disabled = false; btn.innerText = '💾 Salvar Frase';
+                btn.disabled = false; btn.innerText = "&#128188; Salvar Frase";
             });
-
-            document.getElementById('btn-salvar-cores').addEventListener('click', async () => {
-                const cores = {
-                    ouro_solar: document.getElementById('cor-ouro').value,
-                    dourado_antigo: document.getElementById('cor-dourado').value,
-                    azul_profundo: document.getElementById('cor-azul').value
+            document.getElementById("btn-salvar-cores").addEventListener("click", async function() {
+                var cores = {
+                    ouro_solar: document.getElementById("cor-ouro").value,
+                    dourado_antigo: document.getElementById("cor-dourado").value,
+                    azul_profundo: document.getElementById("cor-azul").value
                 };
-                const btn = document.getElementById('btn-salvar-cores');
-                btn.disabled = true; btn.innerText = '💾 Salvando...';
-                const result = await salvarConfig('cores', cores, userId);
-                if (result.success) {
-                    document.getElementById('status-cores').className = 'admin-status success';
-                    document.getElementById('status-cores').innerText = '✅ Cores salvas! Recarregue a página para ver.';
+                var btn = document.getElementById("btn-salvar-cores");
+                btn.disabled = true; btn.innerText = "Salvando...";
+                var result = await salvarConfig("cores", cores, window._adminUserId);
+                var st = document.getElementById("status-cores");
+                if (result.success || result.local) {
+                    st.className = "admin-status success";
+                    st.innerText = "\u2705 Cores salvas! Recarregue.";
                 } else {
-                    document.getElementById('status-cores').className = 'admin-status error';
-                    document.getElementById('status-cores').innerText = '❌ Erro ao salvar.';
+                    st.className = "admin-status error";
+                    st.innerText = "\u274c Erro: " + JSON.stringify(result.error);
                 }
-                btn.disabled = false; btn.innerText = '💾 Salvar Cores';
+                btn.disabled = false; btn.innerText = "&#128188; Salvar Cores";
             });
         }
-
         render();
     </script>
 </body>
