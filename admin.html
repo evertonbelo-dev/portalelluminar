@@ -113,7 +113,7 @@ const container = document.getElementById('admin-content');
                     return;
                 }
 
-                window._adminUserId = userId;
+                window._adminUserId = userId; window._adminUserEmail = userEmail;
                 await renderPainel();
             } catch (err) {
                 addLog('ERRO FATAL: ' + err.message);
