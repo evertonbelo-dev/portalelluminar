@@ -1,3 +1,4 @@
+(function() {
 ﻿// js/app.js - Versão Restaurada, Completa e Sintonizada com o Servidor
 
 // 1. DADOS E NAVEGAÇÃO
@@ -295,3 +296,22 @@ function gerarPDFReal() {
     setTimeout(() => { window.print(); }, 500);
 
 }
+// Exporta funcoes para uso no HTML (onclick)
+window.mostrarTela = mostrarTela;
+window.iniciarJornada = iniciarJornada;
+window.irParaMesa = irParaMesa;
+window.prepararTiragem = prepararTiragem;
+window.realizarLeitura = realizarLeitura;
+window.novaPergunta = novaPergunta;
+window.finalizarComEssencia = finalizarComEssencia;
+window.chamarOraculoSiriano = chamarOraculoSiriano;
+window.gerarPDFReal = gerarPDFReal;
+window.gerarInterpretacaoLocal = gerarInterpretacaoLocal;
+
+// Variaveis de estado acessiveis externamente (read-only)
+window.__consulente = consulente;
+window.__tiragemAtual = tiragemAtual;
+window.__essenciaAtual = essenciaAtual;
+window.__tipoTiragem = tipoTiragem;
+
+})();
