@@ -157,7 +157,7 @@ const container = document.getElementById('admin-content');
             }
             container.innerHTML = "";
             container.innerHTML += "<div class=\"admin-header\"><h1>&#9881; Portal da Administracao</h1>";
-            container.innerHTML += "<span style=\"color:#888;font-size:0.85rem;\">&#128100; " + userEmail + "</span></div>";
+            container.innerHTML += "<span style=\"color:#888;font-size:0.85rem;\">&#128100; " + window._adminUserEmail + "</span></div>";
             container.innerHTML += "<div class=\"admin-card\"><h2>&#128302; Oraculo &mdash; Modelo de IA</h2>";
             container.innerHTML += "<p style=\"color:#888;font-size:0.85rem;margin-bottom:15px;\">Escolha o modelo do Oraculo Siriano.</p>";
             container.innerHTML += "<div id=\"modelos-lista\">" + modelosHtml + "</div>";
