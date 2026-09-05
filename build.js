@@ -9,6 +9,7 @@ const SRC_DIR = '.';
 // Pastas/padrões para copiar
 const ITEMS_TO_COPY = [
     'index.html',
+    'admin.html',
     'taro2.html',
     'login.html',
     'dashboard.html',
@@ -75,7 +76,7 @@ console.log('✅ Gerado: js/env-config.js com variáveis de ambiente');
 
 // Atualiza os HTMLs para incluir o env-config.js
 const htmlFiles = [
-    'index.html', 'taro2.html', 'login.html', 'dashboard.html',
+    'index.html', 'admin.html', 'taro2.html', 'login.html', 'dashboard.html',
     'dna.html', 'numerologia.html', 'hawkins.html', 'bovis.html',
     'cursos.html', 'curso-player.html', 'mestres.html'
 ];
