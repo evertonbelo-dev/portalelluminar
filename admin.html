@@ -94,7 +94,18 @@ const container = document.getElementById('admin-content');
                 }
 
                 addLog('Verificando permissoes...');
-                const adminStatus = userId ? await isAdmin(userId) : false;
+                let adminStatus = false;
+                if (userId) {
+                    try { adminStatus = await isAdmin(userId); } catch(e) { addLog('isAdmin() erro: ' + e.message); }
+                    if (!adminStatus && supabase) {
+                        try {
+                            const { data: rd, error: re } = await supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+                            if (!re && rd) { adminStatus = rd.role === 'admin' || rd.role === 'master'; addLog('Fallback role: ' + rd.role); }
+                            else if (re) addLog('Fallback erro: ' + re.message);
+                            else addLog('Fallback: sem registro');
+                        } catch(e2) { addLog('Fallback exc: ' + e2.message); }
+                    }
+                }
                 addLog('isAdmin: ' + adminStatus);
 
                 if (!adminStatus) {
