@@ -25,6 +25,22 @@
         .admin-loading { text-align: center; padding: 60px; color: #888; }
         .admin-loading .spin { display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.2); border-top: 3px solid var(--ouro-solar); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+.admin-tabs { display: flex; gap: 0; margin-bottom: 30px; border-bottom: 2px solid rgba(212,175,55,0.2); overflow-x: auto; flex-wrap: nowrap; }
+        .admin-tab { padding: 12px 22px; cursor: pointer; font-family: 'Cinzel'; font-size: 0.85rem; color: #888; border: 1px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; transition: all 0.3s; white-space: nowrap; background: transparent; }
+        .admin-tab:hover { color: var(--dourado-antigo); background: rgba(212,175,55,0.05); }
+        .admin-tab.ativa { color: var(--ouro-solar); border-color: rgba(212,175,55,0.3); border-bottom-color: rgba(5,5,16,1); background: rgba(212,175,55,0.08); }
+        .admin-tabela { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .admin-tabela th { color: var(--dourado-antigo); font-family: 'Cinzel'; font-size: 0.8rem; padding: 10px 12px; border-bottom: 1px solid rgba(212,175,55,0.3); text-align: left; }
+        .admin-tabela td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ccc; font-size: 0.85rem; }
+        .admin-tabela tr:hover td { background: rgba(212,175,55,0.03); }
+        .badge-admin { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.7rem; background: rgba(212,175,55,0.2); color: var(--ouro-solar); }
+        .badge-user { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.7rem; background: rgba(255,255,255,0.05); color: #888; }
+        .acoes-usuario button { background: none; border: 1px solid rgba(212,175,55,0.3); color: var(--dourado-antigo); padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: 0.75rem; margin: 0 3px; }
+        .acoes-usuario button:hover { background: rgba(212,175,55,0.1); }
+        .acoes-usuario .btn-excluir { border-color: rgba(255,80,80,0.3); color: #ff6b6b; }
+        .acoes-usuario .btn-excluir:hover { background: rgba(255,80,80,0.1); }
+        .btn-admin-danger { background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.3); color: #ff6b6b; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+        .btn-admin-danger:hover { background: rgba(255,80,80,0.25); }
         .admin-modelo-item { display: flex; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid transparent; }
         .admin-modelo-item:hover { border-color: rgba(212,175,55,0.3); }
         .admin-modelo-item.selecionado { border-color: var(--ouro-solar); background: rgba(255,170,0,0.05); }
@@ -45,10 +61,16 @@
             <div class="spin"></div>
             <p>Verificando permissoes estelares...</p>
         </div>
-    </div><script type="module">
+    </div><div class="admin-tabs" id="admin-tabs-bar">
+        <div class="admin-tab ativa" data-tab="geral">🔮 Geral</div>
+        <div class="admin-tab" data-tab="visual">🎨 Visual</div>
+        <div class="admin-tab" data-tab="usuarios">👥 Usuarios</div>
+        <div class="admin-tab" data-tab="banco">📋 Banco</div>
+    </div>
+    <script type="module">
         import { initSupabase, getSupabase } from './js/supabase-config.js?v=2.0.0';
-        import { isAdmin, carregarConfig, salvarConfig, getSqlSetup } from './js/admin-config.js?v=1.0.0';
-        import { MODELOS_DISPONIVEIS } from './js/modelos.js?v=1.0.0';
+        import { getSqlSetup } from './js/admin-config.js?v=1.0.0';
+        import { isAdmin } from './js/admin-config.js';
 
 const container = document.getElementById('admin-content');
         function addLog(msg) { console.log('[Admin]', msg); }
@@ -108,7 +130,7 @@ const container = document.getElementById('admin-content');
                 }
 
                 window._adminUserId = userId; window._adminUserEmail = userEmail;
-                await renderPainel();
+                await initTabs();
             } catch (err) {
                 addLog('ERRO FATAL: ' + err.message);
                 addLog('Stack: ' + (err.stack || 'sem stack'));
@@ -119,121 +141,15 @@ const container = document.getElementById('admin-content');
             }
         })();
 
-        async function renderPainel() {
-            addLog("Renderizando painel admin...");
-            const config = await carregarConfig() || {};
-            addLog("Config carregada");
-            const modeloAtivoId = config.modelo_ia?.id || window.__OPENROUTER_MODEL__ || "";
-            let modelosHtml = "";
-            const grupos = {};
-            MODELOS_DISPONIVEIS.forEach(function(m) {
-                if (!grupos[m.provedor]) grupos[m.provedor] = [];
-                grupos[m.provedor].push(m);
-            });
-            var provedores = Object.keys(grupos);
-            for (var p = 0; p < provedores.length; p++) {
-                var prov = provedores[p];
-                var lista = grupos[prov];
-                modelosHtml += "<h4 style=\"color:var(--dourado-antigo);font-size:0.9rem;margin:15px 0 8px;\">" + prov + "</h4>";
-                for (var i = 0; i < lista.length; i++) {
-                    var m = lista[i];
-                    var sel = m.id === modeloAtivoId ? "selecionado" : "";
-                    var badgeCusto = m.custo === "baixo" ? "custo-baixo" : "custo-medio";
-                    var checked = m.id === modeloAtivoId ? "checked" : "";
-                    var rec = m.recomendado ? "<span style=\"background:var(--ouro-solar);color:#000;font-size:0.65rem;padding:2px 8px;border-radius:8px;margin-left:6px;\">&#9733;</span>" : "";
-                    modelosHtml += "<label class=\"admin-modelo-item " + sel + "\">";
-                    modelosHtml += "<input type=\"radio\" name=\"modelo-ia\" value=\"" + m.id + "\"" + checked + ">";
-                    modelosHtml += "<span class=\"nome\">" + m.nome + "</span>";
-                    modelosHtml += "<span class=\"desc\">" + m.descricao + " &mdash; ctx: " + m.contexto + "</span>";
-                    modelosHtml += "<span class=\"custo " + badgeCusto + "\">" + m.custo + "</span>";
-                    modelosHtml += rec + "</label>";
-                }
+        async function initTabs() {
+            addLog("Carregando modulo de abas...");
+            try {
+                const mod = await import("./js/admin-tabs.js?v=2.0.0");
+                await mod.initTabs(container, window._adminUserEmail);
+            } catch(e) {
+                addLog("Erro: " + e.message);
+                container.innerHTML = '<div class="admin-card" style="text-align:center;padding:60px;"><h2>Erro ao carregar painel</h2><p style="color:#ff6b6b;margin-top:15px;">' + e.message + '</p></div>';
             }
-            container.innerHTML = "";
-            container.innerHTML += "<div class=\"admin-header\"><h1>&#9881; Portal da Administracao</h1>";
-            container.innerHTML += "<span style=\"color:#888;font-size:0.85rem;\">&#128100; " + window._adminUserEmail + "</span></div>";
-            container.innerHTML += "<div class=\"admin-card\"><h2>&#128302; Oraculo &mdash; Modelo de IA</h2>";
-            container.innerHTML += "<p style=\"color:#888;font-size:0.85rem;margin-bottom:15px;\">Escolha o modelo do Oraculo Siriano.</p>";
-            container.innerHTML += "<div id=\"modelos-lista\">" + modelosHtml + "</div>";
-            container.innerHTML += "<div id=\"status-modelo\" class=\"admin-status\"></div>";
-            container.innerHTML += "<button class=\"btn-admin-save\" id=\"btn-salvar-modelo\" disabled>&#128188; Salvar Modelo</button></div>";
-            container.innerHTML += "<div class=\"admin-card\"><h2>&#10024; Frase do Rodape</h2>";
-            container.innerHTML += "<label>Frase de Afirmacao</label>";
-            container.innerHTML += "<textarea id=\"input-afirmacao\" style=\"min-height:120px;width:100%;padding:12px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#fff;font-size:0.95rem;outline:none;resize:vertical;\">" + (config.afirmacao_footer || "") + "</textarea>";
-            container.innerHTML += "<div id=\"status-afirmacao\" class=\"admin-status\"></div>";
-            container.innerHTML += "<button class=\"btn-admin-save\" id=\"btn-salvar-afirmacao\">&#128188; Salvar Frase</button></div>";
-            container.innerHTML += "<div class=\"admin-card\" style=\"margin-top:30px;\"><h2>&#127912; Cores do Portal</h2>";
-            container.innerHTML += "<div style=\"display:grid;grid-template-columns:1fr 1fr 1fr;gap:25px;\">";
-            container.innerHTML += "<div style=\"text-align:center;\"><label>Ouro Solar</label><input type=\"color\" id=\"cor-ouro\" value=\"" + (config.cores?.ouro_solar || "#ffaa00") + "\" style=\"height:60px;width:100%;padding:5px;cursor:pointer;border-radius:8px;\"><span style=\"display:block;color:#888;font-size:0.75rem;margin-top:4px;\">" + (config.cores?.ouro_solar || "#ffaa00") + "</span></div>";
-            container.innerHTML += "<div style=\"text-align:center;\"><label>Dourado Antigo</label><input type=\"color\" id=\"cor-dourado\" value=\"" + (config.cores?.dourado_antigo || "#d4af37") + "\" style=\"height:60px;width:100%;padding:5px;cursor:pointer;border-radius:8px;\"><span style=\"display:block;color:#888;font-size:0.75rem;margin-top:4px;\">" + (config.cores?.dourado_antigo || "#d4af37") + "</span></div>";
-            container.innerHTML += "<div style=\"text-align:center;\"><label>Azul Profundo</label><input type=\"color\" id=\"cor-azul\" value=\"" + (config.cores?.azul_profundo || "#050510") + "\" style=\"height:60px;width:100%;padding:5px;cursor:pointer;border-radius:8px;\"><span style=\"display:block;color:#888;font-size:0.75rem;margin-top:4px;\">" + (config.cores?.azul_profundo || "#050510") + "</span></div>";
-            container.innerHTML += "</div><div id=\"status-cores\" class=\"admin-status\"></div>";
-            container.innerHTML += "<button class=\"btn-admin-save\" id=\"btn-salvar-cores\">&#128188; Salvar Cores</button></div>";
-            container.innerHTML += "<div class=\"admin-card\"><h2>&#128203; Setup do Banco</h2>";
-            container.innerHTML += "<p style=\"color:#888;font-size:0.85rem;margin-bottom:10px;\">SQL para criar tabelas:</p>";
-            container.innerHTML += "<div class=\"sql-box\" id=\"sql-setup\"></div>";
-            container.innerHTML += "<button class=\"sql-copy\" onclick=\"navigator.clipboard.writeText(document.getElementById('sql-setup').innerText)\">&#128203; Copiar SQL</button></div>";
-            document.getElementById("sql-setup").innerText = getSqlSetup();
-            addLog("Painel renderizado");
-            var radios = document.querySelectorAll('input[name="modelo-ia"]');
-            for (var j = 0; j < radios.length; j++) {
-                radios[j].addEventListener("change", function() {
-                    document.getElementById("btn-salvar-modelo").disabled = false;
-                });
-            }
-            document.getElementById("btn-salvar-modelo").addEventListener("click", async function() {
-                var selected = document.querySelector('input[name="modelo-ia"]:checked');
-                if (!selected) return;
-                var modelo = MODELOS_DISPONIVEIS.find(function(m) { return m.id === selected.value; });
-                var btn = document.getElementById("btn-salvar-modelo");
-                btn.disabled = true; btn.innerText = "Salvando...";
-                var result = await salvarConfig("modelo_ia", { id: modelo.id, nome: modelo.nome }, window._adminUserId);
-                var st = document.getElementById("status-modelo");
-                if (result.success || result.local) {
-                    st.className = "admin-status success";
-                    st.innerText = "\u2705 Modelo atualizado!";
-                    window.__OPENROUTER_MODEL__ = modelo.id;
-                } else {
-                    st.className = "admin-status error";
-                    st.innerText = "\u274c Erro: " + JSON.stringify(result.error);
-                }
-                btn.innerText = "&#128188; Salvar Modelo";
-            });
-            document.getElementById("btn-salvar-afirmacao").addEventListener("click", async function() {
-                var val = document.getElementById("input-afirmacao").value;
-                var btn = document.getElementById("btn-salvar-afirmacao");
-                btn.disabled = true; btn.innerText = "Salvando...";
-                var result = await salvarConfig("afirmacao_footer", val, window._adminUserId);
-                var st = document.getElementById("status-afirmacao");
-                if (result.success || result.local) {
-                    st.className = "admin-status success";
-                    st.innerText = "\u2705 Frase salva!";
-                } else {
-                    st.className = "admin-status error";
-                    st.innerText = "\u274c Erro: " + JSON.stringify(result.error);
-                }
-                btn.disabled = false; btn.innerText = "&#128188; Salvar Frase";
-            });
-            document.getElementById("btn-salvar-cores").addEventListener("click", async function() {
-                var cores = {
-                    ouro_solar: document.getElementById("cor-ouro").value,
-                    dourado_antigo: document.getElementById("cor-dourado").value,
-                    azul_profundo: document.getElementById("cor-azul").value
-                };
-                var btn = document.getElementById("btn-salvar-cores");
-                btn.disabled = true; btn.innerText = "Salvando...";
-                var result = await salvarConfig("cores", cores, window._adminUserId);
-                var st = document.getElementById("status-cores");
-                if (result.success || result.local) {
-                    st.className = "admin-status success";
-                    st.innerText = "\u2705 Cores salvas! Recarregue.";
-                } else {
-                    st.className = "admin-status error";
-                    st.innerText = "\u274c Erro: " + JSON.stringify(result.error);
-                }
-                btn.disabled = false; btn.innerText = "&#128188; Salvar Cores";
-            });
-        }
-    </script>
+        }</script>
 </body>
 </html>
