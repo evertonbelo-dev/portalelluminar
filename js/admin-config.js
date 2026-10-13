@@ -1,5 +1,5 @@
 ﻿// js/admin-config.js — Configuracoes do Portal (persistidas no Supabase)
-// Versao: 1.0.0
+// Versao: 2.1.0
 
 import { getSupabase } from './supabase-config.js';
 
@@ -9,7 +9,7 @@ const DEFAULTS = {
     modelo_ia: { id: 'deepseek/deepseek-v4-flash-0731', nome: 'DeepSeek V4 Flash' },
     afirmacao_footer: '"Que a Luz de Sirius guie teus passos."',
     cores: { ouro_solar: '#ffaa00', dourado_antigo: '#d4af37', azul_profundo: '#050510' },
-    versao_sistema: '2.0.0',
+    versao_sistema: '2.1.0',
     nome_versao: 'O Voo da Aguia',
     titulo_portal: "Portal El'Luminar"
 };

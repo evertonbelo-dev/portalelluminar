@@ -222,8 +222,10 @@ Mencione as cartas com naturalidade. Encerre com uma afirmação de poder.`;
 
         outputIA.value = textoCanalizado;
 
-        // Salva a leitura no Supabase
-        await salvarLeituraNoBackend(pergunta, textoCanalizado);
+        // Salva a leitura no Supabase (se funcao existir)
+        if (typeof salvarLeituraNoBackend === 'function') {
+            await salvarLeituraNoBackend(pergunta, textoCanalizado);
+        }
     } catch (e) {
         console.error("Erro no Oráculo:", e);
         var detalheErro = e.message || JSON.stringify(e);

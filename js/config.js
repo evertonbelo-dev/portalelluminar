@@ -1,5 +1,5 @@
 ﻿// js/config.js — Configuração do Portal El'Luminar
-// Versão: 2.1.1 (Supabase + OpenRouter API — compatível com Vercel estático)
+// Versão: 2.1.0 (Supabase + OpenRouter API — compatível com Vercel estático)
 
 // As variáveis são injetadas pelo build.js via js/env-config.js
 // Fallback seguro para window.__*__ e valores padrão
