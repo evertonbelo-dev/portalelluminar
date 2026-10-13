@@ -191,29 +191,29 @@ Mensagem: "${c.canalizacao || c.msg}"
 
 `;
     });
- {
-        resumoLeitura += ### Bênção da Essência:
-**{essenciaAtual.nome}**
-"{essenciaAtual.canalizacao || essenciaAtual.msg}"
-;
+    if (essenciaAtual) {
+        resumoLeitura += `### Bênção da Essência:
+**${essenciaAtual.nome}**
+"${essenciaAtual.canalizacao || essenciaAtual.msg}"
+`;
     }
 
-    const promptFinal = Consulente: {consulente.nome}
-Pergunta: "{pergunta}"
+    const promptFinal = `Consulente: ${consulente.nome}
+Pergunta: "${pergunta}"
 
 Cartas do Tarô Divino Siriano:
-{resumoLeitura}
+${resumoLeitura}
 
-Por favor, realize a canalização completa agora.;
+Por favor, realize a canalização completa agora.`;
 
     try {
         let textoCanalizado = "";
 
         // Usa o OpenRouter (principal) com timeout
         if (window.chamarOpenRouter) {
-            const systemMsg = Você é o Oráculo Siriano do Portal El'Luminar. Seu tom é amoroso e direto.
+            const systemMsg = `Você é o Oráculo Siriano do Portal El'Luminar. Seu tom é amoroso e direto.
 Use o termo "Criamor". Responda em português. Seja sintético(a) e profundo(a) — no máximo 4 parágrafos.
-Mencione as cartas com naturalidade. Encerre com uma afirmação de poder.;
+Mencione as cartas com naturalidade. Encerre com uma afirmação de poder.`;
 
             textoCanalizado = await window.chamarOpenRouter(promptFinal, systemMsg);
         } else {
