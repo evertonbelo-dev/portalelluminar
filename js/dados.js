@@ -837,7 +837,7 @@ const CARTAS_REINO = [
     },
     {
         nome: "10 da Água - A Dança do Oceano Uno",
-        imagem: "Elemento Agua/Menores_10_ADancaDoOceanoUno.png",
+        imagem: "Elemento Agua/Menores_10_ADançadoOceanoUno.png",
         palavra: "Renovação",
         titulo: "A Roda das Águas",
         canalizacao: "Tudo o que começa, transforma. Tudo o que transforma, renasce. A Roda das Águas lembra que as emoções se movem em ciclos. Família feliz, legado emocional, paz duradoura.",
