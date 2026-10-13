@@ -162,30 +162,38 @@
 
             // Função que chama o OpenRouter
             async function chamarOpenRouter(prompt, systemPrompt) {
-                const response = await fetch(OPENROUTER_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
-                        'HTTP-Referer': OPENROUTER_SITE_URL,
-                        'X-Title': OPENROUTER_APP_NAME
-                    },
-                    body: JSON.stringify({
-                        model: OPENROUTER_MODEL,
-                        messages: [
-                            { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
-                            { role: 'user', content: prompt }
-                        ]
-                    })
-                });
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+                try {
+                    const response = await fetch(OPENROUTER_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + OPENROUTER_API_KEY,
+                            'HTTP-Referer': OPENROUTER_SITE_URL,
+                            'X-Title': OPENROUTER_APP_NAME
+                        },
+                        body: JSON.stringify({
+                            model: OPENROUTER_MODEL,
+                            messages: [
+                                { role: 'system', content: systemPrompt || SYSTEM_PROMPT },
+                                { role: 'user', content: prompt }
+                            ]
+                        }),
+                        signal: controller.signal
+                    });
 
-                if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.error?.message || 'Erro HTTP ' + response.status);
+                    if (!response.ok) {
+                        var errMsg = '';
+                        try { var errData = await response.json(); errMsg = errData.error?.message || JSON.stringify(errData); } catch(_) { errMsg = response.statusText; }
+                        throw new Error('HTTP ' + response.status + ': ' + errMsg);
+                    }
+
+                    const data = await response.json();
+                    return data.choices?.[0]?.message?.content || "";
+                } finally {
+                    clearTimeout(timeout);
                 }
-
-                const data = await response.json();
-                return data.choices?.[0]?.message?.content || "";
             }
 
             // Expõe globalmente para uso no app.js

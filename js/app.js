@@ -226,10 +226,11 @@ Mencione as cartas com naturalidade. Encerre com uma afirmação de poder.`;
         await salvarLeituraNoBackend(pergunta, textoCanalizado);
     } catch (e) {
         console.error("Erro no Oráculo:", e);
+        var detalheErro = e.message || JSON.stringify(e);
         if (e.name === 'AbortError') {
-            outputIA.value = "⏳ A conexão com os Mestres está demorando. Tente novamente em instantes.";
+            outputIA.value = "⏳ A conexão com os Mestres está demorando. Tente novamente em instantes.\n\n🔍 Detalhe: " + detalheErro;
         } else {
-            outputIA.value = "🔮 Interferência na comunicação estelar. O Criamor aguarda sua nova tentativa.";
+            outputIA.value = "🔮 Interferência na comunicação estelar.\n\n📋 Detalhe do erro:\n" + detalheErro + "\n\nVerifique se a chave OpenRouter está configurada nas env vars da Vercel (VITE_OPENROUTER_API_KEY).";
         }
     }
 }
