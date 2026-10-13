@@ -163,7 +163,7 @@
             // Função que chama o OpenRouter
             async function chamarOpenRouter(prompt, systemPrompt) {
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+                const timeout = setTimeout(() => controller.abort(), 90000); // 90s timeout (OpenRouter pode demorar)
                 try {
                     const response = await fetch(OPENROUTER_API_URL, {
                         method: 'POST',
