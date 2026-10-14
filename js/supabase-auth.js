@@ -44,14 +44,18 @@ export async function signIn(email, password) {
 }
 
 // --- LOGIN COM GOOGLE ---
-export async function signInWithGoogle() {
+export async function signInWithGoogle(options = {}) {
     const supabase = await getSupabase();
     if (!supabase) return { error: { message: "Supabase não conectado." } };
+
+    // Guarda destino pós-login no sessionStorage (usado no dashboard/index)
+    const redirectTo = options.redirectTo || window.location.origin + '/dashboard.html';
+    if (options.redirect) sessionStorage.setItem('auth_redirect', options.redirect);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin + '/dashboard.html'
+            redirectTo
         }
     });
 

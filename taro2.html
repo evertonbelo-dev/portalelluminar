@@ -152,6 +152,33 @@
     </footer>
 
     <script type="module">
+        import { initSupabase } from './js/supabase-config.js?v=2.1.0';
+        import { getSession, getCurrentUser } from './js/supabase-auth.js?v=2.1.0';
+        
+        // Verifica se esta logado — senao redireciona para login
+        await initSupabase();
+        const _session = await getSession();
+        if (!_session) {
+            window.location.href = '/login.html?redirect=/taro2.html';
+            throw new Error("Redirecionando para login");
+        }
+        window._currentUserEmail = _session.user.email;
+        window._currentUserId = _session.user.id;
+        window._currentUserName = _session.user.user_metadata?.name || _session.user.email?.split('@')[0] || 'Consulente';
+        
+        // Pre-preenche o nome do consulente com o usuario logado
+        function preencherNomeConsulente() {
+            var campoNome = document.getElementById('nome-consulente');
+            if (campoNome && !campoNome.value && window._currentUserName) {
+                campoNome.value = window._currentUserName;
+            }
+        }
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', preencherNomeConsulente);
+        } else {
+            preencherNomeConsulente();
+        }
+        
         import { OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_API_URL, OPENROUTER_SITE_URL, OPENROUTER_APP_NAME } from './js/config.js?v=2.1.0';
         import { SYSTEM_PROMPT } from './js/taro-api.js?v=2.1.0';
 
@@ -201,6 +228,29 @@
             window.modeloAtivo = { tipo: 'openrouter', modelo: OPENROUTER_MODEL };
             console.log("🔮 Oráculo Digital sintonizado via OpenRouter (" + OPENROUTER_MODEL + ").");
         } catch (e) { console.error("🔮 Erro na sintonização do Oráculo:", e); }
+
+        // Salva a leitura no Supabase, amarrada ao usuario logado
+        window.salvarLeituraNoBackend = async function(pergunta, textoCanalizado) {
+            try {
+                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const cons = window.__consulente || {};
+                const cartas = (window.__tiragemAtual || []).map(function(c) {
+                    return { nome: c.nome || '', imagem: c.imagem || '' };
+                });
+                const ess = window.__essenciaAtual ? (window.__essenciaAtual.nome || '') : '';
+                return await db.saveReading({
+                    user_id: window._currentUserId,
+                    consulente: cons.nome || window._currentUserName || 'Consulente',
+                    tipo_tiragem: window.__tipoTiragem || '',
+                    cartas: cartas,
+                    pergunta: pergunta || '',
+                    interpretacao: textoCanalizado || '',
+                    essencia: ess
+                });
+            } catch (e) {
+                console.warn('Falha ao salvar leitura:', e);
+            }
+        };
     </script>
 
     <script src="js/dados.js?v=2.1.0"></script>

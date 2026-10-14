@@ -61,6 +61,7 @@ function irParaMesa() {
 
 function prepararTiragem(tipo, elementoClicado) {
     tipoTiragem = tipo;
+    window.__tipoTiragem = tipoTiragem;
     document.querySelectorAll('.card-opcao-visual').forEach(c => c.classList.remove('selecionado'));
     if(elementoClicado) elementoClicado.classList.add('selecionado');
     const areaPergunta = document.getElementById('area-pergunta');
@@ -83,6 +84,8 @@ function realizarLeitura() {
     mesa.innerHTML = ""; 
     tiragemAtual = [];
     essenciaAtual = null; 
+    window.__tiragemAtual = tiragemAtual;
+    window.__essenciaAtual = essenciaAtual;
     mesa.className = `mesa-cartas-grid layout-${tipoTiragem}`;
     
     let deck = [...window.ARCANOS_CELESTES, ...window.CARTAS_REINO];
@@ -147,6 +150,7 @@ async function finalizarComEssencia() {
     if (typeof CARTAS_ESSENCIA !== 'undefined' && CARTAS_ESSENCIA.length > 0) {
         const indice = Math.floor(Math.random() * CARTAS_ESSENCIA.length);
         essenciaAtual = CARTAS_ESSENCIA[indice];
+        window.__essenciaAtual = essenciaAtual;
         const caminhoImagem = `assets/cartas/${essenciaAtual.imagem}`;
         
         document.getElementById('carta-essencia-display').innerHTML = `

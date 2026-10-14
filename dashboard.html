@@ -47,24 +47,50 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.0.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.1.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 <script type="module">
-        import { initSupabase } from './js/supabase-config.js?v=2.0.0';
-        import { getSession, getCurrentUser, signOut, onAuthChange } from './js/supabase-auth.js?v=2.0.0';
-        import { getUserReadings, getCourseProgress, getSessionHistory } from './js/supabase-db.js?v=2.0.0';
+        import { initSupabase } from './js/supabase-config.js?v=2.1.0';
+        import { getSession, getCurrentUser, signOut, onAuthChange } from './js/supabase-auth.js?v=2.1.0';
+        import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile } from './js/supabase-db.js?v=2.1.0';
 
         await initSupabase();
         const session = await getSession();
 
         if (!session) {
-            window.location.href = '/login.html';
+            window.location.href = '/login.html?redirect=/dashboard.html';
             throw new Error("Não autenticado");
         }
 
         const user = session.user;
         const container = document.getElementById('dash-content');
+
+        // --- Perfil + Consentimento de Marketing ---
+        let _userProfile = null;
+        async function sincronizarPerfil() {
+            try {
+                _userProfile = await syncUserProfile(user);
+            } catch (e) {
+                console.warn('Perfil não sincronizado:', e);
+            }
+        }
+
+        function bannerConsentimento() {
+            if (!_userProfile || _userProfile.marketing_consent) return '';
+            return `
+                <div id="banner-consent" style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.35);border-radius:12px;padding:20px;margin-bottom:30px;">
+                    <h3 style="font-family:'Cinzel',serif;color:var(--ouro-solar);margin-bottom:10px;font-size:1rem;">📩 Receba as Novidades do Portal</h3>
+                    <p style="color:#bbb;font-size:0.85rem;margin-bottom:14px;">Autorize o envio de mensagens sobre novos oráculos, cursos e ativações. Você pode cancelar quando quiser.</p>
+                    <label style="display:flex;align-items:center;gap:10px;color:#ddd;font-size:0.85rem;cursor:pointer;">
+                        <input type="checkbox" id="chk-consent-dash" style="width:18px;height:18px;accent-color:var(--ouro-solar);cursor:pointer;">
+                        Sim, quero receber novidades por email
+                    </label>
+                    <button id="btn-consent-dash" class="btn-sair" style="margin-top:14px;border-color:rgba(212,175,55,0.4);color:var(--ouro-solar);">Autorizar</button>
+                    <span id="status-consent-dash" style="color:#4caf50;font-size:0.8rem;margin-left:12px;"></span>
+                </div>
+            `;
+        }
 
         function renderDashboard() {
             const nome = user.user_metadata?.name || user.email?.split('@')[0] || 'Viajante';
@@ -83,6 +109,8 @@
                         <button class="btn-sair" id="btn-sair">Sair</button>
                     </div>
                 </div>
+
+                ${bannerConsentimento()}
 
                 <h2 class="dash-section-title">🔮 Ferramentas de Ascensão</h2>
                 <div class="dash-grid">
@@ -146,6 +174,23 @@
                 await signOut();
             });
 
+            const btnConsent = document.getElementById('btn-consent-dash');
+            if (btnConsent) {
+                btnConsent.addEventListener('click', async () => {
+                    const chk = document.getElementById('chk-consent-dash');
+                    if (!chk || !chk.checked) {
+                        document.getElementById('status-consent-dash').innerText = 'Marque a opção para autorizar.';
+                        document.getElementById('status-consent-dash').style.color = '#ff6b6b';
+                        return;
+                    }
+                    const nome = user.user_metadata?.name || user.email?.split('@')[0] || '';
+                    await saveUserProfile(user.id, { email: user.email, name: nome, marketing_consent: true });
+                    _userProfile = { marketing_consent: true };
+                    const banner = document.getElementById('banner-consent');
+                    if (banner) banner.remove();
+                });
+            }
+
             carregarHistorico();
         }
 
@@ -173,6 +218,7 @@
             }
         }
 
+        await sincronizarPerfil();
         renderDashboard();
 
         // Link admin visivel para todos (acesso controlado na pagina)

@@ -147,8 +147,120 @@ export async function getSessionHistory(userId, tipo, limit = 20) {
 }
 
 // ======================================================================
-// FALLBACK: localStorage (modo offline)
+// PERFIL DO USUÁRIO (user_profiles) + Marketing Consent
 // ======================================================================
+
+export async function saveUserProfile(userId, profileData) {
+    const client = await getSupabase();
+    if (!client) {
+        localStorage.setItem('user_profile_local', JSON.stringify(profileData));
+        return { local: true };
+    }
+
+    const { data, error } = await client
+        .from('user_profiles')
+        .upsert({
+            user_id: userId,
+            email: profileData.email,
+            name: profileData.name,
+            marketing_consent: profileData.marketing_consent || false,
+            consent_date: profileData.marketing_consent ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' })
+        .select();
+
+    if (error) console.warn("Erro ao salvar perfil:", error);
+    return { data, error };
+}
+
+export async function saveMarketingConsent(userId, email, name, consent) {
+    return await saveUserProfile(userId, {
+        email,
+        name,
+        marketing_consent: consent
+    });
+}
+
+export async function getUserProfile(userId) {
+    const client = await getSupabase();
+    if (!client) {
+        const local = localStorage.getItem('user_profile_local');
+        return local ? JSON.parse(local) : null;
+    }
+
+    const { data, error } = await client
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+        console.warn("Erro ao carregar perfil:", error);
+    }
+    return data;
+}
+
+export async function getMarketingLeads() {
+    const client = await getSupabase();
+    if (!client) return [];
+
+    const { data, error } = await client
+        .from('user_profiles')
+        .select('email, name, marketing_consent, consent_date, created_at')
+        .eq('marketing_consent', true)
+        .order('consent_date', { ascending: false });
+
+    if (error) {
+        console.warn("Erro ao buscar leads:", error);
+        return [];
+    }
+    return data || [];
+}
+
+// Sincroniza o perfil do usuario: cria se nao existir e aplica consentimento pendente
+export async function syncUserProfile(user) {
+    if (!user || !user.id) return null;
+    const nome = user.user_metadata?.name || user.user_metadata?.full_name || (user.email ? user.email.split('@')[0] : '');
+    let profile = await getUserProfile(user.id);
+
+    if (!profile) {
+        const r = await saveUserProfile(user.id, { email: user.email, name: nome, marketing_consent: false });
+        profile = r?.data?.[0] || null;
+    }
+
+    // Aplica consentimento marcado no cadastro (aguardando a primeira sessao)
+    try {
+        const raw = localStorage.getItem('pending_marketing_consent');
+        if (raw) {
+            const p = JSON.parse(raw);
+            const r = await saveUserProfile(user.id, {
+                email: p.email || user.email,
+                name: p.name || nome,
+                marketing_consent: true
+            });
+            profile = r?.data?.[0] || profile;
+            localStorage.removeItem('pending_marketing_consent');
+        }
+    } catch (e) {
+        console.warn("Erro ao aplicar consentimento pendente:", e);
+    }
+
+    return profile;
+}
+
+export async function applyPendingMarketingConsent(userId, email, name) {
+    if (!userId) return false;
+    try {
+        const raw = localStorage.getItem('pending_marketing_consent');
+        if (!raw) return false;
+        const p = JSON.parse(raw);
+        await saveUserProfile(userId, { email: p.email || email, name: p.name || name, marketing_consent: true });
+        localStorage.removeItem('pending_marketing_consent');
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
 
 const BACKUP_PREFIX = 'supa_backup_';
 

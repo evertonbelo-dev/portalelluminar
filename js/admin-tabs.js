@@ -4,7 +4,7 @@ import { carregarConfig, salvarConfig, getSqlSetup } from './admin-config.js';
 import { MODELOS_DISPONIVEIS } from './modelos.js';
 
 export async function initTabs(containerEl, userEmail) {
-    await renderGeral();
+    await renderGeral(containerEl);
     document.querySelectorAll('.admin-tab').forEach(function(tab) {
         tab.addEventListener('click', async function() {
             document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('ativa'); });
@@ -16,6 +16,7 @@ export async function initTabs(containerEl, userEmail) {
                     case 'geral': await renderGeral(containerEl); break;
                     case 'visual': renderVisual(containerEl); break;
                     case 'usuarios': await renderUsuarios(containerEl); break;
+                    case 'leads': await renderLeads(containerEl); break;
                     case 'banco': renderBanco(containerEl); break;
                 }
             } catch(e) {
@@ -94,23 +95,25 @@ async function renderUsuarios(el) {
         var s = await getSupabase();
         if (!s) { el.innerHTML = '<div class="admin-card"><h2>Usuarios</h2><p style="color:#ff6b6b;">Supabase indisponivel</p></div>'; return; }
         el.innerHTML = '<div class="admin-card"><h2>Carregando...</h2></div>';
-        var { data: users } = await s.from('auth.users').select('id, email, created_at').limit(100);
+        var { data: users, error: usersErr } = await s.rpc('admin_list_users');
+        if (usersErr) { el.innerHTML = '<div class="admin-card"><h2>Usuarios</h2><p style="color:#ff6b6b;">' + usersErr.message + '</p><p style="color:#888;font-size:0.85rem;">Execute o SQL atualizado da aba Banco (função admin_list_users).</p></div>'; return; }
+        users = users || [];
         var { data: roles } = await s.from('user_roles').select('user_id, role');
         var roleMap = {};
         if (roles) roles.forEach(function(r) { roleMap[r.user_id] = r.role; });
         var html = '<div class="admin-card"><h2>Gerenciar Usuarios (' + (users?users.length:0) + ')</h2>';
-        html += '<table class="admin-tabela"><tr><th>Email</th><th>Cadastro</th><th>Perfil</th><th>Acoes</th></tr>';
+        html += '<table class="admin-tabela"><tr><th>Email</th><th>Nome</th><th>Cadastro</th><th>Perfil</th><th>Acoes</th></tr>';
         users.forEach(function(u) {
-            var role = roleMap[u.id] || 'user';
-            html += '<tr><td>' + u.email + '</td><td>' + (u.created_at?new Date(u.created_at).toLocaleDateString('pt-BR'):'-') + '</td>';
+            var uid = u.user_id; var email = u.user_email || ''; var role = u.user_role || roleMap[uid] || 'user';
+            html += '<tr><td>' + email + '</td><td>' + (u.user_name || '-') + '</td><td>' + (u.user_created_at?new Date(u.user_created_at).toLocaleDateString('pt-BR'):'-') + '</td>';
             html += '<td><span class="' + (role==='admin'||role==='master'?'badge-admin':'badge-user') + '">' + role + '</span></td>';
             html += '<td class="acoes-usuario">';
             if (role !== 'admin' && role !== 'master') {
-                html += '<button onclick="window._tornarAdmin(\'' + u.id + '\')">Tornar Admin</button>';
+                html += '<button onclick="window._tornarAdmin(\'' + uid + '\')">Tornar Admin</button>';
             } else {
-                html += '<button onclick="window._removerAdmin(\'' + u.id + '\')">Remover Admin</button>';
+                html += '<button onclick="window._removerAdmin(\'' + uid + '\')">Remover Admin</button>';
             }
-            html += '<button class="btn-excluir" onclick="window._excluirUsuario(\'' + u.id + '\',\'' + u.email + '\')">Excluir</button>';
+            html += '<button class="btn-excluir" onclick="window._excluirUsuario(\'' + uid + '\',\'' + email + '\')">Excluir</button>';
             html += '</td></tr>';
         });
         html += '</table></div>';
@@ -126,6 +129,48 @@ function renderBanco(el) {
     if (sql) sql.innerText = getSqlSetup();
 }
 
+async function renderLeads(el) {
+    try {
+        var s = await getSupabase();
+        if (!s) { el.innerHTML = '<div class="admin-card"><h2>Marketing</h2><p style="color:#ff6b6b;">Supabase indisponivel</p></div>'; return; }
+        
+        // Busca todos os perfis com consentimento de marketing
+        var { data: leads, error } = await s
+            .from('user_profiles')
+            .select('email, name, marketing_consent, consent_date, created_at')
+            .eq('marketing_consent', true)
+            .order('consent_date', { ascending: false });
+
+        if (error) {
+            el.innerHTML = '<div class="admin-card"><h2>Marketing</h2><p style="color:#ff6b6b;">' + error.message + ' — Execute o SQL da aba Banco para criar a tabela user_profiles.</p></div>';
+            return;
+        }
+
+        var emails = (leads || []).map(function(l) { return l.email; });
+        var total = (leads || []).length;
+
+        var html = '<div class="admin-card"><h2>📧 Marketing — Leads Autorizados (' + total + ')</h2>';
+        if (total === 0) {
+            html += '<p style="color:#888;margin:15px 0;">Nenhum lead com consentimento ainda. Os usuarios que marcarem a opção de receber novidades aparecerão aqui.</p>';
+        } else {
+            html += '<div style="margin:15px 0;">'
+                 + '<button class="btn-admin-save" onclick="navigator.clipboard.writeText(\'' + emails.join(';') + '\').then(()=>this.innerText=\'Emails copiados!\')">📋 Copiar Emails</button>'
+                 + ' <button class="btn-admin-save" onclick="navigator.clipboard.writeText(\'' + emails.join(',') + '\').then(()=>this.innerText=\'Lista copiada!\')">📋 Copiar CSV</button>'
+                 + '</div>';
+            html += '<table class="admin-tabela"><tr><th>Nome</th><th>Email</th><th>Consentimento</th></tr>';
+            leads.forEach(function(l) {
+                var data = l.consent_date ? new Date(l.consent_date).toLocaleDateString('pt-BR') : '-';
+                html += '<tr><td>' + (l.name || '-') + '</td><td>' + l.email + '</td><td>' + data + '</td></tr>';
+            });
+            html += '</table>';
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    } catch(e) {
+        el.innerHTML = '<div class="admin-card"><h2>Erro</h2><p style="color:#ff6b6b;">' + e.message + '</p></div>';
+    }
+}
+
 window._tornarAdmin = async function(id) {
     var s = await getSupabase(); var r = await s.from('user_roles').upsert({ user_id: id, role: 'admin', created_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (r.error) { alert(r.error.message); return; } alert('Admin criado!'); location.reload();
@@ -136,9 +181,9 @@ window._removerAdmin = async function(id) {
 };
 window._excluirUsuario = async function(id, email) {
     if (!confirm('Excluir ' + email + '?')) return;
-    if (!confirm('CONFIRMACAO FINAL?')) return;
+    if (!confirm('CONFIRMACAO FINAL? A conta e TODOS os dados do usuario serao apagados.')) return;
     var s = await getSupabase();
-    var r = await s.from('user_roles').delete().eq('user_id', id);
+    var r = await s.rpc('admin_delete_user', { target_user_id: id });
     if (r.error) { alert(r.error.message); return; }
     alert('Excluido!'); location.reload();
 };

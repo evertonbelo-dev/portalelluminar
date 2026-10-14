@@ -63,6 +63,10 @@
                 <div><label class="campo-label">Nome Estelar</label><input type="text" id="nome-cadastro" class="auth-input" placeholder="Seu nome" required></div>
                 <div><label class="campo-label">Email Estelar</label><input type="email" id="email-cadastro" class="auth-input" placeholder="seu@email.com" required></div>
                 <div><label class="campo-label">Senha Cósmica</label><input type="password" id="senha-cadastro" class="auth-input" placeholder="Mínimo 6 caracteres" required minlength="6"></div>
+                <label style="display:flex;align-items:center;gap:8px;color:#aaa;font-size:0.8rem;cursor:pointer;margin-top:5px;">
+                    <input type="checkbox" id="marketing-consent" checked style="width:auto;">
+                    ✨ Quero receber novidades, conteúdos e ofertas especiais do Portal
+                </label>
                 <div id="cadastro-error" class="auth-error"></div>
                 <div id="cadastro-success" class="auth-success"></div>
                 <button type="submit" id="btn-cadastro" class="auth-btn">Criar Conta Estelar</button>
@@ -73,20 +77,70 @@
         </div>
     </div>
     <script type="module">
-        import { initSupabase } from './js/supabase-config.js?v=2.0.0';
-        import { signIn, signUp, signInWithGoogle, getSession } from './js/supabase-auth.js?v=2.0.0';
+        import { initSupabase } from './js/supabase-config.js?v=2.1.0';
+        import { signIn, signUp, signInWithGoogle, getSession } from './js/supabase-auth.js?v=2.1.0';
+        import { saveMarketingConsent, syncUserProfile } from './js/supabase-db.js?v=2.1.0';
         await initSupabase();
         const session = await getSession();
-        if (session) window.location.href = '/dashboard.html';
+        // Se ja estiver logado, sincroniza perfil e redireciona
+        if (session) {
+            try { await syncUserProfile(session.user); } catch (e) { /* silencioso */ }
+            const redirect = new URLSearchParams(window.location.search).get('redirect') || '/index.html';
+            window.location.href = redirect;
+        }
         window.__supabaseSignIn = signIn;
         window.__supabaseSignUp = signUp;
         window.__supabaseGoogle = signInWithGoogle;
+        window.__saveMarketingConsent = saveMarketingConsent;
+        window.__syncUserProfile = syncUserProfile;
     </script>
     <script>
+        function getRedirect() {
+            return new URLSearchParams(window.location.search).get('redirect') || '/index.html';
+        }
         function switchTab(tab){document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('ativo'));document.querySelectorAll('.auth-form').forEach(f=>f.classList.add('oculto'));if(tab==='entrar'){document.querySelector('.auth-tab:first-child').classList.add('ativo');document.getElementById('form-entrar').classList.remove('oculto')}else{document.querySelector('.auth-tab:last-child').classList.add('ativo');document.getElementById('form-cadastrar').classList.remove('oculto')}}
-        async function handleLogin(event){event.preventDefault();const email=document.getElementById('email-login').value;const senha=document.getElementById('senha-login').value;const btn=document.getElementById('btn-login');const errorDiv=document.getElementById('login-error');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Conectando...';errorDiv.innerText='';const{data,error}=await window.__supabaseSignIn(email,senha);if(error){errorDiv.innerText=error.message||"Erro ao conectar. Tente novamente.";btn.disabled=false;btn.innerText='Entrar'}else{window.location.href='/dashboard.html'}}
-        async function handleSignUp(event){event.preventDefault();const email=document.getElementById('email-cadastro').value;const senha=document.getElementById('senha-cadastro').value;const nome=document.getElementById('nome-cadastro').value;const btn=document.getElementById('btn-cadastro');const errorDiv=document.getElementById('cadastro-error');const successDiv=document.getElementById('cadastro-success');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Criando...';errorDiv.innerText='';successDiv.innerText='';const{data,error}=await window.__supabaseSignUp(email,senha,{name:nome});if(error){errorDiv.innerText=error.message||"Erro ao criar conta.";btn.disabled=false;btn.innerText='Criar Conta Estelar'}else{successDiv.innerText='✨ Conta criada! Verifique seu email para confirmar.';btn.disabled=false;btn.innerText='Criar Conta Estelar'}}
-        async function handleGoogleLogin(){await window.__supabaseGoogle()}
+        async function handleLogin(event){
+            event.preventDefault();
+            const email=document.getElementById('email-login').value;
+            const senha=document.getElementById('senha-login').value;
+            const btn=document.getElementById('btn-login');
+            const errorDiv=document.getElementById('login-error');
+            btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Conectando...';errorDiv.innerText='';
+            const{data,error}=await window.__supabaseSignIn(email,senha);
+            if(error){
+                errorDiv.innerText=error.message||"Erro ao conectar.";
+                btn.disabled=false;btn.innerText='Entrar';
+                return;
+            }
+            // Sincroniza perfil (cria) e aplica consentimento pendente do cadastro
+            try { if(data?.user) await window.__syncUserProfile(data.user); } catch(e) { /* silencioso */ }
+            window.location.href=getRedirect();
+        }
+        async function handleSignUp(event){
+            event.preventDefault();
+            const email=document.getElementById('email-cadastro').value;
+            const senha=document.getElementById('senha-cadastro').value;
+            const nome=document.getElementById('nome-cadastro').value;
+            const consent=document.getElementById('marketing-consent').checked;
+            const btn=document.getElementById('btn-cadastro');
+            const errorDiv=document.getElementById('cadastro-error');
+            const successDiv=document.getElementById('cadastro-success');
+            btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Criando...';errorDiv.innerText='';successDiv.innerText='';
+            const{data,error}=await window.__supabaseSignUp(email,senha,{name:nome});
+            if(error){errorDiv.innerText=error.message||"Erro ao criar conta.";btn.disabled=false;btn.innerText='Criar Conta Estelar';return;}
+            // Guarda consentimento pendente (aplicado quando o usuario tiver sessao)
+            if(consent){localStorage.setItem('pending_marketing_consent',JSON.stringify({email:email,name:nome}));}
+            // Se ja houver sessao (confirmacao de email desativada), salva e redireciona
+            if(data?.session && data?.user?.id){
+                if(consent){await window.__saveMarketingConsent(data.user.id,email,nome,true);localStorage.removeItem('pending_marketing_consent');}
+                window.location.href=getRedirect();
+                return;
+            }
+            if(consent && data?.user?.id){await window.__saveMarketingConsent(data.user.id,email,nome,true);}
+            successDiv.innerText='✨ Conta criada! Verifique seu email para confirmar.';
+            btn.disabled=false;btn.innerText='Criar Conta Estelar';
+        }
+        async function handleGoogleLogin(){await window.__supabaseGoogle({redirect: getRedirect(), redirectTo: window.location.origin + getRedirect()})}
         function mostrarRecuperarSenha(){alert("Função de recuperação de senha em breve. Enquanto isso, entre em contato pelo suporte.")}
     </script>
 </body>

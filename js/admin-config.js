@@ -102,6 +102,10 @@ DROP POLICY IF EXISTS "Usuarios podem ver proprio papel" ON user_roles;
 CREATE POLICY "Usuarios podem ver proprio papel" ON user_roles FOR SELECT USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "Admins podem ver todos" ON user_roles;
 CREATE POLICY "Admins podem ver todos" ON user_roles FOR SELECT USING (public.is_admin(auth.uid()));
+-- Escrita em user_roles: sem isto os botoes "Tornar Admin" e
+-- "Remover Admin" do painel falham com erro de RLS.
+DROP POLICY IF EXISTS "Admins podem gerenciar papeis" ON user_roles;
+CREATE POLICY "Admins podem gerenciar papeis" ON user_roles FOR ALL USING (public.is_admin(auth.uid())) WITH CHECK (public.is_admin(auth.uid()));
 
 -- 3. Tabela de configuracoes do site
 CREATE TABLE IF NOT EXISTS site_config (
@@ -124,7 +128,93 @@ INSERT INTO site_config (key, value) VALUES
     ('cores', '{"ouro_solar": "#ffaa00", "dourado_antigo": "#d4af37", "azul_profundo": "#050510"}')
 ON CONFLICT (key) DO NOTHING;
 
--- 5. Para se tornar admin (troque pelo seu email):
+-- 5. Tabela de perfis de usuario + consentimento de marketing
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+    email TEXT,
+    name TEXT,
+    marketing_consent BOOLEAN DEFAULT false,
+    consent_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Garante as colunas mesmo se a tabela ja existir com outro formato
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS display_name TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS marketing_consent BOOLEAN DEFAULT false;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS consent_date TIMESTAMPTZ;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+DO $$ BEGIN
+    ALTER TABLE user_profiles ADD CONSTRAINT user_profiles_user_id_key UNIQUE (user_id);
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Usuarios podem ver proprio perfil" ON user_profiles;
+CREATE POLICY "Usuarios podem ver proprio perfil" ON user_profiles FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Admins podem ver todos os perfis" ON user_profiles;
+CREATE POLICY "Admins podem ver todos os perfis" ON user_profiles FOR SELECT USING (public.is_admin(auth.uid()));
+DROP POLICY IF EXISTS "Usuarios podem inserir/atualizar proprio perfil" ON user_profiles;
+CREATE POLICY "Usuarios podem inserir/atualizar proprio perfil" ON user_profiles FOR ALL USING (auth.uid() = user_id);
+
+-- 6. ADMIN: listar usuarios e excluir contas (SECURITY DEFINER)
+--    O schema "auth" NAO e exposto na API REST, portanto
+--    s.from('auth.users') sempre falha no navegador.
+CREATE OR REPLACE FUNCTION public.admin_list_users()
+RETURNS TABLE (user_id uuid, user_email text, user_name text, user_created_at timestamptz, user_role text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $func$
+BEGIN
+    IF NOT public.is_admin(auth.uid()) THEN
+        RAISE EXCEPTION 'Apenas administradores podem listar usuarios';
+    END IF;
+    RETURN QUERY
+    SELECT u.id, u.email::text,
+           COALESCE(p.name, p.display_name, u.raw_user_meta_data->>'name', u.email)::text,
+           u.created_at,
+           COALESCE(r.role, 'user')::text
+    FROM auth.users u
+    LEFT JOIN public.user_profiles p ON p.user_id = u.id
+    LEFT JOIN public.user_roles r ON r.user_id = u.id
+    ORDER BY u.created_at DESC
+    LIMIT 500;
+END;
+$func$;
+
+CREATE OR REPLACE FUNCTION public.admin_delete_user(target_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $func$
+BEGIN
+    IF NOT public.is_admin(auth.uid()) THEN
+        RAISE EXCEPTION 'Apenas administradores podem excluir usuarios';
+    END IF;
+    IF target_user_id = auth.uid() THEN
+        RAISE EXCEPTION 'Voce nao pode excluir a propria conta';
+    END IF;
+    UPDATE public.site_config SET updated_by = NULL WHERE updated_by = target_user_id;
+    DELETE FROM public.user_roles WHERE user_id = target_user_id;
+    DELETE FROM auth.users WHERE id = target_user_id;
+END;
+$func$;
+
+REVOKE ALL ON FUNCTION public.admin_list_users() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.admin_delete_user(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_list_users() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(uuid) TO authenticated;
+DO $func$ BEGIN
+    REVOKE EXECUTE ON FUNCTION public.admin_list_users() FROM anon;
+    REVOKE EXECUTE ON FUNCTION public.admin_delete_user(uuid) FROM anon;
+EXCEPTION WHEN OTHERS THEN NULL; END $func$;
+
+-- 7. Para se tornar admin (troque pelo seu email):
 -- INSERT INTO user_roles (user_id, role)
 -- SELECT id, 'admin' FROM auth.users WHERE email = 'seu@email.com'
 -- ON CONFLICT (user_id) DO UPDATE SET role = 'admin';

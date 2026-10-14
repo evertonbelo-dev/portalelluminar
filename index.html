@@ -22,6 +22,7 @@
         
         <nav class="portal-nav">
             <div class="chave-ativacao" title="Chave de Ativação">ElLuminar_</div>
+            <span id="nav-user-info" style="color:#aaa;font-size:0.8rem;margin-left:10px;display:none;"></span>
             <a href="login.html" id="btn-login-nav" class="btn-login-portal" style="color: var(--ouro-solar); text-decoration: none; margin-left: 15px; padding: 6px 14px; border: 1px solid var(--dourado-antigo); border-radius: 20px; font-size: 0.8rem; transition: all 0.3s;">🔮 Entrar</a>
         </nav>
     </header>
@@ -187,25 +188,33 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.0.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.1.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 
 <script type="module">
-        // Verifica se o usuário está logado e atualiza o botão de login
+        // Verifica se o usuário está logado e atualiza o nav
         (async () => {
             try {
-                const { supabase } = await import('./js/supabase-config.js?v=2.0.0');
-                const client = await supabase;
-                if (!client) return;
-
-                const { data: { session } } = await client.auth.getSession();
+                const mod = await import('./js/supabase-auth.js?v=2.1.0');
+                const session = await mod.getSession();
                 const btn = document.getElementById('btn-login-nav');
+                const userInfo = document.getElementById('nav-user-info');
                 
                 if (session) {
                     const nome = session.user.user_metadata?.name || session.user.email?.split('@')[0] || '';
+                    const email = session.user.email || '';
+                    if (userInfo) {
+                        userInfo.innerText = '✨ ' + email;
+                        userInfo.style.display = 'inline';
+                    }
                     btn.innerHTML = '🌟 ' + nome;
                     btn.href = '/dashboard.html';
+                    // Cria/atualiza o perfil e aplica consentimento pendente
+                    try {
+                        const db = await import('./js/supabase-db.js?v=2.1.0');
+                        await db.syncUserProfile(session.user);
+                    } catch (e) { /* silencioso */ }
                 }
             } catch (e) {
                 // Supabase não configurado ainda
