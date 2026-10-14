@@ -214,7 +214,35 @@ DO $func$ BEGIN
     REVOKE EXECUTE ON FUNCTION public.admin_delete_user(uuid) FROM anon;
 EXCEPTION WHEN OTHERS THEN NULL; END $func$;
 
--- 7. Para se tornar admin (troque pelo seu email):
+-- 7. Leituras de Taro (readings) + politicas
+--    A policy de UPDATE e necessaria para anexar o texto da IA
+--    depois do salvamento imediato da leitura.
+CREATE TABLE IF NOT EXISTS public.readings (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    consulente TEXT NOT NULL,
+    tipo_tiragem TEXT NOT NULL,
+    cartas JSONB NOT NULL DEFAULT '[]',
+    pergunta TEXT,
+    interpretacao TEXT,
+    essencia TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_readings_user_id ON public.readings(user_id);
+CREATE INDEX IF NOT EXISTS idx_readings_created_at ON public.readings(created_at DESC);
+
+ALTER TABLE public.readings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Usuarios podem ver suas proprias leituras" ON public.readings;
+CREATE POLICY "Usuarios podem ver suas proprias leituras" ON public.readings FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Usuarios podem inserir suas proprias leituras" ON public.readings;
+CREATE POLICY "Usuarios podem inserir suas proprias leituras" ON public.readings FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Usuarios podem atualizar suas proprias leituras" ON public.readings;
+CREATE POLICY "Usuarios podem atualizar suas proprias leituras" ON public.readings FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Usuarios podem deletar suas proprias leituras" ON public.readings;
+CREATE POLICY "Usuarios podem deletar suas proprias leituras" ON public.readings FOR DELETE USING (auth.uid() = user_id);
+
+-- 8. Para se tornar admin (troque pelo seu email):
 -- INSERT INTO user_roles (user_id, role)
 -- SELECT id, 'admin' FROM auth.users WHERE email = 'seu@email.com'
 -- ON CONFLICT (user_id) DO UPDATE SET role = 'admin';

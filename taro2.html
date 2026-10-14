@@ -110,6 +110,9 @@
             <div id="texto-interpretacao" style="width: 100%; max-width: 800px; margin-top: 30px;"></div>
             <div style="text-align: center; margin-top: 40px;">
                 <button onclick="finalizarComEssencia()" class="btn-luz">Receber Bênção da Essência ✨</button>
+                <br><br>
+                <button onclick="salvarLeituraManual()" class="btn-luz">💾 Salvar Leitura</button>
+                <div class="status-salvar" style="min-height:22px; font-size:0.85rem; margin-top:12px;"></div>
             </div>
         </div>
     </section>
@@ -135,8 +138,10 @@
             </div>
 
             <div style="margin-top: 40px; padding-bottom: 100px;">
+                <button onclick="salvarLeituraManual()" class="btn-luz">💾 Salvar Leitura</button>
                 <button onclick="gerarPDFReal()" class="btn-luz">📄 Baixar PDF Sagrado</button>
-                <br><br>
+                <div class="status-salvar" style="min-height:22px; font-size:0.85rem; margin-top:12px;"></div>
+                <br>
                 <button onclick="location.reload()" style="background:none; border:none; color:#aaa; cursor:pointer;">Iniciar Nova Sessão</button>
             </div>
         </div>
@@ -237,26 +242,80 @@
             console.log("🔮 Oráculo Digital sintonizado via OpenRouter (" + OPENROUTER_MODEL + ").");
         } catch (e) { console.error("🔮 Erro na sintonização do Oráculo:", e); }
 
-        // Salva a leitura no Supabase, amarrada ao usuario logado
+        // ---- SALVAR / ATUALIZAR A LEITURA NO SUPABASE ----
+        // Mostra o resultado na tela (antes falhava em silencio no console)
+        window.setStatusSalvar = function(msg, tipo) {
+            var cores = { ok: '#4caf50', erro: '#ff6b6b', info: '#aaaaaa' };
+            document.querySelectorAll('.status-salvar').forEach(function(el) {
+                el.style.color = cores[tipo] || '#aaa';
+                el.innerText = msg || '';
+            });
+        };
+
+        // Monta o payload a partir do estado real da sessao
+        function montarPayloadLeitura(pergunta, textoCanalizado) {
+            const cons = window.__consulente || {};
+            const cartas = (window.__tiragemAtual || []).map(function(c) {
+                return { nome: c.nome || '', imagem: c.imagem || '' };
+            });
+            const ess = window.__essenciaAtual ? (window.__essenciaAtual.nome || '') : '';
+            return {
+                user_id: window._currentUserId,
+                consulente: cons.nome || window._currentUserName || 'Consulente',
+                tipo_tiragem: window.__tipoTiragem || '',
+                cartas: cartas,
+                pergunta: pergunta || '',
+                interpretacao: textoCanalizado || '',
+                essencia: ess
+            };
+        }
+
         window.salvarLeituraNoBackend = async function(pergunta, textoCanalizado) {
+            if (!window._currentUserId) {
+                window.setStatusSalvar('⚠ Entre na sua conta para salvar a leitura.', 'erro');
+                return { ok: false, erro: 'usuario-nao-identificado' };
+            }
+            if (!(window.__tiragemAtual || []).length) {
+                window.setStatusSalvar('⚠ Nenhuma carta sorteada ainda.', 'erro');
+                return { ok: false, erro: 'sem-cartas' };
+            }
+            try {
+                window.setStatusSalvar('💾 Salvando sua leitura...', 'info');
+                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const res = await db.saveReading(montarPayloadLeitura(pergunta, textoCanalizado));
+                if (res.error || res.local) {
+                    const msg = res.error ? (res.error.message || JSON.stringify(res.error)) : 'sem conexao';
+                    window.setStatusSalvar('⚠ Nao foi possivel salvar: ' + msg + ' (guarda neste navegador)', 'erro');
+                    console.warn('Falha ao salvar leitura:', msg);
+                    return { ok: false, erro: msg };
+                }
+                window.setStatusSalvar('✅ Leitura salva na sua jornada!', 'ok');
+                return { ok: true, id: res.id };
+            } catch (e) {
+                window.setStatusSalvar('⚠ Erro ao salvar: ' + (e.message || e), 'erro');
+                console.warn('Falha ao salvar leitura:', e);
+                return { ok: false, erro: e.message || String(e) };
+            }
+        };
+
+        // Anexa o texto da IA a leitura ja gravada
+        window.atualizarLeituraNoBackend = async function(readingId, textoCanalizado) {
+            if (!readingId) return { ok: false, erro: 'sem-id' };
             try {
                 const db = await import('./js/supabase-db.js?v=2.1.0');
-                const cons = window.__consulente || {};
-                const cartas = (window.__tiragemAtual || []).map(function(c) {
-                    return { nome: c.nome || '', imagem: c.imagem || '' };
-                });
-                const ess = window.__essenciaAtual ? (window.__essenciaAtual.nome || '') : '';
-                return await db.saveReading({
-                    user_id: window._currentUserId,
-                    consulente: cons.nome || window._currentUserName || 'Consulente',
-                    tipo_tiragem: window.__tipoTiragem || '',
-                    cartas: cartas,
-                    pergunta: pergunta || '',
+                const res = await db.updateReading(readingId, {
                     interpretacao: textoCanalizado || '',
-                    essencia: ess
+                    pergunta: document.getElementById('pergunta-consulente') ? document.getElementById('pergunta-consulente').value : ''
                 });
+                if (res.error) {
+                    window.setStatusSalvar('✅ Leitura salva. (texto da IA nao anexado: ' + (res.error.message || 'erro') + ')', 'erro');
+                    return { ok: false, erro: res.error.message || 'erro' };
+                }
+                window.setStatusSalvar('✅ Leitura salva com a canalizacao do Oraculo!', 'ok');
+                return { ok: true };
             } catch (e) {
-                console.warn('Falha ao salvar leitura:', e);
+                window.setStatusSalvar('✅ Leitura salva. (texto da IA nao anexado)', 'erro');
+                return { ok: false, erro: e.message || String(e) };
             }
         };
     </script>

@@ -17,7 +17,7 @@ export async function saveReading(readingData) {
     const client = await getSupabase();
     if (!client) {
         saveToLocalBackup('readings', readingData);
-        return { local: true };
+        return { data: null, error: null, local: true, id: null };
     }
 
     const { data, error } = await client
@@ -37,8 +37,33 @@ export async function saveReading(readingData) {
     if (error) {
         console.warn("Erro ao salvar leitura, salvando local:", error);
         saveToLocalBackup('readings', readingData);
+        return { data: null, error, local: true, id: null };
     }
 
+    // Retorna o id da linha gravada, para permitir atualizar depois
+    // (ex.: anexar o texto canalizado pela IA apos o salvamento imediato).
+    return { data, error: null, local: false, id: (data && data[0]) ? data[0].id : null };
+}
+
+// Atualiza uma leitura ja gravada (usado para anexar o texto da IA depois)
+export async function updateReading(readingId, campos) {
+    const client = await getSupabase();
+    if (!client) return { data: null, error: { message: 'Supabase não conectado.' }, local: true };
+    if (!readingId) return { data: null, error: { message: 'Leitura sem identificador.' }, local: false };
+
+    // Só permite atualizar colunas conhecidas
+    const permitidos = {};
+    ['consulente', 'tipo_tiragem', 'cartas', 'pergunta', 'interpretacao', 'essencia'].forEach(function(c) {
+        if (campos && campos[c] !== undefined) permitidos[c] = campos[c];
+    });
+
+    const { data, error } = await client
+        .from('readings')
+        .update(permitidos)
+        .eq('id', readingId)
+        .select();
+
+    if (error) console.warn("Erro ao atualizar leitura:", error);
     return { data, error, local: false };
 }
 

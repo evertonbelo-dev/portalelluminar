@@ -6,6 +6,8 @@ let consulente = { nome: "", nascimento: "", tarologo: "" };
 let tiragemAtual = [];
 let essenciaAtual = null;
 let tipoTiragem = "";
+let leituraSalvaId = null;   // id da leitura ja gravada no Supabase nesta sessao
+let textoIAAtual = "";       // texto canalizado pela IA (para anexar depois)
 
 const CONFIG_LEITURAS = {
     'unica' : { titulos: ["Resposta do Oráculo"] },
@@ -84,6 +86,8 @@ function realizarLeitura() {
     mesa.innerHTML = ""; 
     tiragemAtual = [];
     essenciaAtual = null; 
+    leituraSalvaId = null;   // nova leitura: permite salvar de novo
+    textoIAAtual = "";
     window.__tiragemAtual = tiragemAtual;
     window.__essenciaAtual = essenciaAtual;
     mesa.className = `mesa-cartas-grid layout-${tipoTiragem}`;
@@ -170,6 +174,10 @@ async function finalizarComEssencia() {
             <p style="font-size:1.1rem; font-style:italic; text-align:center; margin-bottom:20px;">"${essenciaAtual.canalizacao || essenciaAtual.msg}"</p>
             ${htmlDetalhes}`;
         
+        // Salva a leitura AGORA, assim que a essencia e revelada, sem depender
+        // da IA: se o Oraculo falhar/tempo esgotar, a leitura ja esta a salvo.
+        salvarLeitura(false);
+
         // DISPARO AUTOMÁTICO PARA O GEMINI VIA SERVIDOR
         chamarOraculoSiriano();
     }
@@ -224,14 +232,19 @@ Mencione as cartas com naturalidade. Encerre com uma afirmação de poder.`;
             textoCanalizado = "A Egrégora está em silêncio. Tente novamente em instantes.";
         }
 
+        textoIAAtual = textoCanalizado;
         outputIA.value = textoCanalizado;
 
-        // Salva a leitura no Supabase (se funcao existir)
-        if (typeof salvarLeituraNoBackend === 'function') {
-            await salvarLeituraNoBackend(pergunta, textoCanalizado);
+        // Anexa o texto canalizado: atualiza a leitura ja salva (ou salva agora)
+        if (leituraSalvaId && typeof window.atualizarLeituraNoBackend === 'function') {
+            await window.atualizarLeituraNoBackend(leituraSalvaId, textoCanalizado);
+        } else {
+            await salvarLeitura(true);
         }
     } catch (e) {
         console.error("Erro no Oráculo:", e);
+        // A IA falhou, mas a leitura NAO pode ser perdida: salva o que existe
+        if (!leituraSalvaId) { await salvarLeitura(false); }
         var detalheErro = e.message || JSON.stringify(e);
         if (e.name === 'AbortError') {
             outputIA.value = "⏳ A conexão com os Mestres está demorando mais que o esperado.\n\n📋 O servidor do Oráculo (OpenRouter) não respondeu dentro do tempo limite de 90 segundos.\nIsso pode acontecer se o modelo estiver sobrecarregado.\n\n👉 Clique em 'Receber Bênção da Essência ✨' novamente para tentar de novo.";
@@ -303,6 +316,41 @@ function gerarPDFReal() {
     setTimeout(() => { window.print(); }, 500);
 
 }
+// --- PERSISTENCIA DA LEITURA ---
+function perguntaAtual() {
+    const el = document.getElementById('pergunta-consulente');
+    return el ? el.value : '';
+}
+
+// Grava a leitura no Supabase. Se ja foi gravada, nao duplica.
+async function salvarLeitura(comTextoIA) {
+    if (typeof window.salvarLeituraNoBackend !== 'function') {
+        console.warn('Salvamento indisponivel: backend nao carregado.');
+        return null;
+    }
+    if (leituraSalvaId) return leituraSalvaId;
+    const res = await window.salvarLeituraNoBackend(perguntaAtual(), comTextoIA ? textoIAAtual : '');
+    if (res && res.ok && res.id) leituraSalvaId = res.id;
+    return leituraSalvaId;
+}
+
+// Botao "Salvar Leitura": salva (ou reenvia o texto da IA) sob demanda
+async function salvarLeituraManual() {
+    if (typeof window.salvarLeituraNoBackend !== 'function') {
+        alert('Salvamento indisponivel. Recarregue a pagina e tente novamente.');
+        return null;
+    }
+    if (leituraSalvaId) {
+        if (textoIAAtual && typeof window.atualizarLeituraNoBackend === 'function') {
+            await window.atualizarLeituraNoBackend(leituraSalvaId, textoIAAtual);
+        } else if (typeof window.setStatusSalvar === 'function') {
+            window.setStatusSalvar('✅ Esta leitura ja esta salva na sua jornada.', 'ok');
+        }
+        return leituraSalvaId;
+    }
+    return await salvarLeitura(true);
+}
+
 // Exporta funcoes para uso no HTML (onclick)
 window.mostrarTela = mostrarTela;
 window.iniciarJornada = iniciarJornada;
@@ -314,6 +362,7 @@ window.finalizarComEssencia = finalizarComEssencia;
 window.chamarOraculoSiriano = chamarOraculoSiriano;
 window.gerarPDFReal = gerarPDFReal;
 window.gerarInterpretacaoLocal = gerarInterpretacaoLocal;
+window.salvarLeituraManual = salvarLeituraManual;
 
 // Variaveis de estado acessiveis externamente (read-only)
 window.__consulente = consulente;

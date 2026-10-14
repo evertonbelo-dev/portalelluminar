@@ -166,6 +166,12 @@ DROP POLICY IF EXISTS "Usuários podem deletar suas próprias leituras" ON publi
 CREATE POLICY "Usuários podem deletar suas próprias leituras"
     ON public.readings FOR DELETE
     USING (auth.uid() = user_id);
+-- Necessaria para anexar o texto da IA apos o salvamento imediato
+DROP POLICY IF EXISTS "Usuários podem atualizar suas próprias leituras" ON public.readings;
+CREATE POLICY "Usuários podem atualizar suas próprias leituras"
+    ON public.readings FOR UPDATE
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
 
 -- course_progress: progresso pessoal do curso
 ALTER TABLE public.course_progress ENABLE ROW LEVEL SECURITY;
