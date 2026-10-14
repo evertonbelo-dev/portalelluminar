@@ -52,14 +52,22 @@
     </footer>
 <script type="module">
         import { initSupabase } from './js/supabase-config.js?v=2.1.0';
-        import { getSession, getCurrentUser, signOut, onAuthChange } from './js/supabase-auth.js?v=2.1.0';
+        import { getSession, getCurrentUser, signOut, onAuthChange, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.1.0';
         import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile } from './js/supabase-db.js?v=2.1.0';
 
         await initSupabase();
+
+        // Se o OAuth/confirmacao de email voltou com erro, avisa o usuario no login
+        const _erroAuth = getAuthErrorFromUrl();
+        if (_erroAuth) {
+            window.location.replace('login.html?erro=' + encodeURIComponent(_erroAuth));
+            throw new Error("Erro no retorno da autenticacao");
+        }
+
         const session = await getSession();
 
         if (!session) {
-            window.location.href = '/login.html?redirect=/dashboard.html';
+            window.location.href = 'login.html?redirect=dashboard.html';
             throw new Error("Não autenticado");
         }
 

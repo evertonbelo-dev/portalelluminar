@@ -153,13 +153,21 @@
 
     <script type="module">
         import { initSupabase } from './js/supabase-config.js?v=2.1.0';
-        import { getSession, getCurrentUser } from './js/supabase-auth.js?v=2.1.0';
+        import { getSession, getCurrentUser, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.1.0';
         
         // Verifica se esta logado — senao redireciona para login
         await initSupabase();
+
+        // Se o OAuth/confirmacao de email voltou com erro, avisa o usuario no login
+        const _erroAuth = getAuthErrorFromUrl();
+        if (_erroAuth) {
+            window.location.replace('login.html?erro=' + encodeURIComponent(_erroAuth));
+            throw new Error("Erro no retorno da autenticacao");
+        }
+
         const _session = await getSession();
         if (!_session) {
-            window.location.href = '/login.html?redirect=/taro2.html';
+            window.location.href = 'login.html?redirect=taro2.html';
             throw new Error("Redirecionando para login");
         }
         window._currentUserEmail = _session.user.email;

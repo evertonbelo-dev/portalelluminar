@@ -197,6 +197,14 @@
         (async () => {
             try {
                 const mod = await import('./js/supabase-auth.js?v=2.1.0');
+
+                // Se o OAuth/confirmacao de email voltou com erro, avisa o usuario no login
+                const _erroAuth = mod.getAuthErrorFromUrl();
+                if (_erroAuth) {
+                    window.location.replace('login.html?erro=' + encodeURIComponent(_erroAuth));
+                    return;
+                }
+
                 const session = await mod.getSession();
                 const btn = document.getElementById('btn-login-nav');
                 const userInfo = document.getElementById('nav-user-info');
@@ -209,7 +217,7 @@
                         userInfo.style.display = 'inline';
                     }
                     btn.innerHTML = '🌟 ' + nome;
-                    btn.href = '/dashboard.html';
+                    btn.href = 'dashboard.html';
                     // Cria/atualiza o perfil e aplica consentimento pendente
                     try {
                         const db = await import('./js/supabase-db.js?v=2.1.0');

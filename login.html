@@ -78,26 +78,41 @@
     </div>
     <script type="module">
         import { initSupabase } from './js/supabase-config.js?v=2.1.0';
-        import { signIn, signUp, signInWithGoogle, getSession } from './js/supabase-auth.js?v=2.1.0';
+        import { signIn, signUp, signInWithGoogle, getSession, appUrl } from './js/supabase-auth.js?v=2.1.0';
         import { saveMarketingConsent, syncUserProfile } from './js/supabase-db.js?v=2.1.0';
         await initSupabase();
         const session = await getSession();
         // Se ja estiver logado, sincroniza perfil e redireciona
         if (session) {
             try { await syncUserProfile(session.user); } catch (e) { /* silencioso */ }
-            const redirect = new URLSearchParams(window.location.search).get('redirect') || '/index.html';
-            window.location.href = redirect;
+            const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+            window.location.href = appUrl(redirect);
         }
         window.__supabaseSignIn = signIn;
         window.__supabaseSignUp = signUp;
         window.__supabaseGoogle = signInWithGoogle;
         window.__saveMarketingConsent = saveMarketingConsent;
         window.__syncUserProfile = syncUserProfile;
+        window.__appUrl = appUrl;
     </script>
     <script>
         function getRedirect() {
-            return new URLSearchParams(window.location.search).get('redirect') || '/index.html';
+            return new URLSearchParams(window.location.search).get('redirect') || 'index.html';
         }
+        // Mostra o erro devolvido na volta do OAuth / confirmacao de email
+        // (ex.: link expirado, acesso negado), em vez de falhar em silencio.
+        (function mostrarErroDeRetorno(){
+            var params = new URLSearchParams(window.location.search);
+            var msg = params.get('erro') || params.get('error_description');
+            if (!msg) {
+                var hash = new URLSearchParams(String(window.location.hash || '').replace(/^#/, ''));
+                msg = hash.get('error_description') || hash.get('error');
+            }
+            if (msg) {
+                var el = document.getElementById('login-error');
+                if (el) el.innerText = msg;
+            }
+        })();
         function switchTab(tab){document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('ativo'));document.querySelectorAll('.auth-form').forEach(f=>f.classList.add('oculto'));if(tab==='entrar'){document.querySelector('.auth-tab:first-child').classList.add('ativo');document.getElementById('form-entrar').classList.remove('oculto')}else{document.querySelector('.auth-tab:last-child').classList.add('ativo');document.getElementById('form-cadastrar').classList.remove('oculto')}}
         async function handleLogin(event){
             event.preventDefault();
@@ -126,7 +141,7 @@
             const errorDiv=document.getElementById('cadastro-error');
             const successDiv=document.getElementById('cadastro-success');
             btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Criando...';errorDiv.innerText='';successDiv.innerText='';
-            const{data,error}=await window.__supabaseSignUp(email,senha,{name:nome});
+            const{data,error}=await window.__supabaseSignUp(email,senha,{name:nome,emailRedirectTo:getRedirect()});
             if(error){errorDiv.innerText=error.message||"Erro ao criar conta.";btn.disabled=false;btn.innerText='Criar Conta Estelar';return;}
             // Guarda consentimento pendente (aplicado quando o usuario tiver sessao)
             if(consent){localStorage.setItem('pending_marketing_consent',JSON.stringify({email:email,name:nome}));}
@@ -140,7 +155,7 @@
             successDiv.innerText='✨ Conta criada! Verifique seu email para confirmar.';
             btn.disabled=false;btn.innerText='Criar Conta Estelar';
         }
-        async function handleGoogleLogin(){await window.__supabaseGoogle({redirect: getRedirect(), redirectTo: window.location.origin + getRedirect()})}
+        async function handleGoogleLogin(){await window.__supabaseGoogle({redirect: getRedirect(), redirectTo: window.__appUrl(getRedirect())})}
         function mostrarRecuperarSenha(){alert("Função de recuperação de senha em breve. Enquanto isso, entre em contato pelo suporte.")}
     </script>
 </body>
