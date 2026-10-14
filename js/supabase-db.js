@@ -13,6 +13,24 @@ import { getSupabase } from './supabase-config.js';
 // LEITURAS DE TARÔ (readings)
 // ======================================================================
 
+// Colunas que dependem de migração no banco. Se o banco ainda for antigo, o
+// insert/update falha com PGRST204/42703: repetimos SEM elas, para que a
+// leitura nunca deixe de ser salva por causa de uma migração pendente.
+const COLUNAS_OPCIONAIS = ['essencia_imagem'];
+
+function faltaColuna(error) {
+    if (!error) return false;
+    const msg = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+    return error.code === 'PGRST204' || error.code === '42703'
+        || /column .*does not exist|Could not find the .*column/i.test(msg);
+}
+
+function semColunasOpcionais(campos) {
+    const copia = Object.assign({}, campos);
+    COLUNAS_OPCIONAIS.forEach(function(c) { delete copia[c]; });
+    return copia;
+}
+
 export async function saveReading(readingData) {
     const client = await getSupabase();
     if (!client) {
@@ -20,20 +38,32 @@ export async function saveReading(readingData) {
         return { data: null, error: null, local: true, id: null };
     }
 
-    const { data, error } = await client
+    const payload = {
+        user_id: readingData.user_id,
+        consulente: readingData.consulente,
+        tipo_tiragem: readingData.tipo_tiragem,
+        cartas: readingData.cartas,
+        pergunta: readingData.pergunta,
+        interpretacao: readingData.interpretacao,
+        essencia: readingData.essencia,
+        essencia_imagem: readingData.essencia_imagem,
+        notas_tarologo: readingData.notas_tarologo,
+        created_at: new Date().toISOString()
+    };
+
+    let { data, error } = await client
         .from('readings')
-        .insert({
-            user_id: readingData.user_id,
-            consulente: readingData.consulente,
-            tipo_tiragem: readingData.tipo_tiragem,
-            cartas: readingData.cartas,
-            pergunta: readingData.pergunta,
-            interpretacao: readingData.interpretacao,
-            essencia: readingData.essencia,
-            notas_tarologo: readingData.notas_tarologo,
-            created_at: new Date().toISOString()
-        })
+        .insert(payload)
         .select();
+
+    // Banco sem a coluna nova: grava o essencial em vez de perder a leitura
+    if (error && faltaColuna(error)) {
+        console.warn("Coluna nova ausente no banco; salvando sem ela. Rode o SQL de migracao.");
+        ({ data, error } = await client
+            .from('readings')
+            .insert(semColunasOpcionais(payload))
+            .select());
+    }
 
     if (error) {
         console.warn("Erro ao salvar leitura, salvando local:", error);
@@ -46,7 +76,8 @@ export async function saveReading(readingData) {
     return { data, error: null, local: false, id: (data && data[0]) ? data[0].id : null };
 }
 
-// Atualiza uma leitura ja gravada (usado para anexar o texto da IA depois)
+// Atualiza uma leitura ja gravada (usado para anexar o texto da IA,
+// as anotacoes do Guardiao e a carta da Essencia depois)
 export async function updateReading(readingId, campos) {
     const client = await getSupabase();
     if (!client) return { data: null, error: { message: 'Supabase não conectado.' }, local: true };
@@ -54,15 +85,25 @@ export async function updateReading(readingId, campos) {
 
     // Só permite atualizar colunas conhecidas
     const permitidos = {};
-    ['consulente', 'tipo_tiragem', 'cartas', 'pergunta', 'interpretacao', 'essencia', 'notas_tarologo'].forEach(function(c) {
+    ['consulente', 'tipo_tiragem', 'cartas', 'pergunta', 'interpretacao', 'essencia', 'essencia_imagem', 'notas_tarologo'].forEach(function(c) {
         if (campos && campos[c] !== undefined) permitidos[c] = campos[c];
     });
 
-    const { data, error } = await client
+    let { data, error } = await client
         .from('readings')
         .update(permitidos)
         .eq('id', readingId)
         .select();
+
+    // Banco sem a coluna nova: reenvia sem ela em vez de perder a atualizacao
+    if (error && faltaColuna(error) && permitidos.essencia_imagem !== undefined) {
+        console.warn("Coluna nova ausente no banco; atualizando sem ela. Rode o SQL de migracao.");
+        ({ data, error } = await client
+            .from('readings')
+            .update(semColunasOpcionais(permitidos))
+            .eq('id', readingId)
+            .select());
+    }
 
     if (error) console.warn("Erro ao atualizar leitura:", error);
     return { data, error, local: false };

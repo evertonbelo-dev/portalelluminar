@@ -264,7 +264,9 @@
             const cartas = (window.__tiragemAtual || []).map(function(c) {
                 return { nome: c.nome || '', imagem: c.imagem || '' };
             });
-            const ess = window.__essenciaAtual ? (window.__essenciaAtual.nome || '') : '';
+            // A Essencia revelada guarda nome + imagem. A imagem inclui a
+            // subpasta (ex.: "Cartas da Essencia/1-ApresencadeSirian.png")
+            const ess = window.__essenciaAtual;
             return {
                 user_id: window._currentUserId,
                 consulente: cons.nome || window._currentUserName || 'Consulente',
@@ -272,7 +274,8 @@
                 cartas: cartas,
                 pergunta: pergunta || '',
                 interpretacao: textoCanalizado || '',
-                essencia: ess,
+                essencia: ess ? (ess.nome || '') : '',
+                essencia_imagem: ess ? (ess.imagem || '') : '',
                 notas_tarologo: notasTarologoAtuais()
             };
         }
@@ -306,24 +309,46 @@
             }
         };
 
-        // Anexa o texto da IA (e as notas do Guardiao) a leitura ja gravada
+        // Anexa a leitura ja gravada: o texto da IA, as anotacoes do Guardiao
+        // e a carta da Essencia revelada (nome + imagem).
         window.atualizarLeituraNoBackend = async function(readingId, textoCanalizado, notasTarologo) {
             if (!readingId) return { ok: false, erro: 'sem-id' };
             try {
                 const db = await import('./js/supabase-db.js?v=2.1.0');
-                const res = await db.updateReading(readingId, {
-                    interpretacao: textoCanalizado || '',
-                    pergunta: document.getElementById('pergunta-consulente') ? document.getElementById('pergunta-consulente').value : '',
-                    notas_tarologo: (notasTarologo !== undefined) ? notasTarologo : notasTarologoAtuais()
-                });
+                const campos = {};
+
+                // So envia o texto quando existir: evita apagar uma canalizacao ja gravada
+                if (textoCanalizado) campos.interpretacao = textoCanalizado;
+
+                const elPergunta = document.getElementById('pergunta-consulente');
+                if (elPergunta) campos.pergunta = elPergunta.value;
+
+                campos.notas_tarologo = (notasTarologo !== undefined) ? notasTarologo : notasTarologoAtuais();
+
+                // A Essencia e revelada DEPOIS do salvamento: sem isto o
+                // historico mostrava apenas o nome, sem a carta.
+                const ess = window.__essenciaAtual;
+                if (ess) {
+                    campos.essencia = ess.nome || '';
+                    campos.essencia_imagem = ess.imagem || '';
+                }
+
+                const res = await db.updateReading(readingId, campos);
                 if (res.error) {
-                    window.setStatusSalvar('✅ Leitura salva. (texto da IA nao anexado: ' + (res.error.message || 'erro') + ')', 'erro');
+                    window.setStatusSalvar('✅ Leitura salva. (dados nao anexados: ' + (res.error.message || 'erro') + ')', 'erro');
                     return { ok: false, erro: res.error.message || 'erro' };
                 }
-                window.setStatusSalvar(textoCanalizado ? '✅ Leitura salva com a canalizacao do Oraculo!' : '✅ Anotacoes do Guardiao salvas!', 'ok');
+
+                const anexados = [];
+                if (textoCanalizado) anexados.push('a canalizacao do Oraculo');
+                if (ess && ess.nome) anexados.push('a carta da Essencia');
+                if (campos.notas_tarologo) anexados.push('as anotacoes do Guardiao');
+                window.setStatusSalvar(anexados.length
+                    ? '✅ Leitura salva com ' + anexados.join(' e ') + '!'
+                    : '✅ Leitura salva na sua jornada!', 'ok');
                 return { ok: true };
             } catch (e) {
-                window.setStatusSalvar('✅ Leitura salva. (texto da IA nao anexado)', 'erro');
+                window.setStatusSalvar('✅ Leitura salva. (dados nao anexados)', 'erro');
                 return { ok: false, erro: e.message || String(e) };
             }
         };

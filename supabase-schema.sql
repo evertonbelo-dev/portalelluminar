@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS public.readings (
     pergunta TEXT,
     interpretacao TEXT,
     essencia TEXT,
+    essencia_imagem TEXT,
     notas_tarologo TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -89,6 +90,12 @@ CREATE TABLE IF NOT EXISTS public.readings (
 -- 1.1 Migração: garante a coluna das anotações do Guardião/Tarólogo
 --     (ela alimenta o PDF e agora também fica gravada na jornada)
 ALTER TABLE public.readings ADD COLUMN IF NOT EXISTS notas_tarologo TEXT;
+
+-- 1.2 Migração: guarda a imagem da carta da Essência revelada
+--     (ex.: "Cartas da Essencia/1-ApresencadeSirian.png", renderizada
+--     como assets/cartas/<valor>). Sem ela o histórico mostrava apenas
+--     o nome da Essência, sem a carta.
+ALTER TABLE public.readings ADD COLUMN IF NOT EXISTS essencia_imagem TEXT;
 
 -- 2. Tabela: course_progress (Progresso dos Cursos)
 CREATE TABLE IF NOT EXISTS public.course_progress (

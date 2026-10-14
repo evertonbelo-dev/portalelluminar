@@ -232,6 +232,14 @@
                 .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
+        // Caminho da carta. A imagem da Essência inclui subpasta
+        // (ex.: "Cartas da Essencia/1-ApresencadeSirian.png"), e ha arquivos
+        // com espaco e acento no nome — por isso codificamos cada segmento.
+        function cartaUrl(imagem) {
+            if (!imagem) return '';
+            return 'assets/cartas/' + String(imagem).split('/').map(encodeURIComponent).join('/');
+        }
+
         function fecharLeitura() {
             const modal = document.getElementById('leitura-modal');
             if (modal) modal.style.display = 'none';
@@ -253,7 +261,7 @@
             const cartasHtml = cartas.length
                 ? cartas.map(c => `
                     <div style="text-align:center;width:110px;">
-                        <img src="assets/cartas/${esc(c.imagem)}" alt="${esc(c.nome)}"
+                        <img src="${cartaUrl(c.imagem)}" alt="${esc(c.nome)}"
                              onerror="this.style.display='none'"
                              style="width:90px;border-radius:8px;border:1px solid rgba(212,175,55,0.4);">
                         <div style="color:var(--ouro-solar);font-family:'Cinzel',serif;font-size:0.78rem;margin-top:8px;">${esc(c.nome)}</div>
@@ -275,9 +283,12 @@
 
                 <div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:24px;">${cartasHtml}</div>
 
-                ${r.essencia ? `<div style="text-align:center;margin-bottom:22px;">
-                    <div style="color:#888;font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✨ Essência</div>
-                    <div style="color:var(--ouro-solar);font-family:'Cinzel',serif;font-size:1.05rem;">${esc(r.essencia)}</div>
+                ${(r.essencia || r.essencia_imagem) ? `<div style="text-align:center;margin-bottom:24px;">
+                    <div style="color:#888;font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">✨ Carta da Essência</div>
+                    ${r.essencia_imagem ? `<img src="${cartaUrl(r.essencia_imagem)}" alt="${esc(r.essencia || 'Carta da Essência')}"
+                        onerror="this.style.display='none'"
+                        style="width:130px;border-radius:50%;border:3px solid var(--ouro-solar);box-shadow:0 0 18px rgba(255,170,0,0.35);margin-bottom:12px;">` : ''}
+                    ${r.essencia ? `<div style="color:var(--ouro-solar);font-family:'Cinzel',serif;font-size:1.05rem;">${esc(r.essencia)}</div>` : ''}
                 </div>` : ''}
 
                 <div style="color:#888;font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🤖 Canalização do Oráculo</div>

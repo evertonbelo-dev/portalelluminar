@@ -226,12 +226,17 @@ CREATE TABLE IF NOT EXISTS public.readings (
     pergunta TEXT,
     interpretacao TEXT,
     essencia TEXT,
+    essencia_imagem TEXT,
     notas_tarologo TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Coluna das anotacoes do Guardiao (alimenta o PDF e fica gravada)
 ALTER TABLE public.readings ADD COLUMN IF NOT EXISTS notas_tarologo TEXT;
+
+-- Coluna da imagem da carta da Essencia revelada
+-- (ex.: "Cartas da Essencia/1-ApresencadeSirian.png")
+ALTER TABLE public.readings ADD COLUMN IF NOT EXISTS essencia_imagem TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_readings_user_id ON public.readings(user_id);
 CREATE INDEX IF NOT EXISTS idx_readings_created_at ON public.readings(created_at DESC);
