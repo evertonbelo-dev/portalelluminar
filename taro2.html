@@ -252,6 +252,12 @@
             });
         };
 
+        // Notas do Guardiao/Tarologo (campo da tela da Essencia; pode nao existir ainda)
+        function notasTarologoAtuais() {
+            var el = document.getElementById('notas-tarologo');
+            return el ? el.value : '';
+        }
+
         // Monta o payload a partir do estado real da sessao
         function montarPayloadLeitura(pergunta, textoCanalizado) {
             const cons = window.__consulente || {};
@@ -266,9 +272,11 @@
                 cartas: cartas,
                 pergunta: pergunta || '',
                 interpretacao: textoCanalizado || '',
-                essencia: ess
+                essencia: ess,
+                notas_tarologo: notasTarologoAtuais()
             };
         }
+        window.notasTarologoAtuais = notasTarologoAtuais;
 
         window.salvarLeituraNoBackend = async function(pergunta, textoCanalizado) {
             if (!window._currentUserId) {
@@ -298,20 +306,21 @@
             }
         };
 
-        // Anexa o texto da IA a leitura ja gravada
-        window.atualizarLeituraNoBackend = async function(readingId, textoCanalizado) {
+        // Anexa o texto da IA (e as notas do Guardiao) a leitura ja gravada
+        window.atualizarLeituraNoBackend = async function(readingId, textoCanalizado, notasTarologo) {
             if (!readingId) return { ok: false, erro: 'sem-id' };
             try {
                 const db = await import('./js/supabase-db.js?v=2.1.0');
                 const res = await db.updateReading(readingId, {
                     interpretacao: textoCanalizado || '',
-                    pergunta: document.getElementById('pergunta-consulente') ? document.getElementById('pergunta-consulente').value : ''
+                    pergunta: document.getElementById('pergunta-consulente') ? document.getElementById('pergunta-consulente').value : '',
+                    notas_tarologo: (notasTarologo !== undefined) ? notasTarologo : notasTarologoAtuais()
                 });
                 if (res.error) {
                     window.setStatusSalvar('✅ Leitura salva. (texto da IA nao anexado: ' + (res.error.message || 'erro') + ')', 'erro');
                     return { ok: false, erro: res.error.message || 'erro' };
                 }
-                window.setStatusSalvar('✅ Leitura salva com a canalizacao do Oraculo!', 'ok');
+                window.setStatusSalvar(textoCanalizado ? '✅ Leitura salva com a canalizacao do Oraculo!' : '✅ Anotacoes do Guardiao salvas!', 'ok');
                 return { ok: true };
             } catch (e) {
                 window.setStatusSalvar('✅ Leitura salva. (texto da IA nao anexado)', 'erro');

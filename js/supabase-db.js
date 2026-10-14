@@ -30,6 +30,7 @@ export async function saveReading(readingData) {
             pergunta: readingData.pergunta,
             interpretacao: readingData.interpretacao,
             essencia: readingData.essencia,
+            notas_tarologo: readingData.notas_tarologo,
             created_at: new Date().toISOString()
         })
         .select();
@@ -53,7 +54,7 @@ export async function updateReading(readingId, campos) {
 
     // Só permite atualizar colunas conhecidas
     const permitidos = {};
-    ['consulente', 'tipo_tiragem', 'cartas', 'pergunta', 'interpretacao', 'essencia'].forEach(function(c) {
+    ['consulente', 'tipo_tiragem', 'cartas', 'pergunta', 'interpretacao', 'essencia', 'notas_tarologo'].forEach(function(c) {
         if (campos && campos[c] !== undefined) permitidos[c] = campos[c];
     });
 

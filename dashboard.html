@@ -284,6 +284,11 @@
                 ${r.interpretacao
                     ? `<div style="color:#e0e0e0;font-size:0.9rem;line-height:1.65;white-space:pre-wrap;">${esc(r.interpretacao)}</div>`
                     : `<p style="color:#ffab40;font-style:italic;font-size:0.85rem;">Esta leitura foi salva sem a canalização do Oráculo (a IA não respondeu no momento). As cartas e a pergunta estão preservadas acima.</p>`}
+
+                ${r.notas_tarologo ? `<div style="margin-top:24px;padding-top:18px;border-top:1px solid rgba(212,175,55,0.25);">
+                    <div style="color:#888;font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🦁 Canalização do Guardião</div>
+                    <div style="color:#e0e0e0;font-size:0.9rem;line-height:1.65;white-space:pre-wrap;">${esc(r.notas_tarologo)}</div>
+                </div>` : ''}
             `;
 
             modal.style.display = 'block';

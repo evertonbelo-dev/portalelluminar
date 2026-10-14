@@ -82,8 +82,13 @@ CREATE TABLE IF NOT EXISTS public.readings (
     pergunta TEXT,
     interpretacao TEXT,
     essencia TEXT,
+    notas_tarologo TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 1.1 Migração: garante a coluna das anotações do Guardião/Tarólogo
+--     (ela alimenta o PDF e agora também fica gravada na jornada)
+ALTER TABLE public.readings ADD COLUMN IF NOT EXISTS notas_tarologo TEXT;
 
 -- 2. Tabela: course_progress (Progresso dos Cursos)
 CREATE TABLE IF NOT EXISTS public.course_progress (

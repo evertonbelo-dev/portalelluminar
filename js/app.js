@@ -8,6 +8,7 @@ let essenciaAtual = null;
 let tipoTiragem = "";
 let leituraSalvaId = null;   // id da leitura ja gravada no Supabase nesta sessao
 let textoIAAtual = "";       // texto canalizado pela IA (para anexar depois)
+let _ultimasNotasSalvas = ""; // anotacoes do Guardiao ja gravadas (evita update repetido)
 
 const CONFIG_LEITURAS = {
     'unica' : { titulos: ["Resposta do Oráculo"] },
@@ -334,15 +335,43 @@ async function salvarLeitura(comTextoIA) {
     return leituraSalvaId;
 }
 
-// Botao "Salvar Leitura": salva (ou reenvia o texto da IA) sob demanda
+// Anotacoes do Guardiao/Tarologo (campo da tela da Essencia, tambem vai para o PDF)
+function notasTarologoAtual() {
+    const el = document.getElementById('notas-tarologo');
+    return el ? el.value : '';
+}
+
+// Grava as anotacoes do Guardiao na leitura da jornada.
+// Se a leitura ainda nao foi gravada, grava ela inteira (o payload ja leva as anotacoes).
+async function salvarNotasTarologo() {
+    const notas = notasTarologoAtual();
+    if (!notas.trim() || notas === _ultimasNotasSalvas) return leituraSalvaId;
+
+    if (!leituraSalvaId) {
+        if (typeof window.salvarLeituraNoBackend === 'function' && (window.__tiragemAtual || []).length) {
+            await salvarLeitura(false);
+            if (leituraSalvaId) _ultimasNotasSalvas = notas;
+        }
+        return leituraSalvaId;
+    }
+
+    if (typeof window.atualizarLeituraNoBackend !== 'function') return leituraSalvaId;
+    const res = await window.atualizarLeituraNoBackend(leituraSalvaId, textoIAAtual, notas);
+    if (res && res.ok) _ultimasNotasSalvas = notas;
+    return leituraSalvaId;
+}
+
+// Botao "Salvar Leitura": salva (ou reenvia o texto da IA e as anotacoes) sob demanda
 async function salvarLeituraManual() {
     if (typeof window.salvarLeituraNoBackend !== 'function') {
         alert('Salvamento indisponivel. Recarregue a pagina e tente novamente.');
         return null;
     }
     if (leituraSalvaId) {
-        if (textoIAAtual && typeof window.atualizarLeituraNoBackend === 'function') {
-            await window.atualizarLeituraNoBackend(leituraSalvaId, textoIAAtual);
+        const notas = notasTarologoAtual();
+        if ((textoIAAtual || notas) && typeof window.atualizarLeituraNoBackend === 'function') {
+            await window.atualizarLeituraNoBackend(leituraSalvaId, textoIAAtual, notas);
+            _ultimasNotasSalvas = notas;
         } else if (typeof window.setStatusSalvar === 'function') {
             window.setStatusSalvar('✅ Esta leitura ja esta salva na sua jornada.', 'ok');
         }
@@ -350,6 +379,12 @@ async function salvarLeituraManual() {
     }
     return await salvarLeitura(true);
 }
+
+// Auto-grava as anotacoes do Guardiao quando o campo perde o foco
+document.addEventListener('DOMContentLoaded', function() {
+    const el = document.getElementById('notas-tarologo');
+    if (el) el.addEventListener('blur', function() { salvarNotasTarologo(); });
+});
 
 // Exporta funcoes para uso no HTML (onclick)
 window.mostrarTela = mostrarTela;
@@ -363,6 +398,7 @@ window.chamarOraculoSiriano = chamarOraculoSiriano;
 window.gerarPDFReal = gerarPDFReal;
 window.gerarInterpretacaoLocal = gerarInterpretacaoLocal;
 window.salvarLeituraManual = salvarLeituraManual;
+window.salvarNotasTarologo = salvarNotasTarologo;
 
 // Variaveis de estado acessiveis externamente (read-only)
 window.__consulente = consulente;
