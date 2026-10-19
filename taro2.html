@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tarô Divino Siriano - A Jornada</title>   
     <link rel="icon" href="data:,"> 
-    <link rel="stylesheet" href="css/portal.css?v=2.2.0"> 
+    <link rel="stylesheet" href="css/portal.css?v=2.3.0"> 
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
     <script src="js/env-config.js"></script>
 </head>
@@ -152,13 +152,13 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.2.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.3.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 
     <script type="module">
-        import { initSupabase } from './js/supabase-config.js?v=2.2.0';
-        import { getSession, getCurrentUser, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.2.0';
+        import { initSupabase } from './js/supabase-config.js?v=2.3.0';
+        import { getSession, getCurrentUser, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.3.0';
         
         // Verifica se esta logado — senao redireciona para login
         await initSupabase();
@@ -192,8 +192,8 @@
             preencherNomeConsulente();
         }
         
-        import { OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_API_URL, OPENROUTER_SITE_URL, OPENROUTER_APP_NAME } from './js/config.js?v=2.2.0';
-        import { SYSTEM_PROMPT } from './js/taro-api.js?v=2.2.0';
+        import { OPENROUTER_API_KEY, OPENROUTER_MODEL, OPENROUTER_API_URL, OPENROUTER_SITE_URL, OPENROUTER_APP_NAME } from './js/config.js?v=2.3.0';
+        import { SYSTEM_PROMPT } from './js/taro-api.js?v=2.3.0';
 
         try {
             // Expõe a chave e dados do OpenRouter globalmente
@@ -292,7 +292,7 @@
             }
             try {
                 window.setStatusSalvar('💾 Salvando sua leitura...', 'info');
-                const db = await import('./js/supabase-db.js?v=2.2.0');
+                const db = await import('./js/supabase-db.js?v=2.3.0');
                 const res = await db.saveReading(montarPayloadLeitura(pergunta, textoCanalizado));
                 if (res.error || res.local) {
                     const msg = res.error ? (res.error.message || JSON.stringify(res.error)) : 'sem conexao';
@@ -314,7 +314,7 @@
         window.atualizarLeituraNoBackend = async function(readingId, textoCanalizado, notasTarologo) {
             if (!readingId) return { ok: false, erro: 'sem-id' };
             try {
-                const db = await import('./js/supabase-db.js?v=2.2.0');
+                const db = await import('./js/supabase-db.js?v=2.3.0');
                 const campos = {};
 
                 // So envia o texto quando existir: evita apagar uma canalizacao ja gravada
@@ -354,8 +354,8 @@
         };
     </script>
 
-    <script src="js/dados.js?v=2.2.0"></script>
-    <script src="js/app.js?v=2.2.0"></script>
+    <script src="js/dados.js?v=2.3.0"></script>
+    <script src="js/app.js?v=2.3.0"></script>
 
     <div id="container-pdf-oculto">
         <div class="capa-pdf">

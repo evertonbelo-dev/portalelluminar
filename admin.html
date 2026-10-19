@@ -67,11 +67,12 @@
         <div class="admin-tab" data-tab="usuarios">👥 Usuarios</div>
         <div class="admin-tab" data-tab="terapeutas">🌿 Terapeutas</div>
         <div class="admin-tab" data-tab="leads">📧 Marketing</div>
+        <div class="admin-tab" data-tab="emails">✉️ E-mails</div>
         <div class="admin-tab" data-tab="banco">📋 Banco</div>
     </div>
     <script type="module">
-        import { initSupabase, getSupabase } from './js/supabase-config.js?v=2.2.0';
-        import { getSqlSetup, isAdmin } from './js/admin-config.js?v=2.2.0';
+        import { initSupabase, getSupabase } from './js/supabase-config.js?v=2.3.0';
+        import { getSqlSetup, isAdmin } from './js/admin-config.js?v=2.3.0';
 
 const container = document.getElementById('admin-content');
         function addLog(msg) { console.log('[Admin]', msg); }
@@ -145,7 +146,7 @@ const container = document.getElementById('admin-content');
         async function initTabs() {
             addLog("Carregando modulo de abas...");
             try {
-                const mod = await import("./js/admin-tabs.js?v=2.2.0");
+                const mod = await import("./js/admin-tabs.js?v=2.3.0");
                 await mod.initTabs(container, window._adminUserEmail);
             } catch(e) {
                 addLog("Erro: " + e.message);

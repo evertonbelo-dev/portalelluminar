@@ -12,13 +12,15 @@
 </head>
 <body>
 
+    <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
+
     <header class="portal-header">
         <a href="index.html" class="logo-area" style="text-decoration:none;">
             <img src="assets/PortalElluminar/Simbolo_Portal.png" alt="Símbolo El’Luminar" class="simbolo-img">
-            <h1>Portal El’Luminar</h1>
+            <div class="portal-marca">Portal El’Luminar</div>
         </a>
 
-        <nav class="portal-nav">
+        <nav class="portal-nav" aria-label="Navegação principal">
             <span id="nav-user-info" style="color:#aaa;font-size:0.8rem;margin-right:10px;display:none;"></span>
             <a href="terapeutas.html" style="color:#bbb;text-decoration:none;font-size:0.8rem;margin-right:14px;">👥 Terapeutas</a>
             <a href="login.html" id="btn-login-nav"
@@ -26,7 +28,7 @@
         </nav>
     </header>
 
-    <main>
+    <main id="conteudo">
         <!-- ================= HERO DO TERAPEUTA ================= -->
         <section class="tera-hero">
             <div class="selo-egregora">✦ Para Terapeutas</div>
@@ -49,7 +51,7 @@
                 </a>
             </div>
 
-            <p style="color:#6f6f85;font-size:0.75rem;margin-top:20px;font-style:italic;">
+            <p style="color:#8f8fa5;font-size:0.78rem;margin-top:20px;font-style:italic;">
                 Cadastro gratuito no lançamento. O painel do terapeuta já está no ar —
                 cadastre seu perfil, seus atendimentos e sua agenda.
             </p>
@@ -460,8 +462,8 @@
                 <div class="faixa-cta">
                     <h2>O próximo passo é seu</h2>
                     <p>
-                        Crie sua conta gratuita, monte seu perfil quando sua área for liberada
-                        e comece a ser encontrado por quem já está buscando.
+                        Crie sua conta gratuita, monte seu perfil e publique quando estiver pronto
+                        — e comece a ser encontrado por quem já está buscando.
                     </p>
                     <div class="hero-ctas" style="margin-top:0;">
                         <a href="login.html" class="btn-cta btn-cta-primario">
@@ -482,7 +484,7 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.2.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.3.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 
@@ -490,7 +492,7 @@
         // Nav: mostra o nome do usuario logado (mesmo comportamento do index.html)
         (async () => {
             try {
-                const mod = await import('./js/supabase-auth.js?v=2.2.0');
+                const mod = await import('./js/supabase-auth.js?v=2.3.0');
                 const session = await mod.getSession();
                 const btn = document.getElementById('btn-login-nav');
                 const info = document.getElementById('nav-user-info');

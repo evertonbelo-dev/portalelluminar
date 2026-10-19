@@ -12,20 +12,22 @@
 </head>
 <body>
 
+    <a class="pular-conteudo" href="#conteudo">Pular para o conteúdo</a>
+
     <header class="portal-header">
         <a href="index.html" class="logo-area" style="text-decoration:none;">
             <img src="assets/PortalElluminar/Simbolo_Portal.png" alt="Símbolo El’Luminar" class="simbolo-img">
-            <h1>Portal El’Luminar</h1>
+            <div class="portal-marca">Portal El’Luminar</div>
         </a>
 
-        <nav class="portal-nav">
+        <nav class="portal-nav" aria-label="Navegação principal">
             <span id="nav-user-info" style="color:#aaa;font-size:0.8rem;margin-right:10px;display:none;"></span>
             <a href="login.html" id="btn-login-nav"
                style="color: var(--ouro-solar); text-decoration: none; padding: 6px 14px; border: 1px solid var(--dourado-antigo); border-radius: 20px; font-size: 0.8rem; transition: all 0.3s;">🔮 Entrar</a>
         </nav>
     </header>
 
-    <main>
+    <main id="conteudo">
         <!-- ================= HERO: os dois botões ================= -->
         <section class="tera-hero">
             <div class="selo-egregora">✦ Egrégora El’Luminar</div>
@@ -106,11 +108,11 @@
                     <button type="button" class="chip ativo" data-filtro="todos">Todos</button>
                 </div>
 
-                <div class="tera-grid" id="tera-grid">
+                <div class="tera-grid" id="tera-grid" aria-busy="true" aria-live="polite">
                     <p class="tera-vazio">Sintonizando os terapeutas...</p>
                 </div>
 
-                <p id="tera-nota" hidden style="text-align:center;color:#6f6f85;font-size:0.75rem;margin-top:26px;font-style:italic;">
+                <p id="tera-nota" hidden style="text-align:center;color:#8f8fa5;font-size:0.78rem;margin-top:26px;font-style:italic;">
                     Prévia do diretório: os perfis acima são ilustrativos. Os perfis reais
                     entram no ar com o cadastro dos terapeutas da Egrégora.
                 </p>
@@ -131,9 +133,10 @@
         </section>
 
         <!-- ================= MODAL DE PERFIL ================= -->
-        <div id="modal-tera" class="modal-tera">
+        <div id="modal-tera" class="modal-tera" role="dialog" aria-modal="true"
+             aria-labelledby="modal-tera-titulo" aria-hidden="true">
             <div class="modal-tera-caixa">
-                <button type="button" class="modal-tera-fechar" id="modal-tera-fechar" aria-label="Fechar">&times;</button>
+                <button type="button" class="modal-tera-fechar" id="modal-tera-fechar" aria-label="Fechar perfil">&times;</button>
                 <div id="modal-tera-conteudo"></div>
             </div>
         </div>
@@ -145,12 +148,12 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.2.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.3.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 
 <script type="module">
-        import { TERAPEUTAS_EXEMPLO } from './js/terapeutas-exemplo.js?v=2.2.0';
+        import { TERAPEUTAS_EXEMPLO } from './js/terapeutas-exemplo.js?v=2.3.0';
 
         const grid = document.getElementById('tera-grid');
         const filtros = document.getElementById('tera-filtros');
@@ -169,6 +172,7 @@
         // que a carrega — o modal espera por ela antes de montar a agenda.
         let SESSION = null;
         let sessaoPronta = Promise.resolve();
+        let _focoAnterior = null;   // devolve o foco ao card ao fechar o modal
 
         // Escapa texto antes de entrar no HTML (mesmo padrao do dashboard)
         function esc(v) {
@@ -215,6 +219,7 @@
 
             if (!lista.length) {
                 grid.innerHTML = '<p class="tera-vazio">Nenhum terapeuta com essa especialidade por enquanto.</p>';
+                grid.setAttribute('aria-busy', 'false');
                 return;
             }
 
@@ -236,9 +241,12 @@
                     '<div class="tera-meta">' + esc(t.cidade || '') +
                         '<br>' + esc(ROTULO_MODALIDADE[t.modalidade] || '') +
                         ' &middot; ' + esc(t.anos || 0) + ' anos</div>' +
-                    '<button type="button" class="btn-card" data-slug="' + esc(t.slug) + '">Ver perfil</button>' +
+                    '<button type="button" class="btn-card" data-slug="' + esc(t.slug) + '"' +
+                        ' aria-label="Ver perfil de ' + esc(t.nome) + '">Ver perfil</button>' +
                     '</article>';
             }).join('');
+
+            grid.setAttribute('aria-busy', 'false');
         }
 
         // Normaliza o telefone para o link do WhatsApp (55 + DDD + numero)
@@ -396,10 +404,15 @@
             }
 
             const chips = dias.map(function (x) {
+                const rotulo = DIA_LONGO[x.dow] + ', ' + dataCurta(x.data) +
+                    (x.slots.length ? '' : ' — sem horários');
                 return '<button type="button" class="agenda-dia' + (x.data === _agenda.dia ? ' ativo' : '') + '"' +
-                    ' data-dia="' + x.data + '"' + (x.slots.length ? '' : ' disabled') + '>' +
-                    '<span>' + DIA_CURTO[x.dow] + '</span>' +
-                    '<strong>' + dataCurta(x.data) + '</strong>' +
+                    ' data-dia="' + x.data + '"' +
+                    ' aria-label="' + rotulo + '"' +
+                    ' aria-pressed="' + (x.data === _agenda.dia ? 'true' : 'false') + '"' +
+                    (x.slots.length ? '' : ' disabled') + '>' +
+                    '<span aria-hidden="true">' + DIA_CURTO[x.dow] + '</span>' +
+                    '<strong aria-hidden="true">' + dataCurta(x.data) + '</strong>' +
                     '</button>';
             }).join('');
 
@@ -408,15 +421,18 @@
 
             const botoes = slots.length
                 ? slots.map(function (s) {
-                    return '<button type="button" class="agenda-slot' +
-                        (_agenda.escolhido === hhmmDe(s.min) ? ' ativo' : '') +
-                        '" data-hora="' + hhmmDe(s.min) + '">' + hhmmDe(s.min) + '</button>';
+                    const hora = hhmmDe(s.min);
+                    const marcado = _agenda.escolhido === hora;
+                    return '<button type="button" class="agenda-slot' + (marcado ? ' ativo' : '') +
+                        '" data-hora="' + hora + '"' +
+                        ' aria-label="' + hora + ' horas"' +
+                        ' aria-pressed="' + (marcado ? 'true' : 'false') + '">' + hora + '</button>';
                 }).join('')
                 : '<p class="agenda-vazia">Sem horários livres neste dia.</p>';
 
-            return '<div class="agenda-dias">' + chips + '</div>' +
-                '<div class="agenda-slots">' + botoes + '</div>' +
-                '<div class="agenda-escolha" id="agenda-escolha"' + (_agenda.escolhido ? '' : ' hidden') + '>' +
+            return '<div class="agenda-dias" role="group" aria-label="Escolha o dia">' + chips + '</div>' +
+                '<div class="agenda-slots" role="group" aria-label="Horários livres">' + botoes + '</div>' +
+                '<div class="agenda-escolha" id="agenda-escolha" aria-live="polite"' + (_agenda.escolhido ? '' : ' hidden') + '>' +
                 escolhaAgenda() + '</div>' +
                 '<p class="agenda-nota">Horários no fuso de Brasília · antecedência mínima de 1 hora.</p>';
         }
@@ -475,7 +491,7 @@
             if (!t) return;
             if (!t.id) { t.ocupados = []; return; }
             try {
-                const db = await import('./js/supabase-db.js?v=2.2.0');
+                const db = await import('./js/supabase-db.js?v=2.3.0');
                 const r = await db.listarHorariosOcupados(t.id);
                 t.ocupados = (r && Array.isArray(r.data)) ? r.data : [];
             } catch (e) {
@@ -522,7 +538,7 @@
             dizer('Enviando sua solicitação...', '#d4af37');
 
             try {
-                const db = await import('./js/supabase-db.js?v=2.2.0');
+                const db = await import('./js/supabase-db.js?v=2.3.0');
                 const u = SESSION.user;
 
                 const r = await db.criarSolicitacaoAgendamento({
@@ -597,26 +613,38 @@
             const contatos = blocoContatos(t);
 
             modalConteudo.innerHTML =
-                '<h2>' + esc(t.nome) + '</h2>' +
+                '<h2 id="modal-tera-titulo">' + esc(t.nome) + '</h2>' +
                 '<div class="modal-sub">' + esc(t.titulo) + ' &middot; ' + esc(t.cidade || '') + '</div>' +
                 '<p class="modal-bio">' + esc(t.bio) + '</p>' +
                 '<h3>Atendimentos</h3>' +
                 (servicos || '<p class="tera-vazio">Serviços a combinar.</p>') +
                 contatos +
                 blocoAgenda(t) +
-                '<div class="modal-aviso">✦ O agendamento com reserva automática entra em breve. ' +
-                (contatos
-                    ? 'Escolha um horário acima e confirme direto com o terapeuta pelos canais acima.'
-                    : 'Escolha um horário acima e combine o contato para confirmar.') +
-                '</div>';
+                '<div class="modal-aviso">✦ Escolha um horário acima e clique em <strong>Solicitar agendamento</strong>. ' +
+                'A reserva fica pendente até o terapeuta confirmar — e é liberada automaticamente se ele não responder.</div>';
 
             modal.classList.add('aberto');
+            modal.setAttribute('aria-hidden', 'false');
+            _focoAnterior = document.activeElement;
+
+            const btnFechar = document.getElementById('modal-tera-fechar');
+            if (btnFechar) btnFechar.focus();
+
             document.body.style.overflow = 'hidden';
         }
 
         function fecharPerfil() {
+            if (!modal.classList.contains('aberto')) return;
+
             modal.classList.remove('aberto');
+            modal.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
+
+            // Devolve o foco ao botão "Ver perfil" que abriu o modal
+            if (_focoAnterior && typeof _focoAnterior.focus === 'function') {
+                _focoAnterior.focus();
+            }
+            _focoAnterior = null;
         }
 
         document.getElementById('modal-tera-fechar').addEventListener('click', fecharPerfil);
@@ -625,6 +653,25 @@
         });
         document.addEventListener('keydown', function (ev) {
             if (ev.key === 'Escape') fecharPerfil();
+
+            // Prende o Tab dentro do modal enquanto ele estiver aberto
+            if (ev.key !== 'Tab' || !modal.classList.contains('aberto')) return;
+
+            const focaveis = modal.querySelectorAll(
+                'button:not([disabled]), [href], select, textarea, input, [tabindex]:not([tabindex="-1"])'
+            );
+            if (!focaveis.length) return;
+
+            const primeiro = focaveis[0];
+            const ultimo = focaveis[focaveis.length - 1];
+
+            if (ev.shiftKey && document.activeElement === primeiro) {
+                ev.preventDefault();
+                ultimo.focus();
+            } else if (!ev.shiftKey && document.activeElement === ultimo) {
+                ev.preventDefault();
+                primeiro.focus();
+            }
         });
         grid.addEventListener('click', function (ev) {
             const b = ev.target.closest('[data-slug]');
@@ -663,7 +710,7 @@
             let doBanco = [];
 
             try {
-                const db = await import('./js/supabase-db.js?v=2.2.0');
+                const db = await import('./js/supabase-db.js?v=2.3.0');
                 const r = await db.listarTerapeutasPublicos();
                 if (r && Array.isArray(r.data)) doBanco = r.data;
             } catch (e) {
@@ -689,7 +736,7 @@
         // guardamos a promise, e o modal espera por ela.
         sessaoPronta = (async function () {
             try {
-                const mod = await import('./js/supabase-auth.js?v=2.2.0');
+                const mod = await import('./js/supabase-auth.js?v=2.3.0');
                 const session = await mod.getSession();
                 SESSION = session || null;
 

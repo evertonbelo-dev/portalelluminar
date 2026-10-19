@@ -183,19 +183,19 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.2.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.3.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 <script type="module">
-        import { initSupabase } from './js/supabase-config.js?v=2.2.0';
-        import { getSession, getCurrentUser, signOut, onAuthChange, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.2.0';
+        import { initSupabase } from './js/supabase-config.js?v=2.3.0';
+        import { getSession, getCurrentUser, signOut, onAuthChange, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.3.0';
         import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile,
                  obterMeuPerfilTerapeuta, salvarPerfilTerapeuta, salvarServicosTerapeuta, salvarContatosTerapeuta,
                  uploadFotoTerapeuta, caminhoFotoTerapeuta, removerFotoTerapeuta,
                  formatarWhatsApp, salvarDisponibilidadeTerapeuta, salvarBloqueiosTerapeuta,
                  listarSolicitacoesTerapeuta, listarMinhasSolicitacoes,
                  responderSolicitacao, cancelarSolicitacao,
-                 expirarSolicitacoesPendentes } from './js/supabase-db.js?v=2.2.0';
+                 expirarSolicitacoesPendentes } from './js/supabase-db.js?v=2.3.0';
 
         await initSupabase();
 

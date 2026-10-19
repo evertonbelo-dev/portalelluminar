@@ -1,6 +1,6 @@
 /* ==========================================================================
    css/terapeutas.css — Vitrine de Terapeutas + Landing do Terapeuta
-   Versão: 2.2.0
+   Versão: 2.3.0
    Usado por: terapeutas.html, seja-terapeuta.html
    Depende de: css/portal.css (variáveis --ouro-solar, --dourado-antigo,
                --chama-viva, --azul-profundo)
@@ -345,7 +345,7 @@
 .agenda-slot.ativo { background: var(--dourado-antigo); border-color: var(--dourado-antigo); color: #000; font-weight: 700; }
 
 .agenda-vazia { color: #8b8b9e; font-size: 0.85rem; font-style: italic; margin-top: 14px; }
-.agenda-nota { color: #6f6f85; font-size: 0.72rem; margin-top: 14px; }
+.agenda-nota { color: #8f8fa5; font-size: 0.72rem; margin-top: 14px; }
 
 .agenda-escolha {
     margin-top: 16px; padding: 14px 16px; border-radius: 12px;
@@ -373,12 +373,57 @@
 .btn-agendar:hover { filter: brightness(1.08); }
 .btn-agendar:disabled { opacity: 0.65; cursor: default; }
 
-/* ---------- RESPONSIVO ---------- */
+/* ---------- Acessibilidade (F5c) ---------- */
+
+/* Header: o nome do site deixa de ser <h1> (cada pagina tem UM h1, o do
+   conteudo). Este bloco replica o estilo do antigo .portal-header h1. */
+.portal-header .portal-marca {
+    font-family: 'Cinzel', serif; color: var(--dourado-antigo);
+    font-size: 1.4rem; text-transform: uppercase; letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+/* Atalho de teclado: aparece so quando recebe foco */
+.pular-conteudo {
+    position: absolute; left: -9999px; top: 0; z-index: 2000;
+    background: var(--ouro-solar); color: #000; font-weight: 700;
+    padding: 10px 18px; border-radius: 0 0 10px 0; text-decoration: none;
+}
+.pular-conteudo:focus { left: 0; }
+
+/* Foco sempre visivel (teclado) */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid var(--ouro-solar);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
+/* Conteudo apenas para leitores de tela */
+.so-leitor {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
 @media (max-width: 700px) {
     /* O header do portal nao tem regra mobile: sem isso os atalhos
        empurram o logo para fora da tela em celulares pequenos. */
     .portal-header { padding: 12px 16px; flex-wrap: wrap; gap: 10px; }
     .portal-header h1 { font-size: 1.05rem; }
+    .portal-header .portal-marca { font-size: 1.05rem; }
     .simbolo-img { height: 38px; }
     .chave-ativacao { display: none; }
     .portal-nav { display: flex; align-items: center; gap: 8px; margin-left: auto; }

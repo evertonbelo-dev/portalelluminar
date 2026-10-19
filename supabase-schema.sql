@@ -1186,4 +1186,61 @@ CREATE TRIGGER trg_booking_notificar
     AFTER INSERT OR UPDATE ON public.therapist_bookings
     FOR EACH ROW EXECUTE FUNCTION public.notificar_booking();
 
+-- ==========================================================
+-- 13. ADMIN: LOG DE E-MAILS + LIMPEZA (Fase F5c)
+--    O schema "net" (respostas do pg_net) nao e exposto ao
+--    navegador — por isso a RPC junta email_log + status HTTP.
+-- ==========================================================
+CREATE OR REPLACE FUNCTION public.admin_listar_emails(p_limite integer DEFAULT 100)
+RETURNS TABLE (
+    id bigint,
+    tipo text,
+    destinatario text,
+    assunto text,
+    status text,
+    status_http integer,
+    detalhe text,
+    created_at timestamptz
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.is_admin(auth.uid()) THEN
+        RAISE EXCEPTION 'Apenas administradores podem ver os emails';
+    END IF;
+
+    RETURN QUERY
+    SELECT l.id, l.tipo, l.destinatario, l.assunto, l.status,
+           r.status_code,
+           COALESCE(l.detalhe, left(r.content, 300)),
+           l.created_at
+      FROM public.email_log l
+      LEFT JOIN net._http_response r ON r.id = l.request_id
+     ORDER BY l.id DESC
+     LIMIT GREATEST(1, LEAST(COALESCE(p_limite, 100), 500));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_listar_emails(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_listar_emails(integer) TO authenticated;
+DO $$ BEGIN
+    REVOKE EXECUTE ON FUNCTION public.admin_listar_emails(integer) FROM anon;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- Limpeza diaria: log com mais de 90 dias
+DO $$
+BEGIN
+    BEGIN
+        PERFORM cron.unschedule('limpar-email-log');
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+    PERFORM cron.schedule(
+        'limpar-email-log',
+        '15 4 * * *',
+        $cron$DELETE FROM public.email_log WHERE created_at < NOW() - INTERVAL '90 days';$cron$
+    );
+END $$;
+
 

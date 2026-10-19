@@ -1,4 +1,4 @@
-﻿// js/admin-tabs.js — Gerenciamento de Abas do Painel Admin v2.2.0
+﻿// js/admin-tabs.js — Gerenciamento de Abas do Painel Admin v2.3.0
 import { getSupabase } from './supabase-config.js';
 import { carregarConfig, salvarConfig, getSqlSetup } from './admin-config.js';
 import { MODELOS_DISPONIVEIS } from './modelos.js';
@@ -18,6 +18,7 @@ export async function initTabs(containerEl, userEmail) {
                     case 'usuarios': await renderUsuarios(containerEl); break;
                     case 'terapeutas': await renderTerapeutas(containerEl); break;
                     case 'leads': await renderLeads(containerEl); break;
+                    case 'emails': await renderEmails(containerEl); break;
                     case 'banco': renderBanco(containerEl); break;
                 }
             } catch(e) {
@@ -171,6 +172,73 @@ async function renderLeads(el) {
         el.innerHTML = '<div class="admin-card"><h2>Erro</h2><p style="color:#ff6b6b;">' + e.message + '</p></div>';
     }
 }
+
+// ---------- LOG DE E-MAILS (F5b) ----------
+async function renderEmails(el) {
+    try {
+        var s = await getSupabase();
+        if (!s) {
+            el.innerHTML = '<div class="admin-card"><h2>E-mails</h2><p style="color:#ff6b6b;">Supabase indisponivel</p></div>';
+            return;
+        }
+
+        var r = await s.rpc('admin_listar_emails', { p_limite: 100 });
+
+        if (r.error) {
+            el.innerHTML = '<div class="admin-card"><h2>✉️ E-mails</h2>'
+                + '<p style="color:#ff6b6b;">' + escTera(r.error.message) + '</p>'
+                + '<p style="color:#888;margin-top:10px;">Se a funcao nao existe, rode a secao 13 do supabase-schema.sql.</p>'
+                + '</div>';
+            return;
+        }
+
+        var lista = r.data || [];
+        var ok = lista.filter(function (l) { return l.status_http === 200; }).length;
+        var falhas = lista.length - ok;
+
+        var html = '<div class="admin-card"><h2>✉️ E-mails enviados (' + lista.length + ')</h2>';
+        html += '<p style="color:#888;margin-bottom:14px;line-height:1.6;">'
+             + ok + ' com HTTP 200 · ' + falhas + ' com pendencia. '
+             + 'Aqui fica o que o Portal disparou; o historico completo (aberturas, bounces) esta no painel do Resend.</p>';
+        html += '<div style="margin-bottom:14px;"><button class="btn-admin-save" onclick="window._emailsAtualizar()">↻ Atualizar</button></div>';
+
+        if (!lista.length) {
+            html += '<p style="color:#888;">Nenhum e-mail registrado ainda. Os avisos aparecem aqui quando houver solicitacao de agendamento.</p>';
+        } else {
+            html += '<table class="admin-tabela"><tr><th>Quando</th><th>Tipo</th><th>Para</th><th>Assunto</th><th>Status</th><th>HTTP</th><th>Detalhe</th></tr>';
+            lista.forEach(function (l) {
+                var quando = new Date(l.created_at).toLocaleString('pt-BR', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+                var cor = l.status_http === 200 ? '#4caf50' : (l.status === 'enfileirado' ? '#aaa' : '#ff6b6b');
+
+                html += '<tr>'
+                     + '<td style="font-size:0.78rem;white-space:nowrap;">' + escTera(quando) + '</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(l.tipo) + '</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(l.destinatario || '-') + '</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(l.assunto || '-') + '</td>'
+                     + '<td style="font-size:0.75rem;color:' + cor + ';">' + escTera(l.status) + '</td>'
+                     + '<td style="font-size:0.78rem;color:' + cor + ';">' + (l.status_http || '—') + '</td>'
+                     + '<td style="font-size:0.72rem;color:#888;max-width:220px;">' + escTera(String(l.detalhe || '').slice(0, 120)) + '</td>'
+                     + '</tr>';
+            });
+            html += '</table>';
+            html += '<p style="color:#666;font-size:0.72rem;margin-top:12px;">'
+                 + '<strong>sem_chave</strong>: falta o segredo <code>resend_api_key</code> no Vault · '
+                 + '<strong>sem_destinatario</strong>: o perfil nao tinha contato · '
+                 + '<strong>erro</strong>: veja o detalhe.</p>';
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<div class="admin-card"><h2>Erro</h2><p style="color:#ff6b6b;">' + escTera(e.message) + '</p></div>';
+    }
+}
+
+window._emailsAtualizar = function () {
+    renderEmails(document.getElementById('admin-content'));
+};
 
 // ---------- VITRINE DE TERAPEUTAS (F2) ----------
 function escTera(v) {
