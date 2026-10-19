@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento | Portal El’Luminar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/portal.css">
+    <style>
+        .pag-wrap { max-width: 560px; margin: 0 auto; padding: 60px 20px 90px; }
+        .pag-card {
+            background: rgba(5, 5, 16, 0.95); border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 18px; padding: 30px;
+        }
+        .pag-card h1 { font-family: 'Cinzel', serif; color: var(--ouro-solar); font-size: 1.5rem; text-align: center; }
+        .pag-sub { text-align: center; color: #9a9aae; font-size: 0.85rem; margin: 6px 0 26px; }
+        .pag-resumo { background: rgba(0, 0, 0, 0.35); border-radius: 12px; padding: 16px 18px; margin-bottom: 22px; }
+        .pag-resumo .linha { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 0.9rem; color: #c9c9d9; }
+        .pag-resumo .linha strong { color: #fff; }
+        .pag-resumo .total { border-top: 1px solid rgba(212, 175, 55, 0.25); margin-top: 8px; padding-top: 12px; font-size: 1.05rem; }
+        .pag-resumo .total strong { color: var(--ouro-solar); font-size: 1.2rem; }
+        .pag-campo { display: flex; gap: 8px; margin-bottom: 18px; }
+        .pag-input {
+            flex: 1; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 10px; padding: 11px 14px; color: #eee; font-family: inherit; font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        .pag-input:focus { outline: none; border-color: var(--ouro-solar); }
+        .pag-btn-sec {
+            background: rgba(212, 175, 55, 0.12); color: var(--ouro-solar); border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 10px; padding: 0 18px; cursor: pointer; font-size: 0.85rem; font-weight: 700;
+        }
+        .pag-opcoes { display: flex; gap: 10px; margin-bottom: 20px; }
+        .pag-opcao {
+            flex: 1; border: 1px solid rgba(212, 175, 55, 0.25); border-radius: 12px; padding: 12px;
+            cursor: pointer; color: #b9b9cc; font-size: 0.82rem; text-align: center; transition: all .2s;
+        }
+        .pag-opcao strong { display: block; color: #fff; font-size: 0.95rem; margin-bottom: 2px; }
+        .pag-opcao.ativo { border-color: var(--ouro-solar); background: rgba(212, 175, 55, 0.14); color: var(--ouro-solar); }
+        .pag-opcao.ativo strong { color: var(--ouro-solar); }
+        #stripe-element { margin: 18px 0; }
+        .pag-btn {
+            width: 100%; border: none; border-radius: 12px; padding: 15px; cursor: pointer;
+            background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar));
+            color: #000; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1rem;
+        }
+        .pag-btn:disabled { opacity: 0.6; cursor: default; }
+        .pag-msg { margin-top: 14px; font-size: 0.85rem; text-align: center; min-height: 20px; }
+        .pag-msg.ok { color: #7bd67f; }
+        .pag-msg.erro { color: #ff8a8a; }
+        .pag-msg.info { color: #ffcc80; }
+        .pag-nota { color: #7f7f95; font-size: 0.72rem; line-height: 1.6; margin-top: 16px; text-align: center; }
+        .pag-voltar { display: block; text-align: center; margin-top: 20px; color: #888; font-size: 0.8rem; }
+    </style>
+    <script src="js/env-config.js"></script>
+</head>
+<body>
+    <main id="conteudo" class="pag-wrap">
+        <div class="pag-card">
+            <h1>Finalizar agendamento</h1>
+            <p class="pag-sub" id="pag-sub">Carregando…</p>
+
+            <div id="pag-conteudo" hidden>
+                <div class="pag-resumo" id="pag-resumo"></div>
+
+                <div class="pag-campo">
+                    <input id="pag-cupom" class="pag-input" placeholder="Cupom de desconto" maxlength="24" autocomplete="off">
+                    <button type="button" id="pag-aplicar" class="pag-btn-sec">Aplicar</button>
+                </div>
+
+                <div class="pag-opcoes" role="radiogroup" aria-label="Forma de pagamento">
+                    <div class="pag-opcao ativo" id="op-sinal" role="radio" aria-checked="true" tabindex="0">
+                        <strong>Sinal 30%</strong> resta acertar com o terapeuta
+                    </div>
+                    <div class="pag-opcao" id="op-integral" role="radio" aria-checked="false" tabindex="0">
+                        <strong>Integral</strong> paga o valor todo agora
+                    </div>
+                </div>
+
+                <div id="stripe-element"></div>
+                <button type="button" id="pag-pagar" class="pag-btn">Pagar</button>
+                <div id="pag-msg" class="pag-msg" role="status" aria-live="polite"></div>
+            </div>
+
+            <p class="pag-nota">
+                Pagamento processado pelo Stripe. O Portal não armazena dados do seu cartão.
+            </p>
+            <a class="pag-voltar" href="terapeutas.html">← Voltar para a vitrine</a>
+        </div>
+    <script type="module">
+        import { initSupabase, getSupabase } from './js/supabase-config.js?v=2.3.0';
+        import { getSession } from './js/supabase-auth.js?v=2.3.0';
+        import { SUPABASE_URL, STRIPE_PK } from './js/config.js?v=2.3.0';
+
+        await initSupabase();
+
+        const $ = function (id) { return document.getElementById(id); };
+        const params = new URLSearchParams(location.search);
+        const bookingId = params.get('agendamento');
+        const voltouDoStripe = params.get('pagamento');
+
+        const dizer = function (texto, tipo) {
+            const el = $('pag-msg');
+            if (el) { el.innerText = texto; el.className = 'pag-msg ' + (tipo || ''); }
+        };
+
+        function precoNum(t) {
+            if (!t) return 0;
+            const s = String(t).replace(/\s/g, '');
+            const limpo = s.indexOf(',') > -1 ? s.replace(/\./g, '').replace(',', '.') : s;
+            const n = Number(limpo.replace(/[^0-9.]/g, ''));
+            return isFinite(n) ? n : 0;
+        }
+
+        function brl(n) {
+            return Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function quandoBonito(iso, hora) {
+            const p = String(iso).split('-').map(Number);
+            const dias = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+            const dow = new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay();
+            return dias[dow] + ', ' + String(p[2]).padStart(2, '0') + '/' + String(p[1]).padStart(2, '0') + ' às ' + String(hora).slice(0, 5);
+        }
+
+        if (!bookingId) {
+            $('pag-sub').innerText = 'Agendamento não informado.';
+            throw new Error('sem-agendamento');
+        }
+
+        const session = await getSession();
+        if (!session) {
+            location.href = 'login.html?redirect=' + encodeURIComponent('pagamento.html?agendamento=' + bookingId);
+            throw new Error('sem-sessao');
+        }
+
+        const client = await getSupabase();
+        const { data: b } = await client
+            .from('therapist_bookings')
+            .select('*, therapists(nome)')
+            .eq('id', bookingId)
+            .maybeSingle();
+
+        if (!b) { $('pag-sub').innerText = 'Agendamento não encontrado.'; throw new Error('nao-encontrado'); }
+        if (b.consulente_id !== session.user.id) { $('pag-sub').innerText = 'Este agendamento não é seu.'; throw new Error('nao-seu'); }
+
+        const total = Number(b.valor_total) || precoNum(b.servico_preco);
+        let percentual = 0;
+        let cupom = '';
+        let forma = 'sinal';
+        let pronto = false;
+        let stripe = null;
+        let elements = null;
+
+        $('pag-sub').innerText = 'Confira os dados e conclua o pagamento.';
+
+        if (b.pagamento_status === 'pago') {
+            $('pag-sub').innerText = '';
+            $('pag-resumo').innerHTML = '<div class="linha"><span>Status</span><strong style="color:#7bd67f;">Pagamento confirmado</strong></div>';
+            $('pag-resumo').hidden = false;
+            dizer('Este atendimento já está pago. Até breve!', 'ok');
+            throw new Error('ja-pago');
+        }
+
+        if (b.status === 'cancelado') {
+            $('pag-sub').innerText = '';
+            $('pag-resumo').innerHTML = '<div class="linha"><span>Status</span><strong style="color:#ff8a8a;">Pedido cancelado</strong></div>';
+            $('pag-resumo').hidden = false;
+            dizer('Este pedido foi cancelado e não pode ser pago.', 'erro');
+            throw new Error('cancelado');
+        }
+
+        function calcular() {
+            const desconto = Math.round(total * percentual) / 100;
+            const liquido = Math.round((total - desconto) * 100) / 100;
+            const cobrar = forma === 'sinal' ? Math.round(liquido * 30) / 100 : liquido;
+            return { desconto: desconto, liquido: liquido, cobrar: cobrar };
+        }
+
+        function pintar() {
+            const v = calcular();
+            const linhas = [];
+
+            linhas.push('<div class="linha"><span>Atendimento</span><strong>' + (b.servico_nome || 'A combinar') + '</strong></div>');
+            linhas.push('<div class="linha"><span>Terapeuta</span><strong>' + ((b.therapists && b.therapists.nome) || '—') + '</strong></div>');
+            linhas.push('<div class="linha"><span>Quando</span><strong>' + quandoBonito(b.data, b.hora_inicio) + '</strong></div>');
+            linhas.push('<div class="linha"><span>Valor do atendimento</span><strong>' + brl(total) + '</strong></div>');
+
+            if (percentual > 0) {
+                linhas.push('<div class="linha"><span>Cupom ' + cupom + ' (' + percentual + '%)</span><strong style="color:#7bd67f;">− ' + brl(v.desconto) + '</strong></div>');
+            }
+
+            linhas.push('<div class="linha total"><span>' + (forma === 'sinal' ? 'Sinal (30%)' : 'Total a pagar') + '</span><strong>' + brl(v.cobrar) + '</strong></div>');
+
+            if (forma === 'sinal') {
+                linhas.push('<div class="linha"><span style="color:#8f8fa5;font-size:0.76rem;">Restante ' + brl(v.liquido - v.cobrar) + ' acertado com o terapeuta</span><span></span></div>');
+            }
+
+            $('pag-resumo').innerHTML = linhas.join('');
+            $('pag-resumo').hidden = false;
+
+            if (pronto) {
+                $('pag-pagar').innerText = 'Recalcular';
+                pronto = false;
+            } else {
+                $('pag-pagar').innerText = 'Continuar para pagamento';
+            }
+        }
+
+        function escolher(nova) {
+            forma = nova;
+            $('op-sinal').classList.toggle('ativo', forma === 'sinal');
+            $('op-integral').classList.toggle('ativo', forma === 'integral');
+            $('op-sinal').setAttribute('aria-checked', forma === 'sinal' ? 'true' : 'false');
+            $('op-integral').setAttribute('aria-checked', forma === 'integral' ? 'true' : 'false');
+            pintar();
+        }
+
+        $('op-sinal').addEventListener('click', function () { escolher('sinal'); });
+        $('op-integral').addEventListener('click', function () { escolher('integral'); });
+        ['op-sinal', 'op-integral'].forEach(function (id) {
+            $(id).addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                    ev.preventDefault();
+                    escolher(id === 'op-sinal' ? 'sinal' : 'integral');
+                }
+            });
+        });
+
+        $('pag-aplicar').addEventListener('click', async function () {
+            const codigo = ($('pag-cupom').value || '').trim().toUpperCase();
+
+            if (!codigo) { percentual = 0; cupom = ''; pintar(); return; }
+
+            const { data } = await client.rpc('validar_cupom', { p_codigo: codigo, p_user: session.user.id });
+            const r = Array.isArray(data) ? data[0] : data;
+
+            if (!r || !r.ok) {
+                percentual = 0; cupom = '';
+                pintar();
+                dizer(r && r.motivo ? r.motivo : 'Cupom inválido', 'erro');
+                return;
+            }
+
+            percentual = Number(r.percentual) || 0;
+            cupom = codigo;
+            pintar();
+            dizer('Cupom aplicado: ' + percentual + '% de desconto.', 'ok');
+        });
+
+        async function carregarStripe() {
+            if (window.Stripe) return window.Stripe(STRIPE_PK);
+
+            await new Promise(function (ok, erro) {
+                const s = document.createElement('script');
+                s.src = 'https://js.stripe.com/v3/';
+                s.onload = ok;
+                s.onerror = erro;
+                document.head.appendChild(s);
+            });
+
+            return window.Stripe(STRIPE_PK);
+        }
+
+        async function prepararPagamento() {
+            if (!STRIPE_PK) {
+                dizer('Pagamento ainda não configurado: falta a chave pública do Stripe (VITE_STRIPE_PUBLISHABLE_KEY).', 'info');
+                return;
+            }
+            if (!total || total <= 0) {
+                dizer('O valor deste atendimento não está definido. Fale com o terapeuta.', 'info');
+                return;
+            }
+
+            $('pag-pagar').disabled = true;
+            dizer('Preparando o pagamento…', 'info');
+
+            try {
+                const resp = await fetch(SUPABASE_URL + '/functions/v1/stripe/intent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + session.access_token
+                    },
+                    body: JSON.stringify({ booking_id: bookingId, forma: forma, cupom: cupom })
+                });
+
+                const dados = await resp.json();
+
+                if (!resp.ok) {
+                    dizer(dados.erro || 'Não foi possível iniciar o pagamento.', 'erro');
+                    return;
+                }
+
+                stripe = await carregarStripe();
+                elements = stripe.elements({
+                    clientSecret: dados.client_secret,
+                    appearance: {
+                        theme: 'night',
+                        variables: { colorPrimary: '#d4af37', colorBackground: '#0f0f1c', colorText: '#e8e8f0' }
+                    }
+                });
+
+                const paymentElement = elements.create('payment', { layout: 'tabs' });
+                paymentElement.mount('#stripe-element');
+
+                pronto = true;
+                $('pag-pagar').innerText = 'Pagar ' + brl(dados.cobrado);
+                dizer('Escolha cartão ou Pix e confirme o pagamento.', 'info');
+            } catch (e) {
+                dizer('Erro ao preparar o pagamento: ' + e.message, 'erro');
+            } finally {
+                $('pag-pagar').disabled = false;
+            }
+        }
+
+        async function confirmarPagamento() {
+            if (!stripe || !elements) return prepararPagamento();
+
+            $('pag-pagar').disabled = true;
+            dizer('Processando…', 'info');
+
+            const { error } = await stripe.confirmPayment({
+                elements: elements,
+                confirmParams: {
+                    return_url: location.origin + location.pathname +
+                        '?agendamento=' + encodeURIComponent(bookingId) + '&pagamento=ok'
+                }
+            });
+
+            if (error) {
+                dizer(error.message || 'Pagamento não concluído.', 'erro');
+                $('pag-pagar').disabled = false;
+            }
+        }
+
+        $('pag-pagar').addEventListener('click', function () {
+            return pronto ? confirmarPagamento() : prepararPagamento();
+        });
+
+        // Depois do Stripe, a verdade vem do webhook — então conferimos no banco
+        async function esperarConfirmacao(tentativas) {
+            const { data } = await client.from('therapist_bookings')
+                .select('pagamento_status, valor_cobrado')
+                .eq('id', bookingId)
+                .maybeSingle();
+
+            if (data && data.pagamento_status === 'pago') {
+                $('pag-sub').innerText = '';
+                $('pag-conteudo').hidden = true;
+                $('pag-resumo').innerHTML =
+                    '<div class="linha"><span>Status</span><strong style="color:#7bd67f;">Pagamento confirmado</strong></div>' +
+                    '<div class="linha total"><span>Pago</span><strong>' + brl(data.valor_cobrado) + '</strong></div>';
+                $('pag-resumo').hidden = false;
+                dizer('Tudo certo! O terapeuta foi avisado do seu agendamento.', 'ok');
+                return;
+            }
+
+            if (tentativas <= 0) {
+                dizer('Recebemos seu pagamento e estamos aguardando a confirmação do Stripe. Pode fechar esta página — o agendamento se atualiza sozinho.', 'info');
+                return;
+            }
+
+            setTimeout(function () { esperarConfirmacao(tentativas - 1); }, 2000);
+        }
+
+        $('pag-conteudo').hidden = false;
+        pintar();
+
+        if (voltouDoStripe === 'ok') {
+            $('pag-conteudo').hidden = true;
+            dizer('Confirmando seu pagamento…', 'info');
+            esperarConfirmacao(8);
+        } else {
+            // Oferece o cupom de primeira compra, se houver
+            try {
+                const { data } = await client.rpc('gerar_cupom_primeira_compra', { p_user: session.user.id });
+                const c = Array.isArray(data) ? data[0] : data;
+
+                if (c && c.codigo) {
+                    $('pag-cupom').value = c.codigo;
+                    dizer('Encontramos seu cupom de primeira compra: ' + c.codigo + ' (' + c.percentual + '%). Clique em Aplicar.', 'info');
+                }
+            } catch (e) { /* opcional */ }
+        }
+    </script>
+</body>
+</html>
+

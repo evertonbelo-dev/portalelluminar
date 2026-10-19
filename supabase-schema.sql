@@ -1390,6 +1390,24 @@ RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
      WHERE upper(codigo) = upper(btrim(p_codigo)) AND usado_em IS NULL;
 $$;
 
+-- Permissoes: gerar/validar so para logados; marcar uso so pelo service_role
+-- (a Edge Function do Stripe, que roda no webhook).
+REVOKE ALL ON FUNCTION public.gerar_cupom_primeira_compra(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.gerar_cupom_primeira_compra(uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.validar_cupom(text, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.validar_cupom(text, uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.marcar_cupom_usado(text, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.marcar_cupom_usado(text, uuid) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.marcar_cupom_usado(text, uuid) TO service_role;
+
+DO $$ BEGIN
+    REVOKE EXECUTE ON FUNCTION public.gerar_cupom_primeira_compra(uuid) FROM anon;
+    REVOKE EXECUTE ON FUNCTION public.validar_cupom(text, uuid) FROM anon;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 -- Prazo de pagamento: 24h, mas nunca depois de 24h antes do atendimento
 CREATE OR REPLACE FUNCTION public.booking_prazo_pagamento()
 RETURNS TRIGGER AS $$

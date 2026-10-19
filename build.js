@@ -23,6 +23,7 @@ const ITEMS_TO_COPY = [
     'terapeutas.html',
     'seja-terapeuta.html',
     'reset.html',
+    'pagamento.html',
     'js/',
     'css/',
     'assets/'
@@ -84,7 +85,7 @@ const htmlFiles = [
     'index.html', 'admin.html', 'taro2.html', 'login.html', 'dashboard.html',
     'dna.html', 'numerologia.html', 'hawkins.html', 'bovis.html',
     'cursos.html', 'curso-player.html', 'mestres.html',
-    'terapeutas.html', 'seja-terapeuta.html', 'reset.html'
+    'terapeutas.html', 'seja-terapeuta.html', 'reset.html', 'pagamento.html'
 ];
 
 for (const file of htmlFiles) {

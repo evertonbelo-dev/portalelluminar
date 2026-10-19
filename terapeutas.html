@@ -582,6 +582,13 @@
                     duracao_min: dur
                 }]);
 
+                const novoId = r.data && r.data.id;
+                if (novoId) {
+                    dizer('Solicitação criada! Abrindo o pagamento…', '#4caf50');
+                    window.location.href = 'pagamento.html?agendamento=' + encodeURIComponent(novoId);
+                    return;
+                }
+
                 dizer('✅ Solicitação enviada! Acompanhe a resposta em Minha Jornada.', '#4caf50');
                 if (btn) btn.innerText = 'Solicitado ✓';
                 if (obs) obs.disabled = true;
