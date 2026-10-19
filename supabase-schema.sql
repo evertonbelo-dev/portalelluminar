@@ -1243,4 +1243,236 @@ BEGIN
     );
 END $$;
 
+-- ==========================================================
+-- 14. PAGAMENTOS E CUPONS (Fase F6 — Stripe)
+--    Regras:
+--      * sinal de 30% ou integral, decidido no checkout
+--      * pendente + sem pagamento + prazo vencido = cancelado
+--      * confirmado + sem pagamento = CONTINUA (regra de negocio)
+--      * cupom de 15% gerado na primeira compra (uso unico, 30 dias)
+--      * cupom aplicado antes de criar o PaymentIntent
+-- ==========================================================
+ALTER TABLE public.therapist_bookings
+    ADD COLUMN IF NOT EXISTS valor_total NUMERIC(10,2),
+    ADD COLUMN IF NOT EXISTS valor_desconto NUMERIC(10,2) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS valor_cobrado NUMERIC(10,2),
+    ADD COLUMN IF NOT EXISTS cupom_codigo TEXT,
+    ADD COLUMN IF NOT EXISTS forma_pagamento TEXT,
+    ADD COLUMN IF NOT EXISTS pagamento_status TEXT NOT NULL DEFAULT 'aguardando',
+    ADD COLUMN IF NOT EXISTS pagamento_deadline TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS stripe_payment_intent TEXT,
+    ADD COLUMN IF NOT EXISTS pago_em TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS reembolso_solicitado_em TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS public.coupons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    codigo TEXT NOT NULL UNIQUE,
+    percentual INTEGER NOT NULL CHECK (percentual BETWEEN 1 AND 100),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    origem TEXT NOT NULL DEFAULT 'primeira_compra'
+        CHECK (origem IN ('primeira_compra', 'solicitado', 'admin', 'stripe')),
+    stripe_coupon_id TEXT,
+    stripe_promotion_code TEXT,
+    valido_ate TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days'),
+    usado_em TIMESTAMPTZ,
+    usado_booking_id UUID,
+    criado_por UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Um cupom de primeira compra aberto por pessoa
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_cupom_primeira_por_user
+    ON public.coupons (user_id)
+    WHERE origem = 'primeira_compra' AND usado_em IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_coupons_user ON public.coupons (user_id);
+CREATE INDEX IF NOT EXISTS idx_coupons_codigo ON public.coupons (upper(codigo));
+
+ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Dono ve o proprio cupom" ON public.coupons;
+CREATE POLICY "Dono ve o proprio cupom"
+    ON public.coupons FOR SELECT
+    USING (user_id = auth.uid() OR public.is_admin(auth.uid()));
+
+DROP POLICY IF EXISTS "Admins gerenciam cupons" ON public.coupons;
+CREATE POLICY "Admins gerenciam cupons"
+    ON public.coupons FOR ALL
+    USING (public.is_admin(auth.uid()))
+    WITH CHECK (public.is_admin(auth.uid()));
+
+-- "R$ 1.234,56" -> 1234.56
+CREATE OR REPLACE FUNCTION public.preco_para_numeric(p_preco text)
+RETURNS numeric LANGUAGE sql IMMUTABLE AS $$
+    SELECT CASE
+        WHEN p_preco IS NULL OR btrim(p_preco) = '' THEN NULL
+        WHEN position(',' in p_preco) > 0 THEN
+            NULLIF(replace(regexp_replace(replace(p_preco, '.', ''), '[^0-9,]', '', 'g'), ',', '.'), '')::numeric
+        ELSE
+            NULLIF(regexp_replace(p_preco, '[^0-9.]', '', 'g'), '')::numeric
+    END;
+$$;
+
+-- Gera (ou devolve) o cupom de 15% da primeira compra. Idempotente.
+CREATE OR REPLACE FUNCTION public.gerar_cupom_primeira_compra(p_user uuid)
+RETURNS TABLE (codigo text, percentual integer, valido_ate timestamptz, novo boolean)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+    v_codigo text;
+    v_reg record;
+BEGIN
+    IF p_user IS NULL THEN RETURN; END IF;
+
+    SELECT c.codigo, c.percentual, c.valido_ate INTO v_reg
+      FROM public.coupons c
+     WHERE c.user_id = p_user AND c.origem = 'primeira_compra' AND c.usado_em IS NULL
+     ORDER BY c.created_at DESC LIMIT 1;
+
+    IF FOUND THEN
+        codigo := v_reg.codigo; percentual := v_reg.percentual;
+        valido_ate := v_reg.valido_ate; novo := false;
+        RETURN NEXT; RETURN;
+    END IF;
+
+    -- Quem ja pagou alguma vez nao e mais primeira compra
+    IF EXISTS (SELECT 1 FROM public.therapist_bookings b
+                WHERE b.consulente_id = p_user AND b.pagamento_status = 'pago') THEN
+        RETURN;
+    END IF;
+
+    v_codigo := 'LUMINAR15-' || upper(substr(md5(random()::text || p_user::text), 1, 6));
+
+    INSERT INTO public.coupons (codigo, percentual, user_id, origem, valido_ate)
+    VALUES (v_codigo, 15, p_user, 'primeira_compra', NOW() + INTERVAL '30 days');
+
+    codigo := v_codigo; percentual := 15;
+    valido_ate := NOW() + INTERVAL '30 days'; novo := true;
+    RETURN NEXT;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.validar_cupom(p_codigo text, p_user uuid)
+RETURNS TABLE (ok boolean, motivo text, percentual integer)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE v record;
+BEGIN
+    IF p_codigo IS NULL OR btrim(p_codigo) = '' THEN
+        ok := false; motivo := 'Informe um codigo'; percentual := 0; RETURN NEXT; RETURN;
+    END IF;
+
+    SELECT c.percentual, c.user_id, c.usado_em, c.valido_ate INTO v
+      FROM public.coupons c
+     WHERE upper(c.codigo) = upper(btrim(p_codigo)) LIMIT 1;
+
+    IF NOT FOUND THEN
+        ok := false; motivo := 'Cupom nao encontrado'; percentual := 0; RETURN NEXT; RETURN;
+    END IF;
+    IF v.usado_em IS NOT NULL THEN
+        ok := false; motivo := 'Este cupom ja foi utilizado'; percentual := 0; RETURN NEXT; RETURN;
+    END IF;
+    IF v.valido_ate < NOW() THEN
+        ok := false; motivo := 'Este cupom venceu'; percentual := 0; RETURN NEXT; RETURN;
+    END IF;
+    IF v.user_id IS NOT NULL AND v.user_id <> p_user THEN
+        ok := false; motivo := 'Este cupom e de outra pessoa'; percentual := 0; RETURN NEXT; RETURN;
+    END IF;
+
+    ok := true; motivo := NULL; percentual := v.percentual; RETURN NEXT;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.marcar_cupom_usado(p_codigo text, p_booking uuid)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+    UPDATE public.coupons
+       SET usado_em = NOW(), usado_booking_id = p_booking
+     WHERE upper(codigo) = upper(btrim(p_codigo)) AND usado_em IS NULL;
+$$;
+
+-- Prazo de pagamento: 24h, mas nunca depois de 24h antes do atendimento
+CREATE OR REPLACE FUNCTION public.booking_prazo_pagamento()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.pagamento_deadline IS NULL THEN
+        NEW.pagamento_deadline := LEAST(
+            NOW() + INTERVAL '24 hours',
+            ((NEW.data + NEW.hora_inicio) AT TIME ZONE 'America/Sao_Paulo') - INTERVAL '24 hours'
+        );
+        IF NEW.pagamento_deadline <= NOW() THEN
+            NEW.pagamento_deadline := NOW() + INTERVAL '30 minutes';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_booking_prazo_pagamento ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_prazo_pagamento
+    BEFORE INSERT OR UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.booking_prazo_pagamento();
+
+-- Desfaz apenas o que esta PENDENTE e sem pagamento (confirmado segue)
+CREATE OR REPLACE FUNCTION public.cancelar_pagamentos_vencidos()
+RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE total integer;
+BEGIN
+    UPDATE public.therapist_bookings
+       SET status = 'cancelado',
+           resposta = COALESCE(resposta, 'Cancelado automaticamente: pagamento nao concluido ate o prazo.')
+     WHERE status = 'pendente'
+       AND pagamento_status <> 'pago'
+       AND pagamento_deadline IS NOT NULL
+       AND pagamento_deadline < NOW();
+
+    GET DIAGNOSTICS total = ROW_COUNT;
+    RETURN total;
+END;
+$$;
+
+-- Pedido PAGO que e cancelado entra na fila de reembolso
+CREATE OR REPLACE FUNCTION public.booking_reembolso()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'cancelado' AND OLD.status <> 'cancelado'
+       AND NEW.pagamento_status = 'pago'
+       AND NEW.reembolso_solicitado_em IS NULL THEN
+        NEW.reembolso_solicitado_em := NOW();
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_booking_reembolso ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_reembolso
+    BEFORE UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.booking_reembolso();
+
+DO $$
+BEGIN
+    BEGIN
+        PERFORM cron.unschedule('cancelar-pagamentos-vencidos');
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+    PERFORM cron.schedule(
+        'cancelar-pagamentos-vencidos',
+        '5,20,35,50 * * * *',
+        $cron$SELECT public.cancelar_pagamentos_vencidos();$cron$
+    );
+END $$;
+
+-- Idempotencia do webhook: o Stripe reenvia eventos; a PK impede
+-- processar duas vezes (e queimar o cupom duas vezes).
+CREATE TABLE IF NOT EXISTS public.stripe_events (
+    id TEXT PRIMARY KEY,
+    tipo TEXT,
+    recebido_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_stripe_events_data
+    ON public.stripe_events (recebido_em DESC);
+ALTER TABLE public.stripe_events ENABLE ROW LEVEL SECURITY;
+-- Sem policies: apenas service_role (a Edge Function) acessa.
+
 

@@ -20,3 +20,6 @@ export const OPENROUTER_APP_NAME = 'Portal El\'Luminar';
 
 // Versão do sistema
 export const SISTEMA_VERSAO = 'v2.3.0';
+
+// Stripe — chave pública (a secreta vive nos secrets da Edge Function)
+export const STRIPE_PK = window.__STRIPE_PK__ || '';
