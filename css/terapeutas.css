@@ -355,6 +355,24 @@
 .agenda-escolha .resumo { color: #cfe8d0; font-size: 0.92rem; font-weight: 700; margin-bottom: 10px; }
 .agenda-escolha .nota { color: #8fa892; font-size: 0.72rem; line-height: 1.6; margin-top: 12px; }
 
+/* Formulário de solicitação (F4) */
+.agenda-select, .agenda-obs {
+    width: 100%; margin-top: 10px; font-family: inherit; font-size: 0.85rem;
+    background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 10px; color: #eee; padding: 10px 12px;
+}
+.agenda-obs { min-height: 64px; resize: vertical; }
+.agenda-select:focus, .agenda-obs:focus { outline: none; border-color: var(--ouro-solar); }
+.agenda-acoes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+.btn-agendar {
+    display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px;
+    border: none; border-radius: 30px; cursor: pointer; text-decoration: none;
+    font-size: 0.85rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar)); color: #000;
+}
+.btn-agendar:hover { filter: brightness(1.08); }
+.btn-agendar:disabled { opacity: 0.65; cursor: default; }
+
 /* ---------- RESPONSIVO ---------- */
 @media (max-width: 700px) {
     /* O header do portal nao tem regra mobile: sem isso os atalhos

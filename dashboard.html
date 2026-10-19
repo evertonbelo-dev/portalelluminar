@@ -67,6 +67,25 @@
             .tp-card { padding: 18px; }
         }
 
+        /* ---------- Solicitações de agendamento (F4) ---------- */
+        .tp-book {
+            background: rgba(5, 5, 16, 0.85); border: 1px solid rgba(212, 175, 55, 0.18);
+            border-radius: 12px; padding: 16px 18px; margin-bottom: 10px;
+        }
+        .tp-book-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+        .tp-book-quando { color: var(--ouro-solar); font-weight: 700; font-size: 0.9rem; }
+        .tp-book-status { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+        .s-pendente { background: rgba(255, 171, 64, 0.12); color: #ffcc80; border: 1px solid rgba(255, 171, 64, 0.35); }
+        .s-confirmado { background: rgba(76, 175, 80, 0.14); color: #7bd67f; border: 1px solid rgba(76, 175, 80, 0.35); }
+        .s-recusado, .s-cancelado { background: rgba(255, 107, 107, 0.1); color: #ff8a8a; border: 1px solid rgba(255, 107, 107, 0.3); }
+        .s-concluido { background: rgba(100, 181, 246, 0.12); color: #90caf9; border: 1px solid rgba(100, 181, 246, 0.35); }
+        .tp-book-info { color: #b9b9cc; font-size: 0.82rem; line-height: 1.6; }
+        .tp-book-obs { color: #8f8fa5; font-size: 0.8rem; font-style: italic; margin-top: 8px; }
+        .tp-book-resp { color: #9bd99e; font-size: 0.8rem; margin-top: 8px; }
+        .tp-book-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .tp-book-acoes .tp-btn-sec { padding: 8px 16px; font-size: 0.78rem; }
+        .tp-vazio-lista { color: #888; font-style: italic; font-size: 0.85rem; }
+
         /* ---------- Foto do terapeuta ---------- */
         .tp-foto-linha { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
         .tp-foto-preview {
@@ -172,7 +191,9 @@
         import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile,
                  obterMeuPerfilTerapeuta, salvarPerfilTerapeuta, salvarServicosTerapeuta, salvarContatosTerapeuta,
                  uploadFotoTerapeuta, caminhoFotoTerapeuta, removerFotoTerapeuta,
-                 formatarWhatsApp, salvarDisponibilidadeTerapeuta, salvarBloqueiosTerapeuta } from './js/supabase-db.js?v=2.1.0';
+                 formatarWhatsApp, salvarDisponibilidadeTerapeuta, salvarBloqueiosTerapeuta,
+                 listarSolicitacoesTerapeuta, listarMinhasSolicitacoes,
+                 responderSolicitacao, cancelarSolicitacao } from './js/supabase-db.js?v=2.1.0';
 
         await initSupabase();
 
@@ -301,6 +322,16 @@
                     <p style="color: #888; font-style: italic;">Verificando seu perfil de terapeuta...</p>
                 </div>
 
+                <h2 class="dash-section-title">📥 Solicitações recebidas</h2>
+                <div id="solicitacoes-terapeuta">
+                    <p class="tp-vazio-lista">Carregando...</p>
+                </div>
+
+                <h2 class="dash-section-title">📅 Meus agendamentos</h2>
+                <div id="minhas-solicitacoes">
+                    <p class="tp-vazio-lista">Carregando...</p>
+                </div>
+
                 <!-- Visualizador de leitura (aberto ao clicar em "Ver leitura") -->
                 <div id="leitura-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;overflow-y:auto;padding:40px 16px;">
                     <div style="max-width:760px;margin:0 auto;background:rgba(5,5,16,0.98);border:1px solid rgba(212,175,55,0.4);border-radius:15px;padding:28px;position:relative;">
@@ -342,8 +373,27 @@
                 });
             }
 
+            // F4: ações das listas de solicitações (delegado)
+            const boxTer = document.getElementById('solicitacoes-terapeuta');
+            if (boxTer) {
+                boxTer.addEventListener('click', function (ev) {
+                    const b = ev.target.closest('[data-book]');
+                    if (b) acaoSolicitacao(b.dataset.book, b.dataset.id);
+                });
+            }
+
+            const boxMeu = document.getElementById('minhas-solicitacoes');
+            if (boxMeu) {
+                boxMeu.addEventListener('click', function (ev) {
+                    const b = ev.target.closest('[data-book]');
+                    if (b) acaoSolicitacao(b.dataset.book, b.dataset.id);
+                });
+            }
+
             carregarHistorico();
             carregarPainelTerapeuta();
+            carregarSolicitacoesRecebidas();
+            carregarMinhasSolicitacoes();
         }
 
         // --- Painel do Terapeuta (F2) ---
@@ -493,6 +543,139 @@
                 alvo.innerHTML = '<div class="tp-card"><p class="tp-msg-erro">Erro ao carregar o painel: ' +
                     esc(e.message) + '</p></div>';
             }
+        }
+
+        // ---------- Solicitações de agendamento (F4) ----------
+        const ROTULO_STATUS_BOOK = {
+            pendente: '⏳ Pendente',
+            confirmado: '✅ Confirmado',
+            recusado: '✖ Recusado',
+            cancelado: '🚫 Cancelado',
+            concluido: '🏁 Concluído'
+        };
+
+        const PESO_STATUS_BOOK = { pendente: 0, confirmado: 1, concluido: 2, recusado: 3, cancelado: 4 };
+
+        function cardSolicitacao(b, souTerapeuta) {
+            const rot = ROTULO_STATUS_BOOK[b.status] || esc(b.status);
+            const quando = rotuloData(b.data).texto + ' às ' + b.hora_inicio;
+
+            const quem = souTerapeuta
+                ? esc(b.consulente_nome || 'Consulente') +
+                  (b.consulente_contato ? ' · ' + esc(b.consulente_contato) : '')
+                : esc(b.terapeuta_nome || 'Terapeuta');
+
+            const servico = b.servico_nome
+                ? esc(b.servico_nome) + (b.servico_preco ? ' · ' + esc(b.servico_preco) : '')
+                : 'Atendimento a combinar';
+
+            let acoes = '';
+            if (souTerapeuta && b.status === 'pendente') {
+                acoes = '<button type="button" class="tp-btn-sec" data-book="confirmar" data-id="' + esc(b.id) + '">Confirmar</button>' +
+                        '<button type="button" class="tp-btn-sec" data-book="recusar" data-id="' + esc(b.id) + '">Recusar</button>';
+            } else if (souTerapeuta && b.status === 'confirmado') {
+                acoes = '<button type="button" class="tp-btn-sec" data-book="concluir" data-id="' + esc(b.id) + '">Marcar como realizado</button>';
+            } else if (!souTerapeuta && (b.status === 'pendente' || b.status === 'confirmado')) {
+                acoes = '<button type="button" class="tp-btn-sec" data-book="cancelar" data-id="' + esc(b.id) + '">Cancelar</button>';
+            }
+
+            return `
+                <div class="tp-book">
+                    <div class="tp-book-topo">
+                        <span class="tp-book-quando">${esc(quando)}</span>
+                        <span class="tp-book-status s-${esc(b.status)}">${rot}</span>
+                    </div>
+                    <div class="tp-book-info">${quem}<br>${servico} · ${esc(b.duracao_min)} min</div>
+                    ${b.observacao ? '<div class="tp-book-obs">“' + esc(b.observacao) + '”</div>' : ''}
+                    ${b.resposta ? '<div class="tp-book-resp">Resposta: ' + esc(b.resposta) + '</div>' : ''}
+                    ${acoes ? '<div class="tp-book-acoes">' + acoes + '</div>' : ''}
+                </div>
+            `;
+        }
+
+        async function carregarSolicitacoesRecebidas() {
+            const alvo = document.getElementById('solicitacoes-terapeuta');
+            if (!alvo) return;
+
+            try {
+                let perfil = _meuPerfilTera;
+                if (!perfil) {
+                    const p = await obterMeuPerfilTerapeuta(user.id);
+                    perfil = (p && p.data) ? p.data : null;
+                    if (perfil) _meuPerfilTera = perfil;
+                }
+
+                if (!perfil) {
+                    alvo.innerHTML = '<p class="tp-vazio-lista">Crie seu perfil de terapeuta para receber solicitações.</p>';
+                    return;
+                }
+
+                const r = await listarSolicitacoesTerapeuta(perfil.id);
+
+                if (r.indisponivel) {
+                    alvo.innerHTML = '<p class="tp-msg-aviso">As solicitações ainda não estão ativas neste banco. Rode a seção 10 do supabase-schema.sql.</p>';
+                    return;
+                }
+                if (r.error) {
+                    alvo.innerHTML = '<p class="tp-msg-erro">Não foi possível carregar: ' + esc(r.error.message) + '</p>';
+                    return;
+                }
+
+                const lista = (r.data || []).slice().sort(function (a, b) {
+                    return (PESO_STATUS_BOOK[a.status] || 9) - (PESO_STATUS_BOOK[b.status] || 9)
+                        || a.data.localeCompare(b.data)
+                        || a.hora_inicio.localeCompare(b.hora_inicio);
+                });
+
+                alvo.innerHTML = lista.length
+                    ? lista.map(function (b) { return cardSolicitacao(b, true); }).join('')
+                    : '<p class="tp-vazio-lista">Nenhuma solicitação ainda.</p>';
+            } catch (e) {
+                alvo.innerHTML = '<p class="tp-msg-erro">Erro: ' + esc(e.message) + '</p>';
+            }
+        }
+
+        async function carregarMinhasSolicitacoes() {
+            const alvo = document.getElementById('minhas-solicitacoes');
+            if (!alvo) return;
+
+            try {
+                const r = await listarMinhasSolicitacoes(user.id);
+
+                if (r.indisponivel) {
+                    alvo.innerHTML = '<p class="tp-vazio-lista">Agendamentos ainda não ativos neste banco.</p>';
+                    return;
+                }
+                if (r.error) {
+                    alvo.innerHTML = '<p class="tp-msg-erro">Erro: ' + esc(r.error.message) + '</p>';
+                    return;
+                }
+
+                const lista = r.data || [];
+                alvo.innerHTML = lista.length
+                    ? lista.map(function (b) { return cardSolicitacao(b, false); }).join('')
+                    : '<p class="tp-vazio-lista">Você ainda não solicitou nenhum horário.</p>';
+            } catch (e) {
+                alvo.innerHTML = '<p class="tp-msg-erro">Erro: ' + esc(e.message) + '</p>';
+            }
+        }
+
+        async function acaoSolicitacao(acao, id) {
+            if (!id) return;
+
+            if (acao === 'cancelar') {
+                if (!confirm('Cancelar esta solicitação?')) return;
+                const r = await cancelarSolicitacao(id);
+                if (r.error) { alert(r.error.message); return; }
+            } else {
+                const status = acao === 'confirmar' ? 'confirmado'
+                    : (acao === 'recusar' ? 'recusado' : 'concluido');
+                const r = await responderSolicitacao(id, status, '');
+                if (r.error) { alert(r.error.message); return; }
+            }
+
+            await carregarSolicitacoesRecebidas();
+            await carregarMinhasSolicitacoes();
         }
 
         // Formulário do perfil (vazio = primeiro cadastro; preenchido = edição)

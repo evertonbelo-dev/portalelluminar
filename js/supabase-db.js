@@ -754,6 +754,206 @@ export async function removerFotoTerapeuta(caminho) {
 }
 
 // ======================================================================
+// SOLICITACOES DE AGENDAMENTO (Fase F4) — therapist_bookings
+//   Anti-double-booking vive no BANCO (constraint de exclusao gist):
+//   duas solicitacoes ativas do mesmo terapeuta nao podem se sobrepor.
+// ======================================================================
+
+function erroDeConflito(error) {
+    if (!error) return false;
+    const msg = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+    return error.code === '23P01' || /sobrepos|conflict|exclusion/i.test(msg);
+}
+
+// O que esta ocupado — sem revelar quem reservou (RPC SECURITY DEFINER)
+export async function listarHorariosOcupados(therapistId) {
+    const client = await getSupabase();
+    if (!client) return { data: [], error: null, indisponivel: true };
+    if (!therapistId) return { data: [], error: null, indisponivel: false };
+
+    const { data, error } = await client.rpc('horarios_ocupados', { p_therapist: therapistId });
+
+    if (error) {
+        // PGRST202 = funcao nao encontrada (migracao da F4 pendente)
+        if (error.code === 'PGRST202' || tabelaAusente(error)) {
+            return { data: [], error: null, indisponivel: true };
+        }
+        return { data: [], error, indisponivel: false };
+    }
+
+    return {
+        data: (data || []).map(function (b) {
+            return {
+                data: String(b.data || '').slice(0, 10),
+                hora_inicio: hhmm(b.hora_inicio),
+                duracao_min: Number(b.duracao_min) || 60
+            };
+        }),
+        error: null,
+        indisponivel: false
+    };
+}
+
+export async function criarSolicitacaoAgendamento(dados) {
+    if (!dados || !dados.therapist_id || !dados.consulente_id || !dados.data || !dados.hora_inicio) {
+        return { data: null, error: { message: 'Dados da solicitacao incompletos.' } };
+    }
+
+    const client = await getSupabase();
+    if (!client) return { data: null, error: { message: 'Supabase nao conectado.' }, indisponivel: true };
+
+    const row = {
+        therapist_id: dados.therapist_id,
+        consulente_id: dados.consulente_id,
+        consulente_nome: dados.consulente_nome || null,
+        consulente_contato: dados.consulente_contato || null,
+        servico_nome: dados.servico_nome || null,
+        servico_preco: dados.servico_preco || null,
+        data: String(dados.data).slice(0, 10),
+        hora_inicio: String(dados.hora_inicio).slice(0, 5),
+        duracao_min: Math.min(600, Math.max(15, Number(dados.duracao_min) || 60)),
+        observacao: dados.observacao ? String(dados.observacao).trim() : null,
+        status: 'pendente'
+    };
+
+    const { data, error } = await client
+        .from('therapist_bookings')
+        .insert(row)
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        if (tabelaAusente(error)) return { data: null, error: null, indisponivel: true };
+        if (erroDeConflito(error)) {
+            return {
+                data: null,
+                conflito: true,
+                error: { message: 'Esse horario acabou de ser ocupado. Escolha outro.' }
+            };
+        }
+        return { data: null, error };
+    }
+
+    return { data: normalizarSolicitacao(data), error: null, indisponivel: false };
+}
+export function normalizarSolicitacao(row) {
+    if (!row) return null;
+    const t = Array.isArray(row.therapists) ? row.therapists[0] : row.therapists;
+    return {
+        id: row.id,
+        therapist_id: row.therapist_id,
+        terapeuta_nome: (t && t.nome) || 'Terapeuta',
+        terapeuta_slug: (t && t.slug) || '',
+        consulente_nome: row.consulente_nome || '',
+        consulente_contato: row.consulente_contato || '',
+        servico_nome: row.servico_nome || '',
+        servico_preco: row.servico_preco || '',
+        data: String(row.data || '').slice(0, 10),
+        hora_inicio: hhmm(row.hora_inicio),
+        duracao_min: Number(row.duracao_min) || 60,
+        status: row.status || 'pendente',
+        observacao: row.observacao || '',
+        resposta: row.resposta || '',
+        created_at: row.created_at || null
+    };
+}
+
+const SELECT_SOLICITACAO = '*, therapists(nome, slug)';
+
+// Painel do consulente: "Meus agendamentos"
+export async function listarMinhasSolicitacoes(userId) {
+    const client = await getSupabase();
+    if (!client) return { data: [], error: null, indisponivel: true };
+    if (!userId) return { data: [], error: null, indisponivel: false };
+
+    const { data, error } = await client
+        .from('therapist_bookings')
+        .select(SELECT_SOLICITACAO)
+        .eq('consulente_id', userId)
+        .order('data', { ascending: false })
+        .order('hora_inicio', { ascending: false })
+        .limit(30);
+
+    if (error) {
+        if (tabelaAusente(error)) return { data: [], error: null, indisponivel: true };
+        return { data: [], error, indisponivel: false };
+    }
+
+    return { data: (data || []).map(normalizarSolicitacao), error: null, indisponivel: false };
+}
+
+// Painel do terapeuta: "Solicitacoes recebidas"
+export async function listarSolicitacoesTerapeuta(therapistId) {
+    const client = await getSupabase();
+    if (!client) return { data: [], error: null, indisponivel: true };
+    if (!therapistId) return { data: [], error: null, indisponivel: false };
+
+    const { data, error } = await client
+        .from('therapist_bookings')
+        .select('*')
+        .eq('therapist_id', therapistId)
+        .order('data', { ascending: true })
+        .order('hora_inicio', { ascending: true })
+        .limit(60);
+
+    if (error) {
+        if (tabelaAusente(error)) return { data: [], error: null, indisponivel: true };
+        return { data: [], error, indisponivel: false };
+    }
+
+    return { data: (data || []).map(normalizarSolicitacao), error: null, indisponivel: false };
+}
+
+const STATUS_RESPOSTA = ['confirmado', 'recusado', 'concluido'];
+
+export async function responderSolicitacao(id, status, resposta) {
+    if (!id || STATUS_RESPOSTA.indexOf(status) === -1) {
+        return { error: { message: 'Resposta invalida.' } };
+    }
+
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase nao conectado.' }, indisponivel: true };
+
+    const { data, error } = await client
+        .from('therapist_bookings')
+        .update({ status: status, resposta: resposta ? String(resposta).trim() : null })
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        if (tabelaAusente(error)) return { error: null, indisponivel: true };
+        if (erroDeConflito(error)) {
+            return { error: { message: 'Ja existe outra reserva nesse horario.' }, conflito: true };
+        }
+        return { error };
+    }
+
+    return { data: normalizarSolicitacao(data), error: null };
+}
+
+// Consulente so pode cancelar (a policy restringe o status a 'cancelado')
+export async function cancelarSolicitacao(id) {
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase nao conectado.' }, indisponivel: true };
+    if (!id) return { error: { message: 'Solicitacao sem identificador.' } };
+
+    const { data, error } = await client
+        .from('therapist_bookings')
+        .update({ status: 'cancelado' })
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        if (tabelaAusente(error)) return { error: null, indisponivel: true };
+        return { error };
+    }
+
+    return { data: normalizarSolicitacao(data), error: null };
+}
+
+// ======================================================================
 // AGENDA (Fase F3) — therapist_availability / therapist_blocks
 //   Janelas semanais (dia_semana 0=domingo) e folgas pontuais.
 //   Horarios em wall-clock de America/Sao_Paulo, no formato HH:MM.

@@ -165,6 +165,11 @@
         // dados do Supabase (status 'publicado') ou, na falta deles, os exemplos.
         let TERAPEUTAS = [];
 
+        // F4: sessao do consulente (para solicitar agendamento) e a promise
+        // que a carrega — o modal espera por ela antes de montar a agenda.
+        let SESSION = null;
+        let sessaoPronta = Promise.resolve();
+
         // Escapa texto antes de entrar no HTML (mesmo padrao do dashboard)
         function esc(v) {
             return String(v == null ? '' : v)
@@ -332,6 +337,9 @@
 
             const folgas = (t.bloqueios || []).filter(function (b) { return b.data === dataISO; });
 
+            // F4: horarios ja solicitados/confirmados (a RPC devolve so data+hora)
+            const ocupados = (t.ocupados || []).filter(function (b) { return b.data === dataISO; });
+
             // Folga sem hora = dia inteiro bloqueado
             if (folgas.some(function (b) { return !b.hora_inicio; })) return [];
 
@@ -349,6 +357,13 @@
                         return cur < minutosDe(b.hora_fim) && (cur + dur) > minutosDe(b.hora_inicio);
                     });
                     if (colide) continue;
+
+                    const tomado = ocupados.some(function (b) {
+                        const bi = minutosDe(b.hora_inicio);
+                        const bf = bi + (Number(b.duracao_min) || 60);
+                        return cur < bf && (cur + dur) > bi;
+                    });
+                    if (tomado) continue;
 
                     livres.push({ min: cur, dur: dur });
                 }
@@ -411,7 +426,7 @@
             return '<h3>Agenda</h3><div id="agenda-box">' + conteudoAgenda(t) + '</div>';
         }
 
-        // Resumo do horário escolhido + atalho para confirmar com o terapeuta
+        // Resumo do horário escolhido + solicitação (F4) e atalho de contato
         function escolhaAgenda() {
             const t = _agenda.perfil;
             if (!t || !_agenda.dia || !_agenda.escolhido) return '';
@@ -423,22 +438,142 @@
             const wa = linkWhatsApp(c.whatsapp);
             const texto = 'Olá! Vi seu perfil no Portal El\'Luminar e gostaria de confirmar um atendimento em ' + quando + '.';
 
-            let botao = '';
-            if (wa) {
-                botao = '<a class="btn-contato" href="' + esc(wa + '?text=' + encodeURIComponent(texto)) +
-                    '" target="_blank" rel="noopener">💬 Confirmar no WhatsApp</a>';
-            } else if (c.email_publico) {
-                botao = '<a class="btn-contato" href="mailto:' + esc(c.email_publico) +
-                    '?subject=' + encodeURIComponent('Agendamento — ' + quando) + '">✉️ Pedir por email</a>';
-            }
+            const servicos = (t.servicos || []).filter(function (s) { return s.ativo !== false; });
+            const opcoes = servicos.length
+                ? '<select class="agenda-select" id="agenda-servico">' +
+                    '<option value="">Atendimento a combinar</option>' +
+                    servicos.map(function (s, i) {
+                        return '<option value="' + i + '">' + esc(s.nome) +
+                            (s.preco ? ' — ' + esc(s.preco) : '') + '</option>';
+                    }).join('') +
+                  '</select>'
+                : '';
 
-            return '<div class="resumo">✦ ' + esc(quando) + '</div>' + botao +
-                '<div class="nota">Este horário ainda não fica reservado automaticamente: a confirmação é combinada direto com o terapeuta. A reserva online chega na próxima etapa.</div>';
+            const botaoWa = wa
+                ? '<a class="btn-contato" href="' + esc(wa + '?text=' + encodeURIComponent(texto)) +
+                  '" target="_blank" rel="noopener">💬 WhatsApp</a>'
+                : '';
+
+            const acao = SESSION
+                ? '<button type="button" class="btn-agendar" id="btn-agendar">✦ Solicitar agendamento</button>'
+                : '<a class="btn-agendar" href="login.html?redirect=terapeutas.html">Entrar para solicitar</a>';
+
+            return '<div class="resumo">✦ ' + esc(quando) + '</div>' +
+                opcoes +
+                (SESSION ? '<textarea class="agenda-obs" id="agenda-obs" maxlength="300" placeholder="Alguma observação para o terapeuta? (opcional)"></textarea>' : '') +
+                '<div class="agenda-acoes">' + acao + botaoWa + '</div>' +
+                '<div class="nota" id="agenda-nota">O horário fica reservado como <strong>pendente</strong> até o terapeuta confirmar. ' +
+                'Você acompanha e pode cancelar em Minha Jornada.</div>';
         }
 
-        function abrirPerfil(slug) {
+        // Recarrega apenas os horários ocupados do terapeuta
+        async function recarregarOcupados(t) {
+            if (!t) return;
+            if (!t.id) { t.ocupados = []; return; }
+            try {
+                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const r = await db.listarHorariosOcupados(t.id);
+                t.ocupados = (r && Array.isArray(r.data)) ? r.data : [];
+            } catch (e) {
+                t.ocupados = t.ocupados || [];
+            }
+        }
+
+        async function solicitarAgendamento() {
+            const t = _agenda.perfil;
+            const nota = document.getElementById('agenda-nota');
+            const btn = document.getElementById('btn-agendar');
+
+            const dizer = function (texto, cor) {
+                if (!nota) return;
+                nota.innerHTML = esc(texto);
+                nota.style.color = cor || '';
+            };
+
+            if (!t || !t.id) {
+                dizer('Este é um perfil de demonstração — não é possível agendar.', '#ffab40');
+                return;
+            }
+            if (!SESSION) {
+                window.location.href = 'login.html?redirect=terapeutas.html';
+                return;
+            }
+
+            const sel = document.getElementById('agenda-servico');
+            const idx = (sel && sel.value !== '') ? Number(sel.value) : -1;
+            const servicos = (t.servicos || []).filter(function (s) { return s.ativo !== false; });
+            const servico = (idx >= 0 && servicos[idx]) ? servicos[idx] : null;
+
+            const obs = document.getElementById('agenda-obs');
+            const padraoDur = (t.disponibilidade && t.disponibilidade[0])
+                ? (Number(t.disponibilidade[0].duracao_min) || 60)
+                : 60;
+            const dur = (servico && servico.duracao_min) ? Number(servico.duracao_min) : padraoDur;
+
+            if (btn) { btn.disabled = true; btn.innerText = 'Enviando...'; }
+            dizer('Enviando sua solicitação...', '#d4af37');
+
+            try {
+                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const u = SESSION.user;
+
+                const r = await db.criarSolicitacaoAgendamento({
+                    therapist_id: t.id,
+                    consulente_id: u.id,
+                    consulente_nome: (u.user_metadata && u.user_metadata.name) || (u.email || '').split('@')[0],
+                    consulente_contato: u.email || '',
+                    servico_nome: servico ? servico.nome : '',
+                    servico_preco: servico ? servico.preco : '',
+                    duracao_min: dur,
+                    data: _agenda.dia,
+                    hora_inicio: _agenda.escolhido,
+                    observacao: obs ? obs.value : ''
+                });
+
+                if (r.indisponivel) {
+                    dizer('O agendamento ainda não está ativo neste banco. Rode a seção 10 do supabase-schema.sql.', '#ffab40');
+                    return;
+                }
+
+                if (r.conflito) {
+                    dizer(r.error.message, '#ff6b6b');
+                    await recarregarOcupados(t);
+                    const box = document.getElementById('agenda-box');
+                    if (box) {
+                        _agenda.escolhido = null;
+                        box.innerHTML = conteudoAgenda(t);
+                    }
+                    return;
+                }
+
+                if (r.error) {
+                    dizer('Não foi possível enviar: ' + r.error.message, '#ff6b6b');
+                    return;
+                }
+
+                // Some da grade já nesta sessão (o banco também bloqueia)
+                t.ocupados = (t.ocupados || []).concat([{
+                    data: _agenda.dia,
+                    hora_inicio: _agenda.escolhido,
+                    duracao_min: dur
+                }]);
+
+                dizer('✅ Solicitação enviada! Acompanhe a resposta em Minha Jornada.', '#4caf50');
+                if (btn) btn.innerText = 'Solicitado ✓';
+                if (obs) obs.disabled = true;
+                if (sel) sel.disabled = true;
+            } finally {
+                if (btn && btn.innerText !== 'Solicitado ✓') btn.disabled = false;
+            }
+        }
+
+        async function abrirPerfil(slug) {
             const t = TERAPEUTAS.find(function (x) { return x.slug === slug; });
             if (!t) return;
+
+            // F4: espera a sessao e busca o que ja esta ocupado (sem saber quem)
+            await sessaoPronta;
+            await recarregarOcupados(t);
 
             const servicos = (t.servicos || []).filter(function (s) {
                 return s.ativo !== false;
@@ -492,6 +627,11 @@
         modalConteudo.addEventListener('click', function (ev) {
             if (!_agenda.perfil) return;
 
+            if (ev.target.closest('#btn-agendar')) {
+                solicitarAgendamento();
+                return;
+            }
+
             const chip = ev.target.closest('[data-dia]');
             const slot = ev.target.closest('[data-hora]');
             if (!chip && !slot) return;
@@ -537,10 +677,14 @@
         carregarTerapeutas();
 
         // Nav: mostra o nome do usuario logado (mesmo comportamento do index.html)
-        (async function () {
+        // F4: a mesma sessao alimenta a solicitacao de agendamento — por isso
+        // guardamos a promise, e o modal espera por ela.
+        sessaoPronta = (async function () {
             try {
                 const mod = await import('./js/supabase-auth.js?v=2.1.0');
                 const session = await mod.getSession();
+                SESSION = session || null;
+
                 const btn = document.getElementById('btn-login-nav');
                 const info = document.getElementById('nav-user-info');
                 if (session && btn) {
@@ -555,6 +699,7 @@
                 }
             } catch (e) {
                 // Supabase nao configurado: segue como visitante
+                SESSION = null;
             }
         })();
     </script>

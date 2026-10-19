@@ -718,3 +718,168 @@ CREATE POLICY "Admins gerenciam folgas"
     USING (public.is_admin(auth.uid()))
     WITH CHECK (public.is_admin(auth.uid()));
 
+-- ==========================================================
+-- 10. SOLICITACOES DE AGENDAMENTO (Fase F4)
+--    therapist_bookings — pedido do consulente para um horario
+--
+--    Anti-double-booking: constraint de EXCLUSAO (gist) impede que
+--    duas solicitacoes ativas se SOBREPONHAM no mesmo terapeuta,
+--    nao apenas que tenham a mesma hora de inicio.
+--    Requer a extensao btree_gist.
+-- ==========================================================
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE IF NOT EXISTS public.therapist_bookings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    therapist_id UUID NOT NULL REFERENCES public.therapists(id) ON DELETE CASCADE,
+    consulente_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    -- Snapshot: o consulente pode mudar de nome/telefone depois
+    consulente_nome TEXT,
+    consulente_contato TEXT,
+    -- Snapshot do servico escolhido (pode ser editado ou apagado depois)
+    servico_nome TEXT,
+    servico_preco TEXT,
+    data DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    duracao_min INTEGER NOT NULL DEFAULT 60 CHECK (duracao_min BETWEEN 15 AND 600),
+    status TEXT NOT NULL DEFAULT 'pendente'
+        CHECK (status IN ('pendente', 'confirmado', 'recusado', 'cancelado', 'concluido')),
+    observacao TEXT,
+    resposta TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.therapist_bookings DROP CONSTRAINT IF EXISTS booking_sem_sobreposicao;
+ALTER TABLE public.therapist_bookings
+    ADD CONSTRAINT booking_sem_sobreposicao
+    EXCLUDE USING gist (
+        therapist_id WITH =,
+        data WITH =,
+        tsrange(
+            data + hora_inicio,
+            data + hora_inicio + (duracao_min * INTERVAL '1 minute')
+        ) WITH &&
+    ) WHERE (status IN ('pendente', 'confirmado'));
+
+CREATE INDEX IF NOT EXISTS idx_bookings_terapeuta
+    ON public.therapist_bookings (therapist_id, data);
+CREATE INDEX IF NOT EXISTS idx_bookings_consulente
+    ON public.therapist_bookings (consulente_id, data);
+CREATE INDEX IF NOT EXISTS idx_bookings_status
+    ON public.therapist_bookings (status);
+
+-- O horario de uma solicitacao nao pode ser remarcado: cancele e crie outra.
+CREATE OR REPLACE FUNCTION public.booking_horario_imutavel()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT public.is_admin(auth.uid()) THEN
+        IF NEW.therapist_id <> OLD.therapist_id
+           OR NEW.consulente_id <> OLD.consulente_id
+           OR NEW.data <> OLD.data
+           OR NEW.hora_inicio <> OLD.hora_inicio
+           OR NEW.duracao_min <> OLD.duracao_min THEN
+            RAISE EXCEPTION 'O horario de uma solicitacao nao pode ser alterado. Cancele e crie outra.';
+        END IF;
+    END IF;
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_booking_imutavel ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_imutavel
+    BEFORE UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.booking_horario_imutavel();
+
+-- ----------------------------------------------------------
+-- RLS: therapist_bookings
+--   Cada lado ve apenas o que lhe pertence. O consulente so
+--   cria pendente e so cancela; quem confirma e o terapeuta.
+-- ----------------------------------------------------------
+ALTER TABLE public.therapist_bookings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Consulente ve as proprias solicitacoes" ON public.therapist_bookings;
+CREATE POLICY "Consulente ve as proprias solicitacoes"
+    ON public.therapist_bookings FOR SELECT
+    USING (consulente_id = auth.uid());
+
+DROP POLICY IF EXISTS "Terapeuta ve as solicitacoes do proprio perfil" ON public.therapist_bookings;
+CREATE POLICY "Terapeuta ve as solicitacoes do proprio perfil"
+    ON public.therapist_bookings FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_bookings.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Admins veem todas as solicitacoes" ON public.therapist_bookings;
+CREATE POLICY "Admins veem todas as solicitacoes"
+    ON public.therapist_bookings FOR SELECT
+    USING (public.is_admin(auth.uid()));
+
+DROP POLICY IF EXISTS "Consulente cria a propria solicitacao" ON public.therapist_bookings;
+CREATE POLICY "Consulente cria a propria solicitacao"
+    ON public.therapist_bookings FOR INSERT
+    WITH CHECK (consulente_id = auth.uid() AND status = 'pendente');
+
+DROP POLICY IF EXISTS "Consulente cancela a propria solicitacao" ON public.therapist_bookings;
+CREATE POLICY "Consulente cancela a propria solicitacao"
+    ON public.therapist_bookings FOR UPDATE
+    USING (consulente_id = auth.uid())
+    WITH CHECK (consulente_id = auth.uid() AND status = 'cancelado');
+
+DROP POLICY IF EXISTS "Terapeuta responde as solicitacoes" ON public.therapist_bookings;
+CREATE POLICY "Terapeuta responde as solicitacoes"
+    ON public.therapist_bookings FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_bookings.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_bookings.therapist_id
+              AND t.user_id = auth.uid()
+        )
+        AND status IN ('pendente', 'confirmado', 'recusado', 'concluido')
+    );
+
+DROP POLICY IF EXISTS "Admins gerenciam solicitacoes" ON public.therapist_bookings;
+CREATE POLICY "Admins gerenciam solicitacoes"
+    ON public.therapist_bookings FOR ALL
+    USING (public.is_admin(auth.uid()))
+    WITH CHECK (public.is_admin(auth.uid()));
+
+-- ----------------------------------------------------------
+-- RPC: horarios_ocupados
+--   A vitrine precisa saber O QUE esta ocupado — nunca QUEM.
+--   SECURITY DEFINER para atravessar a RLS, devolvendo somente
+--   data/hora/duracao de solicitacoes ativas de perfis publicados.
+-- ----------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.horarios_ocupados(p_therapist uuid)
+RETURNS TABLE (data date, hora_inicio time, duracao_min integer)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+    SELECT b.data, b.hora_inicio, b.duracao_min
+    FROM public.therapist_bookings b
+    JOIN public.therapists t ON t.id = b.therapist_id
+    WHERE b.therapist_id = p_therapist
+      AND b.status IN ('pendente', 'confirmado')
+      AND t.status = 'publicado'
+      AND b.data >= CURRENT_DATE - 1
+    ORDER BY b.data, b.hora_inicio;
+$$;
+
+REVOKE ALL ON FUNCTION public.horarios_ocupados(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.horarios_ocupados(uuid) TO anon, authenticated;
+
+
