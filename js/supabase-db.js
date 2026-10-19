@@ -402,8 +402,8 @@ export async function migrateLocalDataToSupabase(userId) {
 function tabelaAusente(error) {
     if (!error) return false;
     const msg = [error.message, error.details, error.hint].filter(Boolean).join(' ');
-    return error.code === 'PGRST205' || error.code === '42P01'
-        || /Could not find the table|relation .* does not exist/i.test(msg);
+    return error.code === 'PGRST205' || error.code === 'PGRST200' || error.code === '42P01'
+        || /Could not find the table|relation .* does not exist|Could not find a relationship/i.test(msg);
 }
 
 // Converte a linha do banco (+ servicos e contatos embutidos) no formato
@@ -430,6 +430,34 @@ export function normalizarTerapeuta(row) {
     const bruto = row.therapist_contatos;
     const contatos = Array.isArray(bruto) ? (bruto[0] || null) : (bruto || null);
 
+    // F3: janelas semanais e folgas pontuais
+    const disponibilidade = (Array.isArray(row.therapist_availability) ? row.therapist_availability : [])
+        .filter(function (a) { return a && a.ativo !== false; })
+        .map(function (a) {
+            return {
+                id: a.id,
+                dia_semana: Number(a.dia_semana),
+                hora_inicio: hhmm(a.hora_inicio),
+                hora_fim: hhmm(a.hora_fim),
+                duracao_min: Number(a.duracao_min) || 60
+            };
+        })
+        .sort(function (a, b) {
+            return (a.dia_semana - b.dia_semana) || a.hora_inicio.localeCompare(b.hora_inicio);
+        });
+
+    const bloqueios = (Array.isArray(row.therapist_blocks) ? row.therapist_blocks : [])
+        .map(function (b) {
+            return {
+                id: b.id,
+                data: String(b.data || '').slice(0, 10),
+                hora_inicio: hhmm(b.hora_inicio),
+                hora_fim: hhmm(b.hora_fim),
+                motivo: b.motivo || ''
+            };
+        })
+        .sort(function (a, b) { return a.data.localeCompare(b.data); });
+
     return {
         id: row.id,
         user_id: row.user_id,
@@ -445,11 +473,18 @@ export function normalizarTerapeuta(row) {
         destaque: !!row.destaque,
         status: row.status || 'rascunho',
         servicos: servicos,
-        contatos: contatos
+        contatos: contatos,
+        disponibilidade: disponibilidade,
+        bloqueios: bloqueios
     };
 }
 
-const SELECT_TERAPEUTA = '*, therapist_services(*), therapist_contatos(*)';
+const SELECT_TERAPEUTA = '*, therapist_services(*), therapist_contatos(*), therapist_availability(*), therapist_blocks(*)';
+
+// Postgres devolve TIME como "14:00:00"; a UI trabalha com "14:00"
+function hhmm(v) {
+    return v ? String(v).slice(0, 5) : '';
+}
 
 // Vitrine: os perfis publicados (a RLS ja bloqueia o resto; o filtro
 // explicito deixa a consulta direta).
@@ -716,6 +751,100 @@ export async function removerFotoTerapeuta(caminho) {
     if (!client) return { error: { message: 'Supabase nao conectado.' } };
     const { error } = await client.storage.from(BUCKET_FOTOS).remove([caminho]);
     return { error: error || null };
+}
+
+// ======================================================================
+// AGENDA (Fase F3) — therapist_availability / therapist_blocks
+//   Janelas semanais (dia_semana 0=domingo) e folgas pontuais.
+//   Horarios em wall-clock de America/Sao_Paulo, no formato HH:MM.
+// ======================================================================
+
+export async function salvarDisponibilidadeTerapeuta(therapistId, janelas) {
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase nao conectado.' }, local: true };
+    if (!therapistId) return { error: { message: 'Perfil sem identificador.' } };
+
+    const lista = (janelas || []).filter(function (j) {
+        return j && j.hora_inicio && j.hora_fim && String(j.hora_inicio) < String(j.hora_fim);
+    });
+
+    const { error: erroDel } = await client
+        .from('therapist_availability')
+        .delete()
+        .eq('therapist_id', therapistId);
+
+    if (erroDel) {
+        if (tabelaAusente(erroDel)) return { error: null, indisponivel: true };
+        return { error: erroDel };
+    }
+
+    if (!lista.length) return { error: null, total: 0 };
+
+    const rows = lista.map(function (j) {
+        const dur = parseInt(j.duracao_min, 10);
+        return {
+            therapist_id: therapistId,
+            dia_semana: Number(j.dia_semana),
+            hora_inicio: String(j.hora_inicio).slice(0, 5),
+            hora_fim: String(j.hora_fim).slice(0, 5),
+            duracao_min: isNaN(dur) ? 60 : Math.min(480, Math.max(15, dur)),
+            ativo: true
+        };
+    });
+
+    const { error } = await client.from('therapist_availability').insert(rows);
+    if (error) {
+        if (tabelaAusente(error)) return { error: null, indisponivel: true };
+        return { error };
+    }
+
+    return { error: null, total: rows.length };
+}
+
+export async function salvarBloqueiosTerapeuta(therapistId, bloqueios) {
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase nao conectado.' }, local: true };
+    if (!therapistId) return { error: { message: 'Perfil sem identificador.' } };
+
+    // Folga e "dia inteiro" (sem horas) ou faixa fechada
+    const lista = (bloqueios || []).filter(function (b) {
+        if (!b || !b.data) return false;
+        const temInicio = !!b.hora_inicio;
+        const temFim = !!b.hora_fim;
+        if (temInicio !== temFim) return false;              // meia faixa: ignora
+        if (temInicio && temFim) return String(b.hora_inicio) < String(b.hora_fim);
+        return true;                                          // dia inteiro
+    });
+
+    const { error: erroDel } = await client
+        .from('therapist_blocks')
+        .delete()
+        .eq('therapist_id', therapistId);
+
+    if (erroDel) {
+        if (tabelaAusente(erroDel)) return { error: null, indisponivel: true };
+        return { error: erroDel };
+    }
+
+    if (!lista.length) return { error: null, total: 0 };
+
+    const rows = lista.map(function (b) {
+        return {
+            therapist_id: therapistId,
+            data: String(b.data).slice(0, 10),
+            hora_inicio: b.hora_inicio ? String(b.hora_inicio).slice(0, 5) : null,
+            hora_fim: b.hora_fim ? String(b.hora_fim).slice(0, 5) : null,
+            motivo: b.motivo ? String(b.motivo).trim() : null
+        };
+    });
+
+    const { error } = await client.from('therapist_blocks').insert(rows);
+    if (error) {
+        if (tabelaAusente(error)) return { error: null, indisponivel: true };
+        return { error };
+    }
+
+    return { error: null, total: rows.length };
 }
 
 

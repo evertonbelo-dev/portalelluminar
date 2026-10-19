@@ -207,7 +207,7 @@
     border: 1px solid rgba(255, 171, 64, 0.35); border-radius: 20px; padding: 2px 8px; margin-top: 8px;
 }
 
-/* Mock da agenda (ilustracao: a agenda real entra na fase F3) */
+/* Mock da agenda na landing (a grade real é gerada em terapeutas.html) */
 .agenda-mock {
     max-width: 620px; margin: 34px auto 0; background: rgba(5, 5, 16, 0.9);
     border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 22px;
@@ -317,6 +317,43 @@
     transition: all 0.25s ease;
 }
 .btn-contato:hover { background: var(--dourado-antigo); color: #000; border-color: var(--dourado-antigo); }
+
+/* ---------- Agenda no modal do perfil (F3) ---------- */
+.agenda-dias { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-top: 4px; }
+.agenda-dia {
+    flex: 0 0 auto; min-width: 62px; padding: 8px 10px; border-radius: 12px;
+    border: 1px solid rgba(212, 175, 55, 0.22); background: rgba(255, 255, 255, 0.03);
+    color: #b9b9cc; cursor: pointer; display: flex; flex-direction: column;
+    gap: 2px; align-items: center; font-size: 0.7rem; transition: all 0.2s ease;
+}
+.agenda-dia strong { font-size: 0.9rem; color: #fff; }
+.agenda-dia:hover:not(:disabled) { border-color: rgba(212, 175, 55, 0.6); }
+.agenda-dia.ativo {
+    border-color: var(--ouro-solar); background: rgba(212, 175, 55, 0.16);
+    color: var(--ouro-solar);
+}
+.agenda-dia.ativo strong { color: var(--ouro-solar); }
+.agenda-dia:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.agenda-slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.agenda-slot {
+    padding: 9px 18px; border-radius: 30px; cursor: pointer;
+    border: 1px solid rgba(212, 175, 55, 0.4); background: rgba(212, 175, 55, 0.08);
+    color: var(--ouro-solar); font-size: 0.85rem; transition: all 0.2s ease;
+}
+.agenda-slot:hover { background: rgba(212, 175, 55, 0.2); }
+.agenda-slot.ativo { background: var(--dourado-antigo); border-color: var(--dourado-antigo); color: #000; font-weight: 700; }
+
+.agenda-vazia { color: #8b8b9e; font-size: 0.85rem; font-style: italic; margin-top: 14px; }
+.agenda-nota { color: #6f6f85; font-size: 0.72rem; margin-top: 14px; }
+
+.agenda-escolha {
+    margin-top: 16px; padding: 14px 16px; border-radius: 12px;
+    background: rgba(76, 175, 80, 0.08); border: 1px solid rgba(76, 175, 80, 0.3);
+}
+.agenda-escolha[hidden] { display: none; }
+.agenda-escolha .resumo { color: #cfe8d0; font-size: 0.92rem; font-weight: 700; margin-bottom: 10px; }
+.agenda-escolha .nota { color: #8fa892; font-size: 0.72rem; line-height: 1.6; margin-top: 12px; }
 
 /* ---------- RESPONSIVO ---------- */
 @media (max-width: 700px) {

@@ -80,7 +80,7 @@
                     <li class="passo">
                         <span class="passo-numero">04</span>
                         <h3>Receba solicitações</h3>
-                        <p>O consulente escolhe um horário livre na sua agenda. Você confirma em um clique.</p>
+                        <p>O consulente vê seus horários livres e escolhe o que quer. Você confirma pelo canal que preferir.</p>
                     </li>
 
                     <li class="passo destaque">
@@ -271,6 +271,171 @@
             return itens.length ? '<div class="modal-contatos">' + itens.join('') + '</div>' : '';
         }
 
+        // ================= AGENDA (F3) =================
+        // Horários em wall-clock de São Paulo. "Hoje" e "agora" vêm do fuso;
+        // o dia da semana de uma data é calculado em UTC (determinístico,
+        // não depende do fuso do navegador de quem visita).
+        const FUSO_SP = 'America/Sao_Paulo';
+        const DIA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const DIA_LONGO = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+        const ANTECEDENCIA_MIN = 60;
+
+        let _agenda = { perfil: null, dia: null, escolhido: null };
+
+        function hojeSP() {
+            return new Intl.DateTimeFormat('en-CA', {
+                timeZone: FUSO_SP, year: 'numeric', month: '2-digit', day: '2-digit'
+            }).format(new Date());
+        }
+
+        function agoraMinSP() {
+            const hora = new Intl.DateTimeFormat('pt-BR', {
+                timeZone: FUSO_SP, hour: '2-digit', minute: '2-digit', hour12: false
+            }).format(new Date());
+            const p = hora.split(':');
+            return Number(p[0]) * 60 + Number(p[1]);
+        }
+
+        function diaSemanaDe(dataISO) {
+            const p = dataISO.split('-').map(Number);
+            return new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay();
+        }
+
+        function somarDias(dataISO, n) {
+            const p = dataISO.split('-').map(Number);
+            return new Date(Date.UTC(p[0], p[1] - 1, p[2] + n)).toISOString().slice(0, 10);
+        }
+
+        function minutosDe(hhmm) {
+            const p = String(hhmm || '0:0').split(':');
+            return Number(p[0]) * 60 + Number(p[1] || 0);
+        }
+
+        function hhmmDe(min) {
+            return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0');
+        }
+
+        function dataCurta(dataISO) {
+            const p = dataISO.split('-');
+            return p[2] + '/' + p[1];
+        }
+
+        // Horários livres: janelas do dia da semana − folgas − passado
+        function slotsDoDia(t, dataISO) {
+            const dow = diaSemanaDe(dataISO);
+            const hoje = hojeSP();
+            const agora = agoraMinSP();
+
+            const doDia = (t.disponibilidade || []).filter(function (j) {
+                return Number(j.dia_semana) === dow;
+            });
+
+            const folgas = (t.bloqueios || []).filter(function (b) { return b.data === dataISO; });
+
+            // Folga sem hora = dia inteiro bloqueado
+            if (folgas.some(function (b) { return !b.hora_inicio; })) return [];
+
+            const livres = [];
+
+            doDia.forEach(function (j) {
+                const ini = minutosDe(j.hora_inicio);
+                const fim = minutosDe(j.hora_fim);
+                const dur = Number(j.duracao_min) || 60;
+
+                for (let cur = ini; cur + dur <= fim; cur += dur) {
+                    if (dataISO === hoje && cur < agora + ANTECEDENCIA_MIN) continue;
+
+                    const colide = folgas.some(function (b) {
+                        return cur < minutosDe(b.hora_fim) && (cur + dur) > minutosDe(b.hora_inicio);
+                    });
+                    if (colide) continue;
+
+                    livres.push({ min: cur, dur: dur });
+                }
+            });
+
+            // Janelas sobrepostas não podem duplicar o mesmo horário
+            const vistos = {};
+            return livres.filter(function (s) {
+                if (vistos[s.min]) return false;
+                vistos[s.min] = true;
+                return true;
+            }).sort(function (a, b) { return a.min - b.min; });
+        }
+
+        function conteudoAgenda(t) {
+            if (!(t.disponibilidade || []).length) {
+                return '<p class="agenda-vazia">Agenda em configuração — combine o horário pelos canais de contato.</p>';
+            }
+
+            const hoje = hojeSP();
+            const dias = [];
+            for (let i = 0; i < 7; i++) {
+                const d = somarDias(hoje, i);
+                dias.push({ data: d, dow: diaSemanaDe(d), slots: slotsDoDia(t, d) });
+            }
+
+            if (!_agenda.dia || !dias.some(function (x) { return x.data === _agenda.dia; })) {
+                const primeiro = dias.filter(function (x) { return x.slots.length; })[0];
+                _agenda.dia = primeiro ? primeiro.data : dias[0].data;
+            }
+
+            const chips = dias.map(function (x) {
+                return '<button type="button" class="agenda-dia' + (x.data === _agenda.dia ? ' ativo' : '') + '"' +
+                    ' data-dia="' + x.data + '"' + (x.slots.length ? '' : ' disabled') + '>' +
+                    '<span>' + DIA_CURTO[x.dow] + '</span>' +
+                    '<strong>' + dataCurta(x.data) + '</strong>' +
+                    '</button>';
+            }).join('');
+
+            const diaAtual = dias.filter(function (x) { return x.data === _agenda.dia; })[0];
+            const slots = diaAtual ? diaAtual.slots : [];
+
+            const botoes = slots.length
+                ? slots.map(function (s) {
+                    return '<button type="button" class="agenda-slot' +
+                        (_agenda.escolhido === hhmmDe(s.min) ? ' ativo' : '') +
+                        '" data-hora="' + hhmmDe(s.min) + '">' + hhmmDe(s.min) + '</button>';
+                }).join('')
+                : '<p class="agenda-vazia">Sem horários livres neste dia.</p>';
+
+            return '<div class="agenda-dias">' + chips + '</div>' +
+                '<div class="agenda-slots">' + botoes + '</div>' +
+                '<div class="agenda-escolha" id="agenda-escolha"' + (_agenda.escolhido ? '' : ' hidden') + '>' +
+                escolhaAgenda() + '</div>' +
+                '<p class="agenda-nota">Horários no fuso de Brasília · antecedência mínima de 1 hora.</p>';
+        }
+
+        function blocoAgenda(t) {
+            _agenda = { perfil: t, dia: null, escolhido: null };
+            return '<h3>Agenda</h3><div id="agenda-box">' + conteudoAgenda(t) + '</div>';
+        }
+
+        // Resumo do horário escolhido + atalho para confirmar com o terapeuta
+        function escolhaAgenda() {
+            const t = _agenda.perfil;
+            if (!t || !_agenda.dia || !_agenda.escolhido) return '';
+
+            const quando = DIA_LONGO[diaSemanaDe(_agenda.dia)] + ', ' +
+                dataCurta(_agenda.dia) + ' às ' + _agenda.escolhido;
+
+            const c = t.contatos || {};
+            const wa = linkWhatsApp(c.whatsapp);
+            const texto = 'Olá! Vi seu perfil no Portal El\'Luminar e gostaria de confirmar um atendimento em ' + quando + '.';
+
+            let botao = '';
+            if (wa) {
+                botao = '<a class="btn-contato" href="' + esc(wa + '?text=' + encodeURIComponent(texto)) +
+                    '" target="_blank" rel="noopener">💬 Confirmar no WhatsApp</a>';
+            } else if (c.email_publico) {
+                botao = '<a class="btn-contato" href="mailto:' + esc(c.email_publico) +
+                    '?subject=' + encodeURIComponent('Agendamento — ' + quando) + '">✉️ Pedir por email</a>';
+            }
+
+            return '<div class="resumo">✦ ' + esc(quando) + '</div>' + botao +
+                '<div class="nota">Este horário ainda não fica reservado automaticamente: a confirmação é combinada direto com o terapeuta. A reserva online chega na próxima etapa.</div>';
+        }
+
         function abrirPerfil(slug) {
             const t = TERAPEUTAS.find(function (x) { return x.slug === slug; });
             if (!t) return;
@@ -295,10 +460,11 @@
                 '<h3>Atendimentos</h3>' +
                 (servicos || '<p class="tera-vazio">Serviços a combinar.</p>') +
                 contatos +
-                '<div class="modal-aviso">✦ O agendamento online entra em breve. ' +
+                blocoAgenda(t) +
+                '<div class="modal-aviso">✦ O agendamento com reserva automática entra em breve. ' +
                 (contatos
-                    ? 'Enquanto isso, fale direto com o terapeuta pelos canais acima.'
-                    : 'Enquanto isso, solicite o contato pelo Portal para combinar dia e horário.') +
+                    ? 'Escolha um horário acima e confirme direto com o terapeuta pelos canais acima.'
+                    : 'Escolha um horário acima e combine o contato para confirmar.') +
                 '</div>';
 
             modal.classList.add('aberto');
@@ -320,6 +486,25 @@
         grid.addEventListener('click', function (ev) {
             const b = ev.target.closest('[data-slug]');
             if (b) abrirPerfil(b.dataset.slug);
+        });
+
+        // Agenda no modal: trocar o dia e escolher o horário
+        modalConteudo.addEventListener('click', function (ev) {
+            if (!_agenda.perfil) return;
+
+            const chip = ev.target.closest('[data-dia]');
+            const slot = ev.target.closest('[data-hora]');
+            if (!chip && !slot) return;
+
+            if (chip) {
+                _agenda.dia = chip.dataset.dia;
+                _agenda.escolhido = null;
+            } else {
+                _agenda.escolhido = slot.dataset.hora;
+            }
+
+            const box = document.getElementById('agenda-box');
+            if (box) box.innerHTML = conteudoAgenda(_agenda.perfil);
         });
 
         // F2: carrega os perfis publicados no Supabase.

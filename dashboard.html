@@ -93,6 +93,23 @@
             pointer-events: none; text-transform: lowercase;
         }
 
+        /* ---------- Agenda do terapeuta ---------- */
+        .tp-agenda-linha { display: grid; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .tp-janela { grid-template-columns: 140px 1fr 1fr 105px 34px; }
+        .tp-folga { grid-template-columns: 150px 110px 110px 1fr 34px; }
+        .tp-agenda-cab {
+            display: grid; gap: 8px; color: #8f8fa5; font-size: 0.68rem;
+            letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px;
+        }
+        .tp-janela-head { grid-template-columns: 140px 1fr 1fr 105px 34px; }
+        .tp-folga-head { grid-template-columns: 150px 110px 110px 1fr 34px; }
+        .tp-agenda-linha .tp-remover { height: 38px; }
+        @media (max-width: 700px) {
+            .tp-janela, .tp-folga { grid-template-columns: 1fr 1fr; }
+            .tp-agenda-linha .tp-remover { grid-column: 2; justify-self: end; width: 70px; }
+            .tp-agenda-cab { display: none; }
+        }
+
         /* ---------- Modal de enquadramento da foto ---------- */
         .tp-crop {
             position: fixed; inset: 0; z-index: 1200; padding: 20px;
@@ -147,7 +164,7 @@
         import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile,
                  obterMeuPerfilTerapeuta, salvarPerfilTerapeuta, salvarServicosTerapeuta, salvarContatosTerapeuta,
                  uploadFotoTerapeuta, caminhoFotoTerapeuta, removerFotoTerapeuta,
-                 formatarWhatsApp } from './js/supabase-db.js?v=2.1.0';
+                 formatarWhatsApp, salvarDisponibilidadeTerapeuta, salvarBloqueiosTerapeuta } from './js/supabase-db.js?v=2.1.0';
 
         await initSupabase();
 
@@ -356,6 +373,43 @@
             `;
         }
 
+        // --- Agenda (F3): uma janela semanal por linha ---
+        const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+        function linhaDisponibilidade(j) {
+            j = j || {};
+            const dia = Number.isInteger(Number(j.dia_semana)) ? Number(j.dia_semana) : 1;
+            const opcoes = DIAS_SEMANA.map(function (nome, i) {
+                return '<option value="' + i + '"' + (i === dia ? ' selected' : '') + '>' + nome + '</option>';
+            }).join('');
+
+            return `
+                <div class="tp-agenda-linha tp-janela">
+                    <select class="tp-select tp-jan-dia">${opcoes}</select>
+                    <input class="tp-input tp-jan-inicio" type="time" value="${esc(j.hora_inicio || '09:00')}">
+                    <input class="tp-input tp-jan-fim" type="time" value="${esc(j.hora_fim || '18:00')}">
+                    <div class="tp-duracao">
+                        <input class="tp-input tp-jan-dur" inputmode="numeric" maxlength="3" value="${j.duracao_min ? esc(j.duracao_min) : 60}">
+                        <span>min</span>
+                    </div>
+                    <button type="button" class="tp-remover" title="Remover janela" aria-label="Remover janela">&times;</button>
+                </div>
+            `;
+        }
+
+        function linhaBloqueio(b) {
+            b = b || {};
+            return `
+                <div class="tp-agenda-linha tp-folga">
+                    <input class="tp-input tp-blk-data" type="date" value="${esc(b.data || '')}">
+                    <input class="tp-input tp-blk-inicio" type="time" value="${esc(b.hora_inicio || '')}">
+                    <input class="tp-input tp-blk-fim" type="time" value="${esc(b.hora_fim || '')}">
+                    <input class="tp-input tp-blk-motivo" maxlength="60" placeholder="Motivo (opcional)" value="${esc(b.motivo || '')}">
+                    <button type="button" class="tp-remover" title="Remover folga" aria-label="Remover folga">&times;</button>
+                </div>
+            `;
+        }
+
         // Moeda: formata ao sair do campo ("180" -> "R$ 180,00") e devolve
         // o número puro ao entrar, para a edição não ficar travada.
         function formatarMoeda(v) {
@@ -407,6 +461,8 @@
             const servicos = (p.servicos && p.servicos.length ? p.servicos : [{}]).map(linhaServico).join('');
             const c = p.contatos || {};
             const inicial = String(p.nome || '?').trim().charAt(0).toUpperCase() || '?';
+            const janelas = (p.disponibilidade && p.disponibilidade.length ? p.disponibilidade : [{}]).map(linhaDisponibilidade).join('');
+            const folgas = (p.bloqueios || []).map(linhaBloqueio).join('');
 
             const badge = p.id
                 ? '<span class="tp-status ' + (publicado ? 'tp-status-on' : 'tp-status-off') + '">' +
@@ -522,6 +578,26 @@
                         </div>
                     </div>
 
+                    <div class="tp-secao">
+                        <h4>Minha agenda</h4>
+                        <p class="tp-dica" style="margin-bottom:14px;">Em que dias e horas você atende. A vitrine monta os horários livres a partir daqui, já descontando as folgas.</p>
+
+                        <div class="tp-agenda-cab tp-janela-head">
+                            <span>Dia</span><span>Início</span><span>Fim</span><span>Duração</span><span></span>
+                        </div>
+                        <div id="tp-janelas">${janelas}</div>
+                        <button type="button" id="btn-tp-add-janela" class="tp-btn-sec">+ Adicionar janela</button>
+
+                        <h4 style="margin-top:24px;">Folgas e exceções</h4>
+                        <p class="tp-dica" style="margin-bottom:14px;">Deixe as horas em branco para bloquear o dia inteiro.</p>
+
+                        <div class="tp-agenda-cab tp-folga-head">
+                            <span>Data</span><span>Início</span><span>Fim</span><span>Motivo</span><span></span>
+                        </div>
+                        <div id="tp-folgas">${folgas}</div>
+                        <button type="button" id="btn-tp-add-folga" class="tp-btn-sec">+ Adicionar folga</button>
+                    </div>
+
                     <div class="tp-acoes">
                         <button type="button" id="btn-tp-salvar" class="tp-btn">Salvar</button>
                         ${publicado
@@ -562,11 +638,27 @@
                 });
             }
 
-            // Remover atendimento (delegado: vale para linhas novas também)
+            const btnAddJanela = document.getElementById('btn-tp-add-janela');
+            if (btnAddJanela) {
+                btnAddJanela.addEventListener('click', function () {
+                    const box = document.getElementById('tp-janelas');
+                    if (box) box.insertAdjacentHTML('beforeend', linhaDisponibilidade());
+                });
+            }
+
+            const btnAddFolga = document.getElementById('btn-tp-add-folga');
+            if (btnAddFolga) {
+                btnAddFolga.addEventListener('click', function () {
+                    const box = document.getElementById('tp-folgas');
+                    if (box) box.insertAdjacentHTML('beforeend', linhaBloqueio());
+                });
+            }
+
+            // Remover linha (atendimento, janela de agenda ou folga)
             raiz.addEventListener('click', function (ev) {
                 const btn = ev.target.closest('.tp-remover');
                 if (!btn) return;
-                const linha = btn.closest('.tp-servico');
+                const linha = btn.closest('.tp-servico, .tp-agenda-linha');
                 if (linha) linha.remove();
             });
 
@@ -891,6 +983,30 @@
                 site: campo('tp-site').trim()
             };
 
+            const janelas = Array.prototype.map.call(
+                document.querySelectorAll('#tp-janelas .tp-janela'),
+                function (linha) {
+                    return {
+                        dia_semana: Number(linha.querySelector('.tp-jan-dia').value),
+                        hora_inicio: linha.querySelector('.tp-jan-inicio').value,
+                        hora_fim: linha.querySelector('.tp-jan-fim').value,
+                        duracao_min: linha.querySelector('.tp-jan-dur').value
+                    };
+                }
+            );
+
+            const folgas = Array.prototype.map.call(
+                document.querySelectorAll('#tp-folgas .tp-folga'),
+                function (linha) {
+                    return {
+                        data: linha.querySelector('.tp-blk-data').value,
+                        hora_inicio: linha.querySelector('.tp-blk-inicio').value,
+                        hora_fim: linha.querySelector('.tp-blk-fim').value,
+                        motivo: (linha.querySelector('.tp-blk-motivo').value || '').trim()
+                    };
+                }
+            );
+
             const btn = document.getElementById('btn-tp-salvar');
             if (btn) btn.disabled = true;
             dizer('Salvando...', '#d4af37');
@@ -924,10 +1040,14 @@
 
                 const rs = await salvarServicosTerapeuta(id, servicos);
                 const rc = await salvarContatosTerapeuta(id, contatos);
+                const ra = await salvarDisponibilidadeTerapeuta(id, janelas);
+                const rb = await salvarBloqueiosTerapeuta(id, folgas);
 
                 const avisos = [];
                 if (rs && rs.error) avisos.push('atendimentos: ' + rs.error.message);
                 if (rc && rc.error) avisos.push('contatos: ' + rc.error.message);
+                if (ra && ra.error) avisos.push('agenda: ' + ra.error.message);
+                if (rb && rb.error) avisos.push('folgas: ' + rb.error.message);
 
                 // Recarrega do banco (serviços voltam com id e ordem)
                 const atual = await obterMeuPerfilTerapeuta(user.id);

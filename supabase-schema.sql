@@ -339,6 +339,7 @@ EXCEPTION WHEN OTHERS THEN NULL; END $$;
 -- ==========================================================
 -- 7. Como se tornar admin (rode manualmente trocando o email)
 -- ==========================================================
+
 -- INSERT INTO public.user_roles (user_id, role)
 -- SELECT id, 'admin' FROM auth.users WHERE email = 'seu@email.com'
 -- ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
@@ -585,3 +586,135 @@ CREATE POLICY "Admins gerenciam contatos"
     ON public.therapist_contatos FOR ALL
     USING (public.is_admin(auth.uid()))
     WITH CHECK (public.is_admin(auth.uid()));
+
+-- ==========================================================
+-- 9. AGENDA DO TERAPEUTA (Fase F3)
+--    therapist_availability — janelas semanais de atendimento
+--    therapist_blocks       — folgas e excecoes pontuais
+--
+--    Horarios sao "wall clock" no fuso America/Sao_Paulo (o Brasil
+--    nao tem horario de verao desde 2019). dia_semana segue o padrao
+--    do JavaScript: 0 = domingo ... 6 = sabado.
+-- ==========================================================
+CREATE TABLE IF NOT EXISTS public.therapist_availability (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    therapist_id UUID NOT NULL REFERENCES public.therapists(id) ON DELETE CASCADE,
+    dia_semana SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
+    hora_inicio TIME NOT NULL,
+    hora_fim TIME NOT NULL,
+    duracao_min INTEGER NOT NULL DEFAULT 60 CHECK (duracao_min BETWEEN 15 AND 480),
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT availability_horario_valido CHECK (hora_fim > hora_inicio)
+);
+
+CREATE TABLE IF NOT EXISTS public.therapist_blocks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    therapist_id UUID NOT NULL REFERENCES public.therapists(id) ON DELETE CASCADE,
+    data DATE NOT NULL,
+    hora_inicio TIME,
+    hora_fim TIME,
+    motivo TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Dia inteiro (os dois nulos) ou faixa fechada
+    CONSTRAINT block_faixa_valida CHECK (
+        (hora_inicio IS NULL AND hora_fim IS NULL)
+        OR (hora_inicio IS NOT NULL AND hora_fim IS NOT NULL AND hora_fim > hora_inicio)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_availability_therapist
+    ON public.therapist_availability (therapist_id, dia_semana);
+CREATE INDEX IF NOT EXISTS idx_blocks_therapist_data
+    ON public.therapist_blocks (therapist_id, data);
+
+-- ----------------------------------------------------------
+-- RLS: therapist_availability
+--   A grade so e publica quando o perfil esta publicado — o mesmo
+--   criterio de servicos e contatos.
+-- ----------------------------------------------------------
+ALTER TABLE public.therapist_availability ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Agenda de perfil visivel e publica" ON public.therapist_availability;
+CREATE POLICY "Agenda de perfil visivel e publica"
+    ON public.therapist_availability FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_availability.therapist_id
+              AND (
+                  t.status = 'publicado'
+                  OR t.user_id = auth.uid()
+                  OR public.is_admin(auth.uid())
+              )
+        )
+    );
+
+DROP POLICY IF EXISTS "Terapeuta gerencia a propria agenda" ON public.therapist_availability;
+CREATE POLICY "Terapeuta gerencia a propria agenda"
+    ON public.therapist_availability FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_availability.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_availability.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Admins gerenciam agendas" ON public.therapist_availability;
+CREATE POLICY "Admins gerenciam agendas"
+    ON public.therapist_availability FOR ALL
+    USING (public.is_admin(auth.uid()))
+    WITH CHECK (public.is_admin(auth.uid()));
+
+-- ----------------------------------------------------------
+-- RLS: therapist_blocks
+-- ----------------------------------------------------------
+ALTER TABLE public.therapist_blocks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Folgas de perfil visivel sao publicas" ON public.therapist_blocks;
+CREATE POLICY "Folgas de perfil visivel sao publicas"
+    ON public.therapist_blocks FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_blocks.therapist_id
+              AND (
+                  t.status = 'publicado'
+                  OR t.user_id = auth.uid()
+                  OR public.is_admin(auth.uid())
+              )
+        )
+    );
+
+DROP POLICY IF EXISTS "Terapeuta gerencia as proprias folgas" ON public.therapist_blocks;
+CREATE POLICY "Terapeuta gerencia as proprias folgas"
+    ON public.therapist_blocks FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_blocks.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_blocks.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Admins gerenciam folgas" ON public.therapist_blocks;
+CREATE POLICY "Admins gerenciam folgas"
+    ON public.therapist_blocks FOR ALL
+    USING (public.is_admin(auth.uid()))
+    WITH CHECK (public.is_admin(auth.uid()));
+
