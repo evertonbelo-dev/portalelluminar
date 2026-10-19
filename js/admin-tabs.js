@@ -1,4 +1,4 @@
-﻿// js/admin-tabs.js — Gerenciamento de Abas do Painel Admin v2.1.0
+﻿// js/admin-tabs.js — Gerenciamento de Abas do Painel Admin v2.2.0
 import { getSupabase } from './supabase-config.js';
 import { carregarConfig, salvarConfig, getSqlSetup } from './admin-config.js';
 import { MODELOS_DISPONIVEIS } from './modelos.js';

@@ -78,9 +78,9 @@
         </div>
     </div>
     <script type="module">
-        import { initSupabase } from './js/supabase-config.js?v=2.1.0';
-        import { signIn, signUp, signInWithGoogle, getSession, appUrl, resetPassword } from './js/supabase-auth.js?v=2.1.0';
-        import { saveMarketingConsent, syncUserProfile } from './js/supabase-db.js?v=2.1.0';
+        import { initSupabase } from './js/supabase-config.js?v=2.2.0';
+        import { signIn, signUp, signInWithGoogle, getSession, appUrl, resetPassword } from './js/supabase-auth.js?v=2.2.0';
+        import { saveMarketingConsent, syncUserProfile } from './js/supabase-db.js?v=2.2.0';
         await initSupabase();
         const session = await getSession();
         // Se ja estiver logado, sincroniza perfil e redireciona

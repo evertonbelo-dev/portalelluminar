@@ -145,12 +145,12 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.1.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.2.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 
 <script type="module">
-        import { TERAPEUTAS_EXEMPLO } from './js/terapeutas-exemplo.js?v=2.1.0';
+        import { TERAPEUTAS_EXEMPLO } from './js/terapeutas-exemplo.js?v=2.2.0';
 
         const grid = document.getElementById('tera-grid');
         const filtros = document.getElementById('tera-filtros');
@@ -475,7 +475,7 @@
             if (!t) return;
             if (!t.id) { t.ocupados = []; return; }
             try {
-                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const db = await import('./js/supabase-db.js?v=2.2.0');
                 const r = await db.listarHorariosOcupados(t.id);
                 t.ocupados = (r && Array.isArray(r.data)) ? r.data : [];
             } catch (e) {
@@ -522,7 +522,7 @@
             dizer('Enviando sua solicitação...', '#d4af37');
 
             try {
-                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const db = await import('./js/supabase-db.js?v=2.2.0');
                 const u = SESSION.user;
 
                 const r = await db.criarSolicitacaoAgendamento({
@@ -663,7 +663,7 @@
             let doBanco = [];
 
             try {
-                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const db = await import('./js/supabase-db.js?v=2.2.0');
                 const r = await db.listarTerapeutasPublicos();
                 if (r && Array.isArray(r.data)) doBanco = r.data;
             } catch (e) {
@@ -689,7 +689,7 @@
         // guardamos a promise, e o modal espera por ela.
         sessaoPronta = (async function () {
             try {
-                const mod = await import('./js/supabase-auth.js?v=2.1.0');
+                const mod = await import('./js/supabase-auth.js?v=2.2.0');
                 const session = await mod.getSession();
                 SESSION = session || null;
 

@@ -207,7 +207,7 @@
         <div class="info-rodape">
             <span></span>
             <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
-            <span class="footer-versao" title="O Voo da Águia">v2.1.0 &mdash; O Voo da Águia</span>
+            <span class="footer-versao" title="O Voo da Águia">v2.2.0 &mdash; O Voo da Águia</span>
         </div>
     </footer>
 
@@ -215,7 +215,7 @@
         // Verifica se o usuário está logado e atualiza o nav
         (async () => {
             try {
-                const mod = await import('./js/supabase-auth.js?v=2.1.0');
+                const mod = await import('./js/supabase-auth.js?v=2.2.0');
 
                 // Se o OAuth/confirmacao de email voltou com erro, avisa o usuario no login
                 const _erroAuth = mod.getAuthErrorFromUrl();
@@ -239,7 +239,7 @@
                     btn.href = 'dashboard.html';
                     // Cria/atualiza o perfil e aplica consentimento pendente
                     try {
-                        const db = await import('./js/supabase-db.js?v=2.1.0');
+                        const db = await import('./js/supabase-db.js?v=2.2.0');
                         await db.syncUserProfile(session.user);
                     } catch (e) { /* silencioso */ }
                 }
