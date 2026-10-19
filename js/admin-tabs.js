@@ -16,6 +16,7 @@ export async function initTabs(containerEl, userEmail) {
                     case 'geral': await renderGeral(containerEl); break;
                     case 'visual': renderVisual(containerEl); break;
                     case 'usuarios': await renderUsuarios(containerEl); break;
+                    case 'terapeutas': await renderTerapeutas(containerEl); break;
                     case 'leads': await renderLeads(containerEl); break;
                     case 'banco': renderBanco(containerEl); break;
                 }
@@ -170,6 +171,96 @@ async function renderLeads(el) {
         el.innerHTML = '<div class="admin-card"><h2>Erro</h2><p style="color:#ff6b6b;">' + e.message + '</p></div>';
     }
 }
+
+// ---------- VITRINE DE TERAPEUTAS (F2) ----------
+function escTera(v) {
+    return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+var ROTULO_STATUS_TERA = { publicado: '🌿 Publicado', pausado: '⏸ Pausado', rascunho: '📝 Rascunho' };
+
+async function renderTerapeutas(el) {
+    try {
+        var s = await getSupabase();
+        if (!s) {
+            el.innerHTML = '<div class="admin-card"><h2>Terapeutas</h2><p style="color:#ff6b6b;">Supabase indisponivel</p></div>';
+            return;
+        }
+
+        var r = await s.from('therapists')
+            .select('id, nome, titulo, cidade, modalidade, status, destaque, slug, foto_url, especialidades, created_at, therapist_services(id)')
+            .order('destaque', { ascending: false })
+            .order('nome', { ascending: true });
+
+        if (r.error) {
+            el.innerHTML = '<div class="admin-card"><h2>🌿 Terapeutas</h2>'
+                + '<p style="color:#ff6b6b;">' + escTera(r.error.message) + '</p>'
+                + '<p style="color:#888;margin-top:10px;">Se a tabela ainda nao existe, rode a secao 8 do supabase-schema.sql no SQL Editor do Supabase.</p>'
+                + '</div>';
+            return;
+        }
+
+        var lista = r.data || [];
+        var publicados = lista.filter(function (t) { return t.status === 'publicado'; }).length;
+
+        var html = '<div class="admin-card"><h2>🌿 Terapeutas (' + lista.length + ')</h2>';
+        html += '<p style="color:#888;margin-bottom:15px;line-height:1.6;">'
+             + publicados + ' publicado(s) na vitrine · ' + (lista.length - publicados) + ' fora dela. '
+             + 'O selo <strong>Destaque</strong> coloca o perfil no topo de '
+             + '<a href="terapeutas.html" target="_blank" style="color:var(--dourado-antigo);">terapeutas.html</a>.</p>';
+
+        if (!lista.length) {
+            html += '<p style="color:#888;">Nenhum perfil cadastrado ainda. Cada terapeuta cria e publica o proprio perfil no dashboard.</p>';
+        } else {
+            html += '<table class="admin-tabela"><tr><th></th><th>Terapeuta</th><th>Especialidades</th><th>Cidade</th><th>Servicos</th><th>Status</th><th>Destaque</th><th>Acoes</th></tr>';
+            lista.forEach(function (t) {
+                var foto = t.foto_url
+                    ? '<img src="' + escTera(t.foto_url) + '" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;">'
+                    : '<span style="display:inline-flex;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#6b3fa0,var(--ouro-solar));color:#000;font-weight:bold;align-items:center;justify-content:center;">'
+                      + escTera(String(t.nome || '?').charAt(0).toUpperCase()) + '</span>';
+
+                var especs = (t.especialidades || []).map(escTera).join(', ') || '-';
+                var servicos = (t.therapist_services || []).length;
+                var publicado = t.status === 'publicado';
+
+                html += '<tr>';
+                html += '<td>' + foto + '</td>';
+                html += '<td><strong>' + escTera(t.nome) + '</strong><br><span style="color:#888;font-size:0.78rem;">' + escTera(t.titulo || '') + '</span></td>';
+                html += '<td style="font-size:0.8rem;">' + especs + '</td>';
+                html += '<td style="font-size:0.8rem;">' + escTera(t.cidade || '-') + '</td>';
+                html += '<td style="text-align:center;">' + servicos + '</td>';
+                html += '<td>' + (ROTULO_STATUS_TERA[t.status] || escTera(t.status)) + '</td>';
+                html += '<td>' + (t.destaque ? '⭐ sim' : '-') + '</td>';
+                html += '<td style="white-space:nowrap;">'
+                     + '<button class="btn-admin-save" style="padding:6px 10px;font-size:0.72rem;margin:2px;" onclick="window._teraStatus(\'' + t.id + '\',\'' + (publicado ? 'pausado' : 'publicado') + '\')">'
+                     + (publicado ? 'Pausar' : 'Publicar') + '</button>'
+                     + '<button class="btn-admin-save" style="padding:6px 10px;font-size:0.72rem;margin:2px;" onclick="window._teraDestaque(\'' + t.id + '\',' + (t.destaque ? 'false' : 'true') + ')">'
+                     + (t.destaque ? 'Tirar destaque' : 'Destacar') + '</button>'
+                     + '</td>';
+                html += '</tr>';
+            });
+            html += '</table>';
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<div class="admin-card"><h2>Erro</h2><p style="color:#ff6b6b;">' + escTera(e.message) + '</p></div>';
+    }
+}
+
+async function atualizarTerapeuta(id, campos) {
+    var s = await getSupabase();
+    var r = await s.from('therapists').update(campos).eq('id', id);
+    if (r.error) { alert(r.error.message); return false; }
+    await renderTerapeutas(document.getElementById('admin-content'));
+    return true;
+}
+
+window._teraStatus = function (id, status) { return atualizarTerapeuta(id, { status: status }); };
+window._teraDestaque = function (id, valor) { return atualizarTerapeuta(id, { destaque: valor }); };
 
 window._tornarAdmin = async function(id) {
     var s = await getSupabase(); var r = await s.from('user_roles').upsert({ user_id: id, role: 'admin', created_at: new Date().toISOString() }, { onConflict: 'user_id' });

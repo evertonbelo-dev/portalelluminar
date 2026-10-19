@@ -66,6 +66,62 @@
             .tp-servico .tp-remover { grid-column: 2; justify-self: end; width: 70px; }
             .tp-card { padding: 18px; }
         }
+
+        /* ---------- Foto do terapeuta ---------- */
+        .tp-foto-linha { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+        .tp-foto-preview {
+            width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(135deg, #6b3fa0, var(--ouro-solar));
+            display: flex; align-items: center; justify-content: center;
+            color: #000; font-weight: bold; font-size: 1.6rem; overflow: hidden;
+            border: 2px solid rgba(212, 175, 55, 0.4);
+        }
+        .tp-foto-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .tp-foto-acoes { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+        .tp-linha-2 { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tp-dica { color: #7f7f95; font-size: 0.72rem; line-height: 1.5; max-width: 320px; }
+
+        /* ---------- Campos de atendimento ---------- */
+        .tp-servico-head {
+            color: #8f8fa5; font-size: 0.68rem; letter-spacing: 0.5px;
+            text-transform: uppercase; margin-bottom: 6px;
+        }
+        .tp-duracao { position: relative; display: flex; align-items: center; }
+        .tp-duracao input { padding-right: 42px; }
+        .tp-duracao span {
+            position: absolute; right: 12px; color: #8f8fa5; font-size: 0.78rem;
+            pointer-events: none; text-transform: lowercase;
+        }
+
+        /* ---------- Modal de enquadramento da foto ---------- */
+        .tp-crop {
+            position: fixed; inset: 0; z-index: 1200; padding: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .tp-crop[hidden] { display: none; }
+        .tp-crop-caixa {
+            background: rgba(8, 8, 20, 0.98); border: 1px solid rgba(212, 175, 55, 0.35);
+            border-radius: 16px; padding: 24px; width: 100%; max-width: 360px; text-align: center;
+        }
+        .tp-crop-caixa h4 { font-family: 'Cinzel', serif; color: var(--ouro-solar); margin-bottom: 8px; }
+        .tp-crop-caixa p { color: #999; font-size: 0.78rem; line-height: 1.5; margin-bottom: 16px; }
+        .tp-crop-view {
+            position: relative; width: 260px; height: 260px; margin: 0 auto 16px;
+            border-radius: 50%; overflow: hidden; background: #0b0b16;
+            cursor: grab; touch-action: none;
+        }
+        .tp-crop-view:active { cursor: grabbing; }
+        .tp-crop-view img { position: absolute; user-select: none; pointer-events: none; max-width: none; }
+        .tp-crop-guia {
+            position: absolute; inset: 0; border-radius: 50%;
+            box-shadow: inset 0 0 0 2px rgba(212, 175, 55, 0.55); pointer-events: none;
+        }
+        .tp-crop-caixa input[type="range"] { width: 100%; margin-bottom: 16px; accent-color: var(--ouro-solar); }
+        .tp-crop-acoes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        @media (max-width: 560px) {
+            .tp-crop-view { width: 220px; height: 220px; }
+        }
     </style>
     <script src="js/env-config.js"></script>
 </head>
@@ -89,7 +145,8 @@
         import { initSupabase } from './js/supabase-config.js?v=2.1.0';
         import { getSession, getCurrentUser, signOut, onAuthChange, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.1.0';
         import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile,
-                 obterMeuPerfilTerapeuta, salvarPerfilTerapeuta, salvarServicosTerapeuta, salvarContatosTerapeuta } from './js/supabase-db.js?v=2.1.0';
+                 obterMeuPerfilTerapeuta, salvarPerfilTerapeuta, salvarServicosTerapeuta, salvarContatosTerapeuta,
+                 uploadFotoTerapeuta, caminhoFotoTerapeuta, removerFotoTerapeuta } from './js/supabase-db.js?v=2.1.0';
 
         await initSupabase();
 
@@ -281,18 +338,47 @@
             rascunho: '📝 Rascunho — só você vê'
         };
 
-        // Uma linha de atendimento (nome / duracao / preco)
+        // Uma linha de atendimento (nome / duracao em min / valor em R$)
         function linhaServico(s) {
             s = s || {};
             const dur = (s.duracao_min === null || s.duracao_min === undefined) ? '' : esc(s.duracao_min);
             return `
                 <div class="tp-servico">
                     <input class="tp-input tp-serv-nome" maxlength="80" placeholder="Ex.: Tiragem Tríade + Essência" value="${esc(s.nome || '')}">
-                    <input class="tp-input tp-serv-dur" type="number" min="0" max="600" step="5" placeholder="min" value="${dur}">
-                    <input class="tp-input tp-serv-preco" maxlength="30" placeholder="R$ 180 / A combinar" value="${esc(s.preco || '')}">
+                    <div class="tp-duracao">
+                        <input class="tp-input tp-serv-dur" inputmode="numeric" maxlength="4" placeholder="60" value="${dur}">
+                        <span>min</span>
+                    </div>
+                    <input class="tp-input tp-serv-preco" inputmode="decimal" maxlength="18" placeholder="R$ 180,00" value="${esc(s.preco || '')}">
                     <button type="button" class="tp-remover" title="Remover atendimento" aria-label="Remover atendimento">&times;</button>
                 </div>
             `;
+        }
+
+        // Moeda: formata ao sair do campo ("180" -> "R$ 180,00") e devolve
+        // o número puro ao entrar, para a edição não ficar travada.
+        function formatarMoeda(v) {
+            const limpo = String(v || '').replace(/[^\d,.]/g, '').replace(/\./g, '').replace(',', '.');
+            const n = parseFloat(limpo);
+            if (!isFinite(n)) return '';
+            return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Telefone: +pais (DDD) numero — assume Brasil quando o código não vem
+        function formatarTelefone(v) {
+            let d = String(v || '').replace(/\D/g, '');
+            if (!d) return '';
+            if (d.length > 13) d = d.slice(0, 13);
+            if (d.length <= 11) d = '55' + d;
+            const pais = d.slice(0, 2);
+            const ddd = d.slice(2, 4);
+            const resto = d.slice(4);
+            let out = '+' + pais;
+            if (ddd) out += ' (' + ddd + ')';
+            if (resto) {
+                out += ' ' + (resto.length > 4 ? resto.slice(0, resto.length - 4) + '-' + resto.slice(-4) : resto);
+            }
+            return out;
         }
 
         async function carregarPainelTerapeuta() {
@@ -333,6 +419,7 @@
             const publicado = p.status === 'publicado';
             const servicos = (p.servicos && p.servicos.length ? p.servicos : [{}]).map(linhaServico).join('');
             const c = p.contatos || {};
+            const inicial = String(p.nome || '?').trim().charAt(0).toUpperCase() || '?';
 
             const badge = p.id
                 ? '<span class="tp-status ' + (publicado ? 'tp-status-on' : 'tp-status-off') + '">' +
@@ -389,12 +476,31 @@
                     </div>
 
                     <div class="tp-field">
-                        <label class="tp-label" for="tp-foto">Link da sua foto (opcional)</label>
-                        <input id="tp-foto" class="tp-input" placeholder="https://..." value="${esc(p.foto_url || '')}">
+                        <label class="tp-label">Foto do perfil</label>
+                        <div class="tp-foto-linha">
+                            <div class="tp-foto-preview" id="tp-foto-preview">
+                                ${p.foto_url ? '<img src="' + esc(p.foto_url) + '" alt="Foto do perfil">' : esc(inicial)}
+                            </div>
+                            <div class="tp-foto-acoes">
+                                <div class="tp-linha-2">
+                                    <button type="button" id="btn-tp-foto" class="tp-btn-sec">${p.foto_url ? '🔄 Trocar foto' : '📷 Escolher foto'}</button>
+                                    <button type="button" id="btn-tp-foto-remover" class="tp-btn-sec" ${p.foto_url ? '' : 'hidden'}>Remover</button>
+                                </div>
+                                <span class="tp-dica">JPG ou PNG. Você arrasta e ajusta o zoom antes de enviar — é exatamente o enquadramento que aparece no card da vitrine.</span>
+                            </div>
+                        </div>
+                        <input type="file" id="tp-foto-arquivo" accept="image/*" hidden>
+                        <input id="tp-foto" class="tp-input" placeholder="ou cole um link (https://...)" value="${esc(p.foto_url || '')}" style="margin-top:10px;font-size:0.78rem;">
                     </div>
 
                     <div class="tp-secao">
                         <h4>Atendimentos</h4>
+                        <div class="tp-servico tp-servico-head">
+                            <span>Atendimento</span>
+                            <span>Duração</span>
+                            <span>Valor</span>
+                            <span></span>
+                        </div>
                         <div id="tp-servicos">${servicos}</div>
                         <button type="button" id="btn-tp-add-servico" class="tp-btn-sec">+ Adicionar atendimento</button>
                     </div>
@@ -403,8 +509,8 @@
                         <h4>Como o consulente fala com você</h4>
                         <div class="tp-grid">
                             <div class="tp-field">
-                                <label class="tp-label" for="tp-wa">WhatsApp</label>
-                                <input id="tp-wa" class="tp-input" placeholder="(11) 99999-9999" value="${esc(c.whatsapp || '')}">
+                                <label class="tp-label" for="tp-wa">WhatsApp (país + DDD + número)</label>
+                                <input id="tp-wa" class="tp-input" placeholder="+55 (11) 99999-9999" value="${esc(c.whatsapp || '')}">
                             </div>
                             <div class="tp-field">
                                 <label class="tp-label" for="tp-email">Email público</label>
@@ -413,6 +519,14 @@
                             <div class="tp-field">
                                 <label class="tp-label" for="tp-instagram">Instagram</label>
                                 <input id="tp-instagram" class="tp-input" placeholder="@seu.perfil" value="${esc(c.instagram || '')}">
+                            </div>
+                            <div class="tp-field">
+                                <label class="tp-label" for="tp-facebook">Facebook</label>
+                                <input id="tp-facebook" class="tp-input" placeholder="@sua.pagina ou link" value="${esc(c.facebook || '')}">
+                            </div>
+                            <div class="tp-field">
+                                <label class="tp-label" for="tp-youtube">YouTube</label>
+                                <input id="tp-youtube" class="tp-input" placeholder="@seu.canal ou link" value="${esc(c.youtube || '')}">
                             </div>
                             <div class="tp-field">
                                 <label class="tp-label" for="tp-site">Site</label>
@@ -427,6 +541,23 @@
                             ? '<button type="button" id="btn-tp-pausar" class="tp-btn-sec">Pausar da vitrine</button>'
                             : '<button type="button" id="btn-tp-publicar" class="tp-btn-sec">Publicar na vitrine</button>'}
                         <span id="tp-status" class="tp-msg"></span>
+                    </div>
+                </div>
+
+                <div class="tp-crop" id="tp-crop" hidden>
+                    <div class="tp-crop-caixa">
+                        <h4>Enquadre sua foto</h4>
+                        <p>Arraste a imagem para posicionar e use o zoom. O que estiver dentro do círculo é o que aparece no seu card.</p>
+                        <div class="tp-crop-view" id="tp-crop-view">
+                            <img id="tp-crop-img" alt="">
+                            <div class="tp-crop-guia"></div>
+                        </div>
+                        <input type="range" id="tp-crop-zoom" min="100" max="300" step="1" value="100" aria-label="Zoom da foto">
+                        <div class="tp-crop-acoes">
+                            <button type="button" id="tp-crop-cancelar" class="tp-btn-sec">Cancelar</button>
+                            <button type="button" id="tp-crop-salvar" class="tp-btn">Usar esta foto</button>
+                        </div>
+                        <p id="tp-crop-msg" class="tp-msg" style="margin-top:14px;margin-bottom:0;"></p>
                     </div>
                 </div>
             `;
@@ -471,6 +602,259 @@
             if (btnPausar) {
                 btnPausar.addEventListener('click', function () { salvarPainelTerapeuta('pausado'); });
             }
+
+            vincularFotoTerapeuta();
+            vincularMascaras(raiz);
+        }
+
+        // --- Foto: upload local com enquadramento (F2.1) ---
+        let _crop = null;   // { img, view, base, escala, ox, oy, arrastando, inicioX, inicioY }
+
+        // Máscaras: valor em R$ ao sair do campo e telefone no WhatsApp
+        function vincularMascaras(raiz) {
+            if (!raiz) return;
+
+            raiz.addEventListener('focus', function (ev) {
+                const el = ev.target;
+                if (el && el.classList && el.classList.contains('tp-serv-preco') && /R\$/.test(el.value)) {
+                    el.value = el.value.replace(/[^\d,]/g, '');
+                }
+            }, true);
+
+            raiz.addEventListener('blur', function (ev) {
+                const el = ev.target;
+                if (!el || !el.classList) return;
+                if (el.classList.contains('tp-serv-preco')) {
+                    el.value = formatarMoeda(el.value);
+                } else if (el.id === 'tp-wa') {
+                    el.value = formatarTelefone(el.value);
+                }
+            }, true);
+        }
+
+        function vincularFotoTerapeuta() {
+            const btn = document.getElementById('btn-tp-foto');
+            const arquivo = document.getElementById('tp-foto-arquivo');
+
+            if (btn && arquivo) {
+                btn.addEventListener('click', function () { arquivo.click(); });
+                arquivo.addEventListener('change', function () {
+                    const f = arquivo.files && arquivo.files[0];
+                    arquivo.value = '';
+                    if (!f) return;
+                    if (!/^image\//.test(f.type)) { alert('Escolha um arquivo de imagem (JPG ou PNG).'); return; }
+                    if (f.size > 8 * 1024 * 1024) { alert('A imagem deve ter no máximo 8 MB.'); return; }
+                    abrirCrop(f);
+                });
+            }
+
+            const btnRemover = document.getElementById('btn-tp-foto-remover');
+            if (btnRemover) {
+                btnRemover.addEventListener('click', async function () {
+                    const campo = document.getElementById('tp-foto');
+                    const atual = campo ? campo.value : '';
+                    if (campo) campo.value = '';
+                    atualizarPreviewFoto('');
+
+                    const aviso = document.getElementById('tp-status');
+                    if (aviso) {
+                        aviso.innerText = 'Foto removida. Clique em Salvar para confirmar no perfil.';
+                        aviso.style.color = '#ffab40';
+                    }
+
+                    const caminho = caminhoFotoTerapeuta(atual);
+                    if (caminho) {
+                        try { await removerFotoTerapeuta(caminho); } catch (e) { /* melhor esforço */ }
+                    }
+                });
+            }
+
+            const zoom = document.getElementById('tp-crop-zoom');
+            if (zoom) {
+                zoom.addEventListener('input', function () {
+                    if (!_crop) return;
+                    _crop.escala = _crop.base * (parseInt(this.value, 10) / 100);
+                    limitarCrop();
+                    desenharCrop();
+                });
+            }
+
+            const cancelar = document.getElementById('tp-crop-cancelar');
+            if (cancelar) cancelar.addEventListener('click', fecharCrop);
+
+            const salvar = document.getElementById('tp-crop-salvar');
+            if (salvar) salvar.addEventListener('click', aplicarCrop);
+
+            // Arrastar para posicionar (mouse e toque)
+            const view = document.getElementById('tp-crop-view');
+            if (view) {
+                view.addEventListener('pointerdown', function (ev) {
+                    if (!_crop) return;
+                    _crop.arrastando = true;
+                    _crop.inicioX = ev.clientX - _crop.ox;
+                    _crop.inicioY = ev.clientY - _crop.oy;
+                    try { view.setPointerCapture(ev.pointerId); } catch (e) { /* opcional */ }
+                });
+                view.addEventListener('pointermove', function (ev) {
+                    if (!_crop || !_crop.arrastando) return;
+                    _crop.ox = ev.clientX - _crop.inicioX;
+                    _crop.oy = ev.clientY - _crop.inicioY;
+                    limitarCrop();
+                    desenharCrop();
+                });
+                const soltar = function () { if (_crop) _crop.arrastando = false; };
+                view.addEventListener('pointerup', soltar);
+                view.addEventListener('pointercancel', soltar);
+                view.addEventListener('pointerleave', soltar);
+            }
+        }
+
+        function abrirCrop(file) {
+            const modal = document.getElementById('tp-crop');
+            const view = document.getElementById('tp-crop-view');
+            if (!modal || !view) return;
+
+            const leitor = new FileReader();
+            leitor.onload = function () {
+                const img = new Image();
+                img.onload = function () {
+                    const lado = view.clientWidth || 260;
+                    const base = Math.max(lado / img.naturalWidth, lado / img.naturalHeight);
+                    _crop = {
+                        img: img, view: lado, base: base, escala: base,
+                        ox: 0, oy: 0, arrastando: false, inicioX: 0, inicioY: 0
+                    };
+
+                    const zoom = document.getElementById('tp-crop-zoom');
+                    if (zoom) zoom.value = 100;
+                    const msg = document.getElementById('tp-crop-msg');
+                    if (msg) msg.innerText = '';
+
+                    const visivel = document.getElementById('tp-crop-img');
+                    if (visivel) visivel.src = img.src;
+
+                    modal.hidden = false;
+                    desenharCrop();
+                };
+                img.onerror = function () { alert('Não foi possível abrir esta imagem.'); };
+                img.src = leitor.result;
+            };
+            leitor.readAsDataURL(file);
+        }
+
+        // Centraliza a imagem no círculo e aplica o deslocamento do arrasto
+        function desenharCrop() {
+            if (!_crop) return;
+            const el = document.getElementById('tp-crop-img');
+            if (!el) return;
+            el.style.width = (_crop.img.naturalWidth * _crop.escala) + 'px';
+            el.style.height = (_crop.img.naturalHeight * _crop.escala) + 'px';
+            el.style.left = '50%';
+            el.style.top = '50%';
+            el.style.transform = 'translate(-50%, -50%) translate(' + _crop.ox + 'px, ' + _crop.oy + 'px)';
+        }
+
+        // Impede que a imagem "descole" e deixe buraco dentro do círculo
+        function limitarCrop() {
+            if (!_crop) return;
+            const w = _crop.img.naturalWidth * _crop.escala;
+            const h = _crop.img.naturalHeight * _crop.escala;
+            const maxX = Math.max(0, (w - _crop.view) / 2);
+            const maxY = Math.max(0, (h - _crop.view) / 2);
+            _crop.ox = Math.min(maxX, Math.max(-maxX, _crop.ox));
+            _crop.oy = Math.min(maxY, Math.max(-maxY, _crop.oy));
+        }
+
+        function fecharCrop() {
+            const modal = document.getElementById('tp-crop');
+            if (modal) modal.hidden = true;
+            _crop = null;
+        }
+
+        function atualizarPreviewFoto(url) {
+            const box = document.getElementById('tp-foto-preview');
+            if (box) {
+                if (url) {
+                    box.innerHTML = '<img src="' + esc(url) + '" alt="Foto do perfil">';
+                } else {
+                    const campoNome = document.getElementById('tp-nome');
+                    const nome = campoNome ? campoNome.value : '?';
+                    box.textContent = String(nome || '?').trim().charAt(0).toUpperCase() || '?';
+                }
+            }
+            const btn = document.getElementById('btn-tp-foto');
+            if (btn) btn.innerText = url ? '🔄 Trocar foto' : '📷 Escolher foto';
+            const rem = document.getElementById('btn-tp-foto-remover');
+            if (rem) rem.hidden = !url;
+        }
+
+        // Recorta o que está no círculo, gera JPEG 480x480 e sobe pro Storage
+        async function aplicarCrop() {
+            if (!_crop) return;
+
+            const msg = document.getElementById('tp-crop-msg');
+            const dizer = function (t, c) { if (msg) { msg.innerText = t; msg.style.color = c || '#aaa'; } };
+
+            const OUT = 480;
+            const cv = document.createElement('canvas');
+            cv.width = OUT;
+            cv.height = OUT;
+            const ctx = cv.getContext('2d');
+            ctx.fillStyle = '#0b0b16';
+            ctx.fillRect(0, 0, OUT, OUT);
+
+            const k = OUT / _crop.view;
+            const w = _crop.img.naturalWidth * _crop.escala;
+            const h = _crop.img.naturalHeight * _crop.escala;
+            const x = (_crop.view / 2 - w / 2 + _crop.ox) * k;
+            const y = (_crop.view / 2 - h / 2 + _crop.oy) * k;
+            ctx.drawImage(_crop.img, x, y, w * k, h * k);
+
+            const btn = document.getElementById('tp-crop-salvar');
+            if (btn) btn.disabled = true;
+            dizer('Enviando...', '#d4af37');
+
+            cv.toBlob(async function (blob) {
+                if (!blob) {
+                    dizer('Não foi possível gerar a imagem.', '#ff6b6b');
+                    if (btn) btn.disabled = false;
+                    return;
+                }
+
+                const campo = document.getElementById('tp-foto');
+                const anterior = campo ? campo.value : '';
+
+                const up = await uploadFotoTerapeuta(user.id, blob);
+
+                if (up.indisponivel) {
+                    dizer('Bucket de fotos não configurado. Rode a seção 8 do supabase-schema.sql.', '#ffab40');
+                    if (btn) btn.disabled = false;
+                    return;
+                }
+                if (up.error) {
+                    dizer('Erro ao enviar: ' + up.error.message, '#ff6b6b');
+                    if (btn) btn.disabled = false;
+                    return;
+                }
+
+                if (campo) campo.value = up.url;
+                atualizarPreviewFoto(up.url);
+
+                // Apaga a foto anterior do bucket (melhor esforço: se falhar,
+                // fica um arquivo órfão, sem afetar o perfil)
+                const antigo = caminhoFotoTerapeuta(anterior);
+                if (antigo && antigo !== up.caminho) {
+                    try { await removerFotoTerapeuta(antigo); } catch (e) { /* opcional */ }
+                }
+
+                fecharCrop();
+
+                const aviso = document.getElementById('tp-status');
+                if (aviso) {
+                    aviso.innerText = 'Foto enviada! Clique em Salvar para gravar no perfil.';
+                    aviso.style.color = '#4caf50';
+                }
+            }, 'image/jpeg', 0.86);
         }
 
         // Coleta o formulário, grava perfil → atendimentos → contatos e
@@ -515,6 +899,8 @@
                 whatsapp: campo('tp-wa').trim(),
                 email_publico: campo('tp-email').trim(),
                 instagram: campo('tp-instagram').trim(),
+                facebook: campo('tp-facebook').trim(),
+                youtube: campo('tp-youtube').trim(),
                 site: campo('tp-site').trim()
             };
 

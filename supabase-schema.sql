@@ -402,6 +402,52 @@ CREATE INDEX IF NOT EXISTS idx_therapists_status
 CREATE INDEX IF NOT EXISTS idx_therapist_services_therapist
     ON public.therapist_services (therapist_id, ordem);
 
+-- Redes sociais: ALTER (e nao so CREATE TABLE) porque a tabela pode ja
+-- existir de uma execucao anterior deste schema.
+ALTER TABLE public.therapist_contatos ADD COLUMN IF NOT EXISTS facebook TEXT;
+ALTER TABLE public.therapist_contatos ADD COLUMN IF NOT EXISTS youtube TEXT;
+
+-- ----------------------------------------------------------
+-- STORAGE: fotos dos terapeutas
+--   Bucket publico para leitura (a vitrine mostra a foto) e escrita
+--   restrita a pasta do proprio usuario: {auth.uid()}/foto-<ts>.jpg
+-- ----------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('therapist-fotos', 'therapist-fotos', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Fotos de terapeutas sao publicas" ON storage.objects;
+CREATE POLICY "Fotos de terapeutas sao publicas"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'therapist-fotos');
+
+DROP POLICY IF EXISTS "Terapeuta envia a propria foto" ON storage.objects;
+CREATE POLICY "Terapeuta envia a propria foto"
+    ON storage.objects FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        bucket_id = 'therapist-fotos'
+        AND auth.uid()::text = (storage.foldername(name))[1]
+    );
+
+DROP POLICY IF EXISTS "Terapeuta atualiza a propria foto" ON storage.objects;
+CREATE POLICY "Terapeuta atualiza a propria foto"
+    ON storage.objects FOR UPDATE
+    TO authenticated
+    USING (
+        bucket_id = 'therapist-fotos'
+        AND (auth.uid()::text = (storage.foldername(name))[1] OR public.is_admin(auth.uid()))
+    );
+
+DROP POLICY IF EXISTS "Terapeuta remove a propria foto" ON storage.objects;
+CREATE POLICY "Terapeuta remove a propria foto"
+    ON storage.objects FOR DELETE
+    TO authenticated
+    USING (
+        bucket_id = 'therapist-fotos'
+        AND (auth.uid()::text = (storage.foldername(name))[1] OR public.is_admin(auth.uid()))
+    );
+
 -- updated_at automatico (mesma tabela de perfis, dois gatilhos)
 CREATE OR REPLACE FUNCTION public.touch_therapists_updated_at()
 RETURNS TRIGGER AS $$

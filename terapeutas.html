@@ -258,6 +258,16 @@
                 const site = /^https?:\/\//i.test(c.site) ? c.site : 'https://' + c.site;
                 itens.push('<a class="btn-contato" href="' + esc(site) + '" target="_blank" rel="noopener">🔗 Site</a>');
             }
+            if (c.facebook) {
+                const fb = String(c.facebook).trim();
+                const url = /^https?:\/\//i.test(fb) ? fb : 'https://facebook.com/' + encodeURIComponent(fb.replace(/^@/, ''));
+                itens.push('<a class="btn-contato" href="' + esc(url) + '" target="_blank" rel="noopener">📘 Facebook</a>');
+            }
+            if (c.youtube) {
+                const yt = String(c.youtube).trim();
+                const url = /^https?:\/\//i.test(yt) ? yt : 'https://youtube.com/@' + encodeURIComponent(yt.replace(/^@/, ''));
+                itens.push('<a class="btn-contato" href="' + esc(url) + '" target="_blank" rel="noopener">▶️ YouTube</a>');
+            }
             return itens.length ? '<div class="modal-contatos">' + itens.join('') + '</div>' : '';
         }
 

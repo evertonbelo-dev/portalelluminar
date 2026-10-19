@@ -617,10 +617,13 @@ export async function salvarContatosTerapeuta(therapistId, contatos) {
         whatsapp: limpar(c.whatsapp),
         email_publico: limpar(c.email_publico),
         instagram: limpar(c.instagram),
+        facebook: limpar(c.facebook),
+        youtube: limpar(c.youtube),
         site: limpar(c.site)
     };
 
-    const vazio = !row.whatsapp && !row.email_publico && !row.instagram && !row.site;
+    const vazio = !row.whatsapp && !row.email_publico && !row.instagram
+        && !row.facebook && !row.youtube && !row.site;
 
     if (vazio) {
         const { error } = await client.from('therapist_contatos').delete().eq('therapist_id', therapistId);
@@ -641,6 +644,59 @@ export async function salvarContatosTerapeuta(therapistId, contatos) {
     }
 
     return { error: null };
+}
+
+// ======================================================================
+// FOTO DO TERAPEUTA (Supabase Storage — bucket "therapist-fotos")
+//   A imagem já chega recortada e quadrada (blob JPEG gerado no canvas,
+//   pelo painel do dashboard), então aqui só sobe o arquivo.
+// ======================================================================
+
+const BUCKET_FOTOS = 'therapist-fotos';
+
+export async function uploadFotoTerapeuta(userId, blob) {
+    const client = await getSupabase();
+    if (!client) return { url: null, caminho: null, error: { message: 'Supabase nao conectado.' }, indisponivel: true };
+    if (!userId || !blob) return { url: null, caminho: null, error: { message: 'Imagem invalida.' } };
+
+    // Um arquivo por envio: o nome com timestamp evita cache antigo no CDN.
+    const caminho = userId + '/foto-' + Date.now() + '.jpg';
+
+    const { error } = await client.storage.from(BUCKET_FOTOS).upload(caminho, blob, {
+        contentType: 'image/jpeg',
+        cacheControl: '31536000',
+        upsert: false
+    });
+
+    if (error) {
+        const msg = (error.message || '') + ' ' + (error.error || '');
+        if (/bucket/i.test(msg) || error.statusCode === '404') {
+            return { url: null, caminho: null, error: null, indisponivel: true };
+        }
+        return { url: null, caminho: null, error };
+    }
+
+    const pub = client.storage.from(BUCKET_FOTOS).getPublicUrl(caminho);
+    return {
+        url: pub && pub.data ? pub.data.publicUrl : null,
+        caminho: caminho,
+        error: null,
+        indisponivel: false
+    };
+}
+
+// Caminho interno a partir da URL pública (para apagar a foto trocada).
+export function caminhoFotoTerapeuta(url) {
+    const m = String(url || '').match(/\/object\/public\/therapist-fotos\/([^?#]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+}
+
+export async function removerFotoTerapeuta(caminho) {
+    if (!caminho) return { error: null };
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase nao conectado.' } };
+    const { error } = await client.storage.from(BUCKET_FOTOS).remove([caminho]);
+    return { error: error || null };
 }
 
 
