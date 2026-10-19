@@ -454,9 +454,13 @@
                   '" target="_blank" rel="noopener">💬 WhatsApp</a>'
                 : '';
 
-            const acao = SESSION
-                ? '<button type="button" class="btn-agendar" id="btn-agendar">✦ Solicitar agendamento</button>'
-                : '<a class="btn-agendar" href="login.html?redirect=terapeutas.html">Entrar para solicitar</a>';
+            const meuPerfil = !!(SESSION && t.user_id && SESSION.user.id === t.user_id);
+
+            const acao = meuPerfil
+                ? '<a class="btn-agendar" href="dashboard.html">Este é o seu perfil — gerenciar</a>'
+                : (SESSION
+                    ? '<button type="button" class="btn-agendar" id="btn-agendar">✦ Solicitar agendamento</button>'
+                    : '<a class="btn-agendar" href="login.html?redirect=terapeutas.html">Entrar para solicitar</a>');
 
             return '<div class="resumo">✦ ' + esc(quando) + '</div>' +
                 opcoes +
@@ -496,6 +500,10 @@
             }
             if (!SESSION) {
                 window.location.href = 'login.html?redirect=terapeutas.html';
+                return;
+            }
+            if (t.user_id && SESSION.user.id === t.user_id) {
+                dizer('Você não pode agendar com o seu próprio perfil. Use outra conta de consulente para testar.', '#ffab40');
                 return;
             }
 
