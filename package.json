@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo 'Abra os arquivos HTML diretamente no navegador'",
+    "dev": "node server.js",
     "build": "node build.js",
     "preview": "npx serve dist"
   }
