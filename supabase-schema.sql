@@ -882,4 +882,88 @@ $$;
 REVOKE ALL ON FUNCTION public.horarios_ocupados(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.horarios_ocupados(uuid) TO anon, authenticated;
 
+-- ==========================================================
+-- 11. EXPIRACAO DE PENDENTES (Fase F5a)
+--    Uma solicitacao pendente segura o horario. Se o terapeuta
+--    nao responder em 24h, ela e cancelada e o horario volta
+--    a aparecer na vitrine.
+-- ==========================================================
+ALTER TABLE public.therapist_bookings ADD COLUMN IF NOT EXISTS expira_em TIMESTAMPTZ;
+
+-- Backfill para quem ja tinha pedidos abertos
+UPDATE public.therapist_bookings
+   SET expira_em = created_at + INTERVAL '24 hours'
+ WHERE status = 'pendente' AND expira_em IS NULL;
+
+-- Pendente ganha 24h; qualquer outro status perde a expiracao.
+-- O prazo nunca passa do proprio atendimento: vale o menor entre
+-- "agora + 24h" e "1h antes do horario" (wall-clock de Sao Paulo).
+CREATE OR REPLACE FUNCTION public.booking_expira_em()
+RETURNS TRIGGER AS $$
+DECLARE limite timestamptz;
+BEGIN
+    IF NEW.status = 'pendente' THEN
+        IF NEW.expira_em IS NULL THEN
+            limite := LEAST(
+                NOW() + INTERVAL '24 hours',
+                ((NEW.data + NEW.hora_inicio) AT TIME ZONE 'America/Sao_Paulo') - INTERVAL '1 hour'
+            );
+            -- Se o atendimento já está em cima, garante ao menos 30 min.
+            IF limite <= NOW() THEN
+                limite := NOW() + INTERVAL '30 minutes';
+            END IF;
+            NEW.expira_em := limite;
+        END IF;
+    ELSE
+        NEW.expira_em := NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_booking_expira ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_expira
+    BEFORE INSERT OR UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.booking_expira_em();
+
+-- Cancelamento automatico (SECURITY DEFINER: roda sem sessao, via cron)
+CREATE OR REPLACE FUNCTION public.expirar_solicitacoes_pendentes()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE total integer;
+BEGIN
+    UPDATE public.therapist_bookings
+       SET status = 'cancelado',
+           resposta = COALESCE(resposta, 'Cancelada automaticamente: sem resposta do terapeuta em 24h.')
+     WHERE status = 'pendente'
+       AND expira_em IS NOT NULL
+       AND expira_em < NOW();
+
+    GET DIAGNOSTICS total = ROW_COUNT;
+    RETURN total;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.expirar_solicitacoes_pendentes() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.expirar_solicitacoes_pendentes() TO anon, authenticated;
+
+-- Agendador do proprio Postgres (Supabase tem pg_cron disponivel)
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+DO $$
+BEGIN
+    BEGIN
+        PERFORM cron.unschedule('expirar-solicitacoes-pendentes');
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+    PERFORM cron.schedule(
+        'expirar-solicitacoes-pendentes',
+        '*/15 * * * *',
+        $cron$SELECT public.expirar_solicitacoes_pendentes();$cron$
+    );
+END $$;
+
 

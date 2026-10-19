@@ -81,6 +81,7 @@
         .s-concluido { background: rgba(100, 181, 246, 0.12); color: #90caf9; border: 1px solid rgba(100, 181, 246, 0.35); }
         .tp-book-info { color: #b9b9cc; font-size: 0.82rem; line-height: 1.6; }
         .tp-book-obs { color: #8f8fa5; font-size: 0.8rem; font-style: italic; margin-top: 8px; }
+        .tp-book-prazo { color: #ffcc80; font-size: 0.75rem; margin-top: 8px; }
         .tp-book-resp { color: #9bd99e; font-size: 0.8rem; margin-top: 8px; }
         .tp-book-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         .tp-book-acoes .tp-btn-sec { padding: 8px 16px; font-size: 0.78rem; }
@@ -193,7 +194,8 @@
                  uploadFotoTerapeuta, caminhoFotoTerapeuta, removerFotoTerapeuta,
                  formatarWhatsApp, salvarDisponibilidadeTerapeuta, salvarBloqueiosTerapeuta,
                  listarSolicitacoesTerapeuta, listarMinhasSolicitacoes,
-                 responderSolicitacao, cancelarSolicitacao } from './js/supabase-db.js?v=2.2.0';
+                 responderSolicitacao, cancelarSolicitacao,
+                 expirarSolicitacoesPendentes } from './js/supabase-db.js?v=2.2.0';
 
         await initSupabase();
 
@@ -569,6 +571,13 @@
                 ? esc(b.servico_nome) + (b.servico_preco ? ' · ' + esc(b.servico_preco) : '')
                 : 'Atendimento a combinar';
 
+            let prazo = '';
+            if (b.status === 'pendente' && b.minutos_para_expirar != null) {
+                prazo = b.minutos_para_expirar >= 60
+                    ? 'expira em ' + Math.round(b.minutos_para_expirar / 60) + 'h'
+                    : 'expira em ' + b.minutos_para_expirar + 'min';
+            }
+
             let acoes = '';
             if (souTerapeuta && b.status === 'pendente') {
                 acoes = '<button type="button" class="tp-btn-sec" data-book="confirmar" data-id="' + esc(b.id) + '">Confirmar</button>' +
@@ -586,6 +595,7 @@
                         <span class="tp-book-status s-${esc(b.status)}">${rot}</span>
                     </div>
                     <div class="tp-book-info">${quem}<br>${servico} · ${esc(b.duracao_min)} min</div>
+                    ${prazo ? '<div class="tp-book-prazo">⏳ ' + prazo + '</div>' : ''}
                     ${b.observacao ? '<div class="tp-book-obs">“' + esc(b.observacao) + '”</div>' : ''}
                     ${b.resposta ? '<div class="tp-book-resp">Resposta: ' + esc(b.resposta) + '</div>' : ''}
                     ${acoes ? '<div class="tp-book-acoes">' + acoes + '</div>' : ''}
@@ -598,6 +608,8 @@
             if (!alvo) return;
 
             try {
+                await expirarSolicitacoesPendentes();
+
                 let perfil = _meuPerfilTera;
                 if (!perfil) {
                     const p = await obterMeuPerfilTerapeuta(user.id);
@@ -640,6 +652,7 @@
             if (!alvo) return;
 
             try {
+                await expirarSolicitacoesPendentes();
                 const r = await listarMinhasSolicitacoes(user.id);
 
                 if (r.indisponivel) {

@@ -771,6 +771,11 @@ export async function listarHorariosOcupados(therapistId) {
     if (!client) return { data: [], error: null, indisponivel: true };
     if (!therapistId) return { data: [], error: null, indisponivel: false };
 
+    // Autocura: libera pendentes vencidas antes de listar (o cron do banco
+    // roda a cada 15 min; isto garante que a vitrine nunca mostre horario
+    // preso por um pedido que ja caducou).
+    try { await client.rpc('expirar_solicitacoes_pendentes'); } catch (e) { /* opcional */ }
+
     const { data, error } = await client.rpc('horarios_ocupados', { p_therapist: therapistId });
 
     if (error) {
@@ -839,6 +844,14 @@ export async function criarSolicitacaoAgendamento(dados) {
 export function normalizarSolicitacao(row) {
     if (!row) return null;
     const t = Array.isArray(row.therapists) ? row.therapists[0] : row.therapists;
+
+    // Quanto falta para expirar (so faz sentido em pendente)
+    let minutosParaExpirar = null;
+    if (row.status === 'pendente' && row.expira_em) {
+        const ms = new Date(row.expira_em).getTime() - Date.now();
+        minutosParaExpirar = Math.max(0, Math.round(ms / 60000));
+    }
+
     return {
         id: row.id,
         therapist_id: row.therapist_id,
@@ -854,8 +867,27 @@ export function normalizarSolicitacao(row) {
         status: row.status || 'pendente',
         observacao: row.observacao || '',
         resposta: row.resposta || '',
+        expira_em: row.expira_em || null,
+        minutos_para_expirar: minutosParaExpirar,
         created_at: row.created_at || null
     };
+}
+
+// Expira as pendentes vencidas (roda no banco; devolve quantas cancelou)
+export async function expirarSolicitacoesPendentes() {
+    const client = await getSupabase();
+    if (!client) return { expiradas: 0, error: null, indisponivel: true };
+
+    const { data, error } = await client.rpc('expirar_solicitacoes_pendentes');
+
+    if (error) {
+        if (error.code === 'PGRST202' || tabelaAusente(error)) {
+            return { expiradas: 0, error: null, indisponivel: true };
+        }
+        return { expiradas: 0, error, indisponivel: false };
+    }
+
+    return { expiradas: Number(data) || 0, error: null, indisponivel: false };
 }
 
 const SELECT_SOLICITACAO = '*, therapists(nome, slug)';
