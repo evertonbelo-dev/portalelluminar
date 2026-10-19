@@ -54,6 +54,7 @@
                 <div><label class="campo-label">Email Estelar</label><input type="email" id="email-login" class="auth-input" placeholder="seu@email.com" required></div>
                 <div><label class="campo-label">Senha Cósmica</label><input type="password" id="senha-login" class="auth-input" placeholder="••••••••" required></div>
                 <div id="login-error" class="auth-error"></div>
+                <div id="login-success" class="auth-success" style="display:none"></div>
                 <button type="submit" id="btn-login" class="auth-btn">Entrar</button>
                 <div class="auth-divider">— ou —</div>
                 <button type="button" class="auth-google-btn" onclick="handleGoogleLogin()"><span>🔮</span> Entrar com Google</button>
@@ -78,7 +79,7 @@
     </div>
     <script type="module">
         import { initSupabase } from './js/supabase-config.js?v=2.1.0';
-        import { signIn, signUp, signInWithGoogle, getSession, appUrl } from './js/supabase-auth.js?v=2.1.0';
+        import { signIn, signUp, signInWithGoogle, getSession, appUrl, resetPassword } from './js/supabase-auth.js?v=2.1.0';
         import { saveMarketingConsent, syncUserProfile } from './js/supabase-db.js?v=2.1.0';
         await initSupabase();
         const session = await getSession();
@@ -94,6 +95,7 @@
         window.__saveMarketingConsent = saveMarketingConsent;
         window.__syncUserProfile = syncUserProfile;
         window.__appUrl = appUrl;
+        window.__resetPassword = resetPassword;
     </script>
     <script>
         function getRedirect() {
@@ -156,7 +158,33 @@
             btn.disabled=false;btn.innerText='Criar Conta Estelar';
         }
         async function handleGoogleLogin(){await window.__supabaseGoogle({redirect: getRedirect(), redirectTo: window.__appUrl(getRedirect())})}
-        function mostrarRecuperarSenha(){alert("Função de recuperação de senha em breve. Enquanto isso, entre em contato pelo suporte.")}
+        async function mostrarRecuperarSenha(){
+            var campo = document.getElementById('email-login');
+            var email = (campo && campo.value || '').trim();
+
+            if (!email) {
+                email = (prompt('Informe o e-mail da sua conta para receber o link de redefinição:') || '').trim();
+            }
+            if (!email) return;
+
+            var errorDiv = document.getElementById('login-error');
+            var okDiv = document.getElementById('login-success');
+            if (errorDiv) errorDiv.innerText = '';
+            if (okDiv) { okDiv.style.display = 'block'; okDiv.innerText = 'Enviando link de recuperação...'; }
+
+            var r = await window.__resetPassword(email);
+
+            if (r && r.error) {
+                if (okDiv) { okDiv.style.display = 'none'; okDiv.innerText = ''; }
+                if (errorDiv) errorDiv.innerText = r.error.message || 'Não foi possível enviar o link.';
+                return;
+            }
+
+            if (okDiv) {
+                okDiv.innerText = '📧 Link enviado para ' + email +
+                    '. Abra o e-mail (confira o spam) e defina a nova senha.';
+            }
+        }
     </script>
 </body>
 </html>

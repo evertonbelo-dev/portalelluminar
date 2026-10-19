@@ -121,6 +121,31 @@ export async function signInWithMagicLink(email) {
     return { data, error };
 }
 
+// --- RECUPERAR SENHA (envia o link por email) ---
+export async function resetPassword(email) {
+    const supabase = await getSupabase();
+    if (!supabase) return { error: { message: 'Supabase não conectado.' } };
+
+    const retorno = appUrl('reset.html');
+    const { data, error } = await supabase.auth.resetPasswordForEmail(String(email || '').trim(), {
+        redirectTo: ehUrlAbsoluta(retorno) ? retorno : undefined
+    });
+
+    return { data, error };
+}
+
+// --- DEFINIR NOVA SENHA (usado em reset.html, com a sessão do link) ---
+export async function updatePassword(novaSenha) {
+    const supabase = await getSupabase();
+    if (!supabase) return { error: { message: 'Supabase não conectado.' } };
+    if (!novaSenha || String(novaSenha).length < 6) {
+        return { error: { message: 'A senha precisa ter pelo menos 6 caracteres.' } };
+    }
+
+    const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
+    return { data, error };
+}
+
 // --- SAIR ---
 export async function signOut() {
     const supabase = await getSupabase();

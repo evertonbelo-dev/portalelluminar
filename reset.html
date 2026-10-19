@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal El'Luminar | Nova Senha</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/portal.css">
+    <style>
+        .auth-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .auth-card { background: rgba(5,5,16,0.95); border: 1px solid var(--dourado-antigo); border-radius: 20px; padding: 40px; width: 100%; max-width: 420px; backdrop-filter: blur(10px); box-shadow: 0 0 50px rgba(212,175,55,0.1); }
+        .auth-card h1 { font-family: 'Cinzel',serif; color: var(--ouro-solar); text-align: center; font-size: 1.4rem; margin-bottom: 5px; }
+        .auth-card .subtitulo { text-align: center; color: #aaa; margin-bottom: 28px; font-size: 0.88rem; line-height: 1.5; }
+        .auth-form { display: flex; flex-direction: column; gap: 18px; }
+        .campo-label { color: var(--dourado-antigo); font-size: 0.85rem; margin-bottom: 3px; display: block; }
+        .auth-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 10px; padding: 12px 16px; color: #fff; font-size: 1rem; width: 100%; outline: none; transition: border-color .3s; }
+        .auth-input:focus { border-color: var(--ouro-solar); }
+        .auth-btn { background: linear-gradient(135deg,var(--dourado-antigo),var(--ouro-solar)); border: none; border-radius: 10px; padding: 14px; color: #000; font-weight: bold; font-size: 1rem; cursor: pointer; font-family: 'Cinzel',serif; }
+        .auth-btn:hover { opacity: .92; }
+        .auth-btn:disabled { opacity: .6; cursor: default; }
+        .auth-error { color: #ff6b6b; font-size: .85rem; padding: 8px 12px; background: rgba(255,100,100,0.1); border-radius: 8px; border: 1px solid rgba(255,100,100,0.2); display: none; }
+        .auth-error:not(:empty) { display: block; }
+        .auth-success { color: #4caf50; font-size: .85rem; padding: 8px 12px; background: rgba(76,175,80,0.1); border-radius: 8px; border: 1px solid rgba(76,175,80,0.2); display: none; }
+        .auth-success:not(:empty) { display: block; }
+        .logo-simbolo { text-align: center; margin-bottom: 15px; }
+        .logo-simbolo img { width: 80px; height: auto; filter: drop-shadow(0 0 15px rgba(212,175,55,0.4)); }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top: 2px solid #fff; border-radius: 50%; animation: spin .8s linear infinite; margin-right: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+    <script src="js/env-config.js"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="logo-simbolo"><a href="index.html"><img src="assets/PortalElluminar/Simbolo_Portal.png" alt="Símbolo"></a></div>
+            <h1>Nova Senha</h1>
+            <p class="subtitulo">Defina a nova senha da sua conta estelar.</p>
+
+            <form id="form-nova-senha" class="auth-form" onsubmit="salvarNovaSenha(event)">
+                <div>
+                    <label class="campo-label">Nova senha</label>
+                    <input type="password" id="nova-senha" class="auth-input" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password">
+                </div>
+                <div>
+                    <label class="campo-label">Repita a nova senha</label>
+                    <input type="password" id="confirmar-senha" class="auth-input" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+                </div>
+                <div id="reset-error" class="auth-error"></div>
+                <div id="reset-success" class="auth-success"></div>
+                <button type="submit" id="btn-nova-senha" class="auth-btn">Salvar nova senha</button>
+            </form>
+
+            <div id="reset-link-invalido" style="display:none;text-align:center;color:#bbb;font-size:0.9rem;line-height:1.6;">
+                <p>Este link de recuperação é inválido ou já expirou.</p>
+                <p style="margin-top:14px;"><a href="login.html" style="color:var(--ouro-solar);">Pedir um novo link</a></p>
+            </div>
+
+            <div style="text-align:center;margin-top:25px"><a href="index.html" style="color:#888;font-size:.8rem">← Voltar ao Portal</a></div>
+        </div>
+    </div>
+    <script type="module">
+        import { initSupabase } from './js/supabase-config.js?v=2.1.0';
+        import { getSession, updatePassword } from './js/supabase-auth.js?v=2.1.0';
+
+        await initSupabase();
+
+        // O link do Supabase chega como #access_token=...&type=recovery.
+        // O cliente converte em sessão ao iniciar; damos um instante para isso.
+        let sessao = null;
+        for (let i = 0; i < 12 && !sessao; i++) {
+            sessao = await getSession();
+            if (!sessao) await new Promise(function (r) { setTimeout(r, 250); });
+        }
+
+        if (!sessao) {
+            const form = document.getElementById('form-nova-senha');
+            const aviso = document.getElementById('reset-link-invalido');
+            if (form) form.style.display = 'none';
+            if (aviso) aviso.style.display = 'block';
+        }
+
+        window.__updatePassword = updatePassword;
+    </script>
+    <script>
+        async function salvarNovaSenha(event) {
+            event.preventDefault();
+
+            const senha = document.getElementById('nova-senha').value;
+            const confirma = document.getElementById('confirmar-senha').value;
+            const erroDiv = document.getElementById('reset-error');
+            const okDiv = document.getElementById('reset-success');
+            const btn = document.getElementById('btn-nova-senha');
+
+            erroDiv.innerText = '';
+            okDiv.innerText = '';
+
+            if (senha !== confirma) {
+                erroDiv.innerText = 'As duas senhas não são iguais.';
+                return;
+            }
+            if (senha.length < 6) {
+                erroDiv.innerText = 'A senha precisa ter pelo menos 6 caracteres.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Salvando...';
+
+            const r = await window.__updatePassword(senha);
+
+            if (r && r.error) {
+                erroDiv.innerText = r.error.message || 'Não foi possível salvar a nova senha.';
+                btn.disabled = false;
+                btn.innerText = 'Salvar nova senha';
+                return;
+            }
+
+            okDiv.innerText = '✨ Senha alterada! Redirecionando para o seu painel...';
+            setTimeout(function () { window.location.href = 'dashboard.html'; }, 1600);
+        }
+    </script>
+</body>
+</html>
