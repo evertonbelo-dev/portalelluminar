@@ -104,6 +104,14 @@
         .tp-janela-head { grid-template-columns: 140px 1fr 1fr 105px 34px; }
         .tp-folga-head { grid-template-columns: 150px 110px 110px 1fr 34px; }
         .tp-agenda-linha .tp-remover { height: 38px; }
+
+        /* Data da folga + o dia da semana dela */
+        .tp-data-campo { display: flex; flex-direction: column; gap: 4px; }
+        .tp-data-dia {
+            color: #8f8fa5; font-size: 0.7rem; letter-spacing: 0.3px;
+            padding-left: 2px; white-space: nowrap;
+        }
+        .tp-data-dia.passada { color: #ff8a8a; }
         @media (max-width: 700px) {
             .tp-janela, .tp-folga { grid-template-columns: 1fr 1fr; }
             .tp-agenda-linha .tp-remover { grid-column: 2; justify-self: end; width: 70px; }
@@ -375,6 +383,35 @@
 
         // --- Agenda (F3): uma janela semanal por linha ---
         const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        const DIAS_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        function hojeISOSaoPaulo() {
+            return new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
+            }).format(new Date());
+        }
+
+        // "Qui · 22/10 · amanhã" — o dia da semana da data escolhida.
+        // O dia da semana é calculado em UTC, então não muda com o fuso de quem usa.
+        function rotuloData(iso) {
+            if (!iso) return { texto: 'Sem data', passada: false };
+
+            const p = iso.split('-').map(Number);
+            const alvo = Date.UTC(p[0], p[1] - 1, p[2]);
+            const h = hojeISOSaoPaulo().split('-').map(Number);
+            const hoje = Date.UTC(h[0], h[1] - 1, h[2]);
+            const diff = Math.round((alvo - hoje) / 86400000);
+
+            const dow = new Date(alvo).getUTCDay();
+            const dia = String(p[2]).padStart(2, '0') + '/' + String(p[1]).padStart(2, '0');
+
+            let extra = '';
+            if (diff === 0) extra = ' · hoje';
+            else if (diff === 1) extra = ' · amanhã';
+            else if (diff < 0) extra = ' · passada';
+
+            return { texto: DIAS_CURTO[dow] + ' · ' + dia + extra, passada: diff < 0 };
+        }
 
         function linhaDisponibilidade(j) {
             j = j || {};
@@ -399,9 +436,13 @@
 
         function linhaBloqueio(b) {
             b = b || {};
+            const rot = rotuloData(b.data);
             return `
                 <div class="tp-agenda-linha tp-folga">
-                    <input class="tp-input tp-blk-data" type="date" value="${esc(b.data || '')}">
+                    <div class="tp-data-campo">
+                        <input class="tp-input tp-blk-data" type="date" value="${esc(b.data || '')}">
+                        <span class="tp-data-dia${rot.passada ? ' passada' : ''}">${esc(rot.texto)}</span>
+                    </div>
                     <input class="tp-input tp-blk-inicio" type="time" value="${esc(b.hora_inicio || '')}">
                     <input class="tp-input tp-blk-fim" type="time" value="${esc(b.hora_fim || '')}">
                     <input class="tp-input tp-blk-motivo" maxlength="60" placeholder="Motivo (opcional)" value="${esc(b.motivo || '')}">
@@ -653,6 +694,27 @@
                     if (box) box.insertAdjacentHTML('beforeend', linhaBloqueio());
                 });
             }
+
+            // Ao digitar/escolher a data da folga, o rótulo embaixo completa
+            // com o dia da semana (e avisa se é hoje, amanhã ou passada).
+            const atualizarRotuloDoCampo = function (campo) {
+                const label = campo.parentElement
+                    ? campo.parentElement.querySelector('.tp-data-dia')
+                    : null;
+                if (!label) return;
+                const rot = rotuloData(campo.value);
+                label.textContent = rot.texto;
+                label.classList.toggle('passada', rot.passada);
+            };
+
+            ['input', 'change'].forEach(function (evento) {
+                raiz.addEventListener(evento, function (ev) {
+                    const alvo = ev.target;
+                    if (alvo && alvo.classList && alvo.classList.contains('tp-blk-data')) {
+                        atualizarRotuloDoCampo(alvo);
+                    }
+                });
+            });
 
             // Remover linha (atendimento, janela de agenda ou folga)
             raiz.addEventListener('click', function (ev) {
