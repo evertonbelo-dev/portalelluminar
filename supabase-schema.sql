@@ -342,3 +342,200 @@ EXCEPTION WHEN OTHERS THEN NULL; END $$;
 -- INSERT INTO public.user_roles (user_id, role)
 -- SELECT id, 'admin' FROM auth.users WHERE email = 'seu@email.com'
 -- ON CONFLICT (user_id) DO UPDATE SET role = 'admin';
+
+-- ==========================================================
+-- 8. VITRINE DE TERAPEUTAS (Fase F2)
+--    therapists         — perfil publico (1 por conta)
+--    therapist_services — atendimentos exibidos no perfil
+--    therapist_contatos — canais de contato exibidos no perfil
+--
+--    Visibilidade:
+--      visitante  -> le apenas perfis com status = 'publicado'
+--      terapeuta  -> le/edita o proprio perfil, em qualquer status
+--      admin      -> le/edita todos
+-- ==========================================================
+CREATE TABLE IF NOT EXISTS public.therapists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    slug TEXT UNIQUE,
+    nome TEXT NOT NULL,
+    titulo TEXT,
+    especialidades TEXT[] NOT NULL DEFAULT '{}',
+    cidade TEXT,
+    modalidade TEXT NOT NULL DEFAULT 'ambos'
+        CHECK (modalidade IN ('online', 'presencial', 'ambos')),
+    anos INTEGER,
+    bio TEXT,
+    foto_url TEXT,
+    destaque BOOLEAN NOT NULL DEFAULT false,
+    status TEXT NOT NULL DEFAULT 'rascunho'
+        CHECK (status IN ('rascunho', 'publicado', 'pausado')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.therapist_services (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    therapist_id UUID NOT NULL REFERENCES public.therapists(id) ON DELETE CASCADE,
+    nome TEXT NOT NULL,
+    descricao TEXT,
+    duracao_min INTEGER,
+    -- Preco em texto livre ("R$ 180", "A combinar"). A F4 (agendamento)
+    -- normaliza para NUMERIC quando existir checkout.
+    preco TEXT,
+    ordem INTEGER NOT NULL DEFAULT 0,
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.therapist_contatos (
+    therapist_id UUID PRIMARY KEY REFERENCES public.therapists(id) ON DELETE CASCADE,
+    whatsapp TEXT,
+    email_publico TEXT,
+    instagram TEXT,
+    site TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_therapists_status
+    ON public.therapists (status);
+CREATE INDEX IF NOT EXISTS idx_therapist_services_therapist
+    ON public.therapist_services (therapist_id, ordem);
+
+-- updated_at automatico (mesma tabela de perfis, dois gatilhos)
+CREATE OR REPLACE FUNCTION public.touch_therapists_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_therapists_updated_at ON public.therapists;
+CREATE TRIGGER trg_therapists_updated_at
+    BEFORE UPDATE ON public.therapists
+    FOR EACH ROW EXECUTE FUNCTION public.touch_therapists_updated_at();
+
+DROP TRIGGER IF EXISTS trg_therapist_contatos_updated_at ON public.therapist_contatos;
+CREATE TRIGGER trg_therapist_contatos_updated_at
+    BEFORE UPDATE ON public.therapist_contatos
+    FOR EACH ROW EXECUTE FUNCTION public.touch_therapists_updated_at();
+
+-- ----------------------------------------------------------
+-- RLS: therapists
+-- ----------------------------------------------------------
+ALTER TABLE public.therapists ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Perfis publicados sao publicos" ON public.therapists;
+CREATE POLICY "Perfis publicados sao publicos"
+    ON public.therapists FOR SELECT
+    USING (
+        status = 'publicado'
+        OR auth.uid() = user_id
+        OR public.is_admin(auth.uid())
+    );
+
+DROP POLICY IF EXISTS "Terapeuta gerencia proprio perfil" ON public.therapists;
+CREATE POLICY "Terapeuta gerencia proprio perfil"
+    ON public.therapists FOR ALL
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins gerenciam terapeutas" ON public.therapists;
+CREATE POLICY "Admins gerenciam terapeutas"
+    ON public.therapists FOR ALL
+    USING (public.is_admin(auth.uid()))
+    WITH CHECK (public.is_admin(auth.uid()));
+
+-- ----------------------------------------------------------
+-- RLS: therapist_services
+--   Servicos seguem o status do perfil: so aparecem quando o
+--   perfil esta publicado (o EXISTS respeita a RLS de therapists).
+-- ----------------------------------------------------------
+ALTER TABLE public.therapist_services ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Servicos de perfil visivel sao publicos" ON public.therapist_services;
+CREATE POLICY "Servicos de perfil visivel sao publicos"
+    ON public.therapist_services FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_services.therapist_id
+              AND (
+                  t.status = 'publicado'
+                  OR t.user_id = auth.uid()
+                  OR public.is_admin(auth.uid())
+              )
+        )
+    );
+
+DROP POLICY IF EXISTS "Terapeuta gerencia os proprios servicos" ON public.therapist_services;
+CREATE POLICY "Terapeuta gerencia os proprios servicos"
+    ON public.therapist_services FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_services.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_services.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Admins gerenciam servicos" ON public.therapist_services;
+CREATE POLICY "Admins gerenciam servicos"
+    ON public.therapist_services FOR ALL
+    USING (public.is_admin(auth.uid()))
+    WITH CHECK (public.is_admin(auth.uid()));
+
+-- ----------------------------------------------------------
+-- RLS: therapist_contatos
+--   O contato e publico quando o perfil esta publicado — e por
+--   ele que o consulente fala com o terapeuta. Campos deixados
+--   em branco no painel simplesmente nao aparecem na vitrine.
+-- ----------------------------------------------------------
+ALTER TABLE public.therapist_contatos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Contatos de perfil visivel sao publicos" ON public.therapist_contatos;
+CREATE POLICY "Contatos de perfil visivel sao publicos"
+    ON public.therapist_contatos FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_contatos.therapist_id
+              AND (
+                  t.status = 'publicado'
+                  OR t.user_id = auth.uid()
+                  OR public.is_admin(auth.uid())
+              )
+        )
+    );
+
+DROP POLICY IF EXISTS "Terapeuta gerencia os proprios contatos" ON public.therapist_contatos;
+CREATE POLICY "Terapeuta gerencia os proprios contatos"
+    ON public.therapist_contatos FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_contatos.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.therapists t
+            WHERE t.id = therapist_contatos.therapist_id
+              AND t.user_id = auth.uid()
+        )
+    );
+
+DROP POLICY IF EXISTS "Admins gerenciam contatos" ON public.therapist_contatos;
+CREATE POLICY "Admins gerenciam contatos"
+    ON public.therapist_contatos FOR ALL
+    USING (public.is_admin(auth.uid()))
+    WITH CHECK (public.is_admin(auth.uid()));

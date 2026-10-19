@@ -299,6 +299,25 @@
     color: #ffcc80; font-size: 0.78rem; line-height: 1.6;
 }
 
+/* Foto real do terapeuta: cobre a inicial e, se a imagem falhar,
+   a letra aparece por baixo (onerror remove o <img>). */
+.tera-foto-inicial.has-foto { position: relative; overflow: hidden; }
+.tera-foto-inicial.has-foto img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+
+/* Canais de contato no modal do perfil */
+.modal-contatos { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.btn-contato {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 18px; border-radius: 30px; text-decoration: none;
+    font-size: 0.85rem; font-weight: 700;
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    color: var(--ouro-solar); background: rgba(212, 175, 55, 0.10);
+    transition: all 0.25s ease;
+}
+.btn-contato:hover { background: var(--dourado-antigo); color: #000; border-color: var(--dourado-antigo); }
+
 /* ---------- RESPONSIVO ---------- */
 @media (max-width: 700px) {
     /* O header do portal nao tem regra mobile: sem isso os atalhos

@@ -31,6 +31,41 @@
         .loading-dash { text-align: center; padding: 60px; color: #888; }
         .loading-dash .spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(212,175,55,0.2); border-top: 3px solid var(--ouro-solar); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ---------- Painel do Terapeuta (F2) ---------- */
+        .tp-card { background: rgba(5, 5, 16, 0.85); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 15px; padding: 25px; }
+        .tp-card code { background: #1a1a2a; padding: 2px 6px; border-radius: 4px; color: #9bd99e; font-size: 0.8rem; }
+        .tp-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; flex-wrap: wrap; margin-bottom: 18px; }
+        .tp-topo h3 { font-family: 'Cinzel', serif; color: var(--ouro-solar); font-size: 1.05rem; margin-bottom: 6px; }
+        .tp-topo p { color: #999; font-size: 0.82rem; line-height: 1.5; }
+        .tp-topo a { color: var(--dourado-antigo); }
+        .tp-status { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.72rem; font-weight: bold; white-space: nowrap; }
+        .tp-status-on { background: rgba(76, 175, 80, 0.18); color: #7bd67f; border: 1px solid rgba(76, 175, 80, 0.35); }
+        .tp-status-off { background: rgba(212, 175, 55, 0.12); color: #cbb26a; border: 1px solid rgba(212, 175, 55, 0.3); }
+        .tp-aviso { background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.3); color: #9bd99e; border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; margin-bottom: 18px; }
+        .tp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px; }
+        .tp-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .tp-label { color: #a9a9bd; font-size: 0.72rem; letter-spacing: 0.4px; text-transform: uppercase; }
+        .tp-input, .tp-select, .tp-textarea { background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(212, 175, 55, 0.22); border-radius: 8px; padding: 10px 12px; color: #eee; font-family: inherit; font-size: 0.88rem; width: 100%; }
+        .tp-input:focus, .tp-select:focus, .tp-textarea:focus { outline: none; border-color: var(--ouro-solar); box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.12); }
+        .tp-textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+        .tp-secao { border-top: 1px solid rgba(212, 175, 55, 0.12); margin-top: 8px; padding-top: 18px; margin-bottom: 8px; }
+        .tp-secao h4 { font-family: 'Cinzel', serif; color: var(--dourado-antigo); font-size: 0.92rem; margin-bottom: 14px; }
+        .tp-servico { display: grid; grid-template-columns: 1fr 90px 150px 34px; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .tp-remover { background: rgba(255, 107, 107, 0.12); border: 1px solid rgba(255, 107, 107, 0.3); color: #ff8a8a; border-radius: 8px; height: 38px; cursor: pointer; font-size: 1.1rem; line-height: 1; }
+        .tp-remover:hover { background: rgba(255, 107, 107, 0.25); }
+        .tp-acoes { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+        .tp-btn { background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar)); color: #000; border: none; border-radius: 30px; padding: 12px 28px; font-weight: bold; font-size: 0.88rem; cursor: pointer; }
+        .tp-btn:disabled { opacity: 0.6; cursor: wait; }
+        .tp-btn-sec { background: rgba(212, 175, 55, 0.1); color: var(--ouro-solar); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 30px; padding: 11px 22px; font-size: 0.85rem; cursor: pointer; }
+        .tp-msg { font-size: 0.82rem; }
+        .tp-msg-aviso { color: #ffab40; font-size: 0.85rem; line-height: 1.6; margin-bottom: 16px; }
+        .tp-msg-erro { color: #ff6b6b; font-size: 0.85rem; }
+        @media (max-width: 560px) {
+            .tp-servico { grid-template-columns: 1fr 1fr; }
+            .tp-servico .tp-remover { grid-column: 2; justify-self: end; width: 70px; }
+            .tp-card { padding: 18px; }
+        }
     </style>
     <script src="js/env-config.js"></script>
 </head>
@@ -53,7 +88,8 @@
 <script type="module">
         import { initSupabase } from './js/supabase-config.js?v=2.1.0';
         import { getSession, getCurrentUser, signOut, onAuthChange, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.1.0';
-        import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile } from './js/supabase-db.js?v=2.1.0';
+        import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile,
+                 obterMeuPerfilTerapeuta, salvarPerfilTerapeuta, salvarServicosTerapeuta, salvarContatosTerapeuta } from './js/supabase-db.js?v=2.1.0';
 
         await initSupabase();
 
@@ -177,6 +213,11 @@
                     <p style="color: #888; font-style: italic;">Carregando seu histórico...</p>
                 </div>
 
+                <h2 class="dash-section-title">🌿 Meu Espaço de Terapeuta</h2>
+                <div id="terapeuta-panel">
+                    <p style="color: #888; font-style: italic;">Verificando seu perfil de terapeuta...</p>
+                </div>
+
                 <!-- Visualizador de leitura (aberto ao clicar em "Ver leitura") -->
                 <div id="leitura-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;overflow-y:auto;padding:40px 16px;">
                     <div style="max-width:760px;margin:0 auto;background:rgba(5,5,16,0.98);border:1px solid rgba(212,175,55,0.4);border-radius:15px;padding:28px;position:relative;">
@@ -219,6 +260,324 @@
             }
 
             carregarHistorico();
+            carregarPainelTerapeuta();
+        }
+
+        // --- Painel do Terapeuta (F2) ---
+        // O perfil e criado/atualizado aqui; a vitrine le so os publicados.
+        // Sem a secao 8 do supabase-schema.sql rodada, o painel avisa em vez
+        // de quebrar (mesma estrategia de degradacao do resto do portal).
+        let _meuPerfilTera = null;
+
+        const MODALIDADES_TERA = [
+            { v: 'ambos', t: 'Online e presencial' },
+            { v: 'online', t: 'Somente online' },
+            { v: 'presencial', t: 'Somente presencial' }
+        ];
+
+        const ROTULO_STATUS_TERA = {
+            publicado: '🌿 Publicado na vitrine',
+            pausado: '⏸ Pausado — fora da vitrine',
+            rascunho: '📝 Rascunho — só você vê'
+        };
+
+        // Uma linha de atendimento (nome / duracao / preco)
+        function linhaServico(s) {
+            s = s || {};
+            const dur = (s.duracao_min === null || s.duracao_min === undefined) ? '' : esc(s.duracao_min);
+            return `
+                <div class="tp-servico">
+                    <input class="tp-input tp-serv-nome" maxlength="80" placeholder="Ex.: Tiragem Tríade + Essência" value="${esc(s.nome || '')}">
+                    <input class="tp-input tp-serv-dur" type="number" min="0" max="600" step="5" placeholder="min" value="${dur}">
+                    <input class="tp-input tp-serv-preco" maxlength="30" placeholder="R$ 180 / A combinar" value="${esc(s.preco || '')}">
+                    <button type="button" class="tp-remover" title="Remover atendimento" aria-label="Remover atendimento">&times;</button>
+                </div>
+            `;
+        }
+
+        async function carregarPainelTerapeuta() {
+            const alvo = document.getElementById('terapeuta-panel');
+            if (!alvo) return;
+
+            try {
+                const r = await obterMeuPerfilTerapeuta(user.id);
+
+                if (r && r.indisponivel) {
+                    alvo.innerHTML = `
+                        <div class="tp-card">
+                            <h3 style="font-family:'Cinzel',serif;color:var(--ouro-solar);margin-bottom:10px;font-size:1.05rem;">Seu perfil na vitrine</h3>
+                            <p class="tp-msg-aviso">A vitrine ainda não está ativa neste banco. Rode a seção 8 do <code>supabase-schema.sql</code> no SQL Editor do Supabase e recarregue esta página.</p>
+                            <a class="tp-btn-sec" href="seja-terapeuta.html" style="text-decoration:none;display:inline-block;">Entender como funciona →</a>
+                        </div>`;
+                    return;
+                }
+
+                if (!r || r.error) {
+                    alvo.innerHTML = '<div class="tp-card"><p class="tp-msg-erro">Não foi possível carregar seu perfil: ' +
+                        esc((r && r.error && r.error.message) || 'erro desconhecido') + '</p></div>';
+                    return;
+                }
+
+                _meuPerfilTera = r.data;
+                alvo.innerHTML = painelTerapeutaHTML(_meuPerfilTera, '');
+                vincularPainelTerapeuta();
+            } catch (e) {
+                alvo.innerHTML = '<div class="tp-card"><p class="tp-msg-erro">Erro ao carregar o painel: ' +
+                    esc(e.message) + '</p></div>';
+            }
+        }
+
+        // Formulário do perfil (vazio = primeiro cadastro; preenchido = edição)
+        function painelTerapeutaHTML(perfil, aviso) {
+            const p = perfil || {};
+            const publicado = p.status === 'publicado';
+            const servicos = (p.servicos && p.servicos.length ? p.servicos : [{}]).map(linhaServico).join('');
+            const c = p.contatos || {};
+
+            const badge = p.id
+                ? '<span class="tp-status ' + (publicado ? 'tp-status-on' : 'tp-status-off') + '">' +
+                  (ROTULO_STATUS_TERA[p.status] || ROTULO_STATUS_TERA.rascunho) + '</span>'
+                : '<span class="tp-status tp-status-off">📝 Ainda não cadastrado</span>';
+
+            return `
+                <div class="tp-card">
+                    <div class="tp-topo">
+                        <div>
+                            <h3>${p.id ? 'Seu perfil na vitrine' : 'Crie seu perfil de terapeuta'}</h3>
+                            <p>Preencha e publique: seu card aparece em <a href="terapeutas.html" target="_blank" rel="noopener">terapeutas.html</a>. Você pode salvar como rascunho e publicar depois.</p>
+                        </div>
+                        ${badge}
+                    </div>
+
+                    ${aviso ? '<div class="tp-aviso">' + esc(aviso) + '</div>' : ''}
+
+                    <div class="tp-grid">
+                        <div class="tp-field">
+                            <label class="tp-label" for="tp-nome">Nome público *</label>
+                            <input id="tp-nome" class="tp-input" maxlength="60" placeholder="Como quer ser chamado" value="${esc(p.nome || '')}">
+                        </div>
+                        <div class="tp-field">
+                            <label class="tp-label" for="tp-titulo">Título / formação</label>
+                            <input id="tp-titulo" class="tp-input" maxlength="90" placeholder="Taróloga Terapêutica Siriana" value="${esc(p.titulo || '')}">
+                        </div>
+                        <div class="tp-field">
+                            <label class="tp-label" for="tp-especs">Especialidades (separe por vírgula)</label>
+                            <input id="tp-especs" class="tp-input" placeholder="Tarô, Radiônica, Numerologia" value="${esc((p.especialidades || []).join(', '))}">
+                        </div>
+                        <div class="tp-field">
+                            <label class="tp-label" for="tp-cidade">Cidade</label>
+                            <input id="tp-cidade" class="tp-input" maxlength="60" placeholder="São Paulo · SP" value="${esc(p.cidade || '')}">
+                        </div>
+                        <div class="tp-field">
+                            <label class="tp-label" for="tp-modalidade">Atendimento</label>
+                            <select id="tp-modalidade" class="tp-select">
+                                ${MODALIDADES_TERA.map(function (m) {
+                                    const sel = (p.modalidade || 'ambos') === m.v ? ' selected' : '';
+                                    return '<option value="' + m.v + '"' + sel + '>' + m.t + '</option>';
+                                }).join('')}
+                            </select>
+                        </div>
+                        <div class="tp-field">
+                            <label class="tp-label" for="tp-anos">Anos de prática</label>
+                            <input id="tp-anos" class="tp-input" type="number" min="0" max="80" placeholder="12" value="${p.anos ? esc(p.anos) : ''}">
+                        </div>
+                    </div>
+
+                    <div class="tp-field">
+                        <label class="tp-label" for="tp-bio">Apresentação</label>
+                        <textarea id="tp-bio" class="tp-textarea" maxlength="900" placeholder="Como você trabalha, o que o consulente pode esperar...">${esc(p.bio || '')}</textarea>
+                    </div>
+
+                    <div class="tp-field">
+                        <label class="tp-label" for="tp-foto">Link da sua foto (opcional)</label>
+                        <input id="tp-foto" class="tp-input" placeholder="https://..." value="${esc(p.foto_url || '')}">
+                    </div>
+
+                    <div class="tp-secao">
+                        <h4>Atendimentos</h4>
+                        <div id="tp-servicos">${servicos}</div>
+                        <button type="button" id="btn-tp-add-servico" class="tp-btn-sec">+ Adicionar atendimento</button>
+                    </div>
+
+                    <div class="tp-secao">
+                        <h4>Como o consulente fala com você</h4>
+                        <div class="tp-grid">
+                            <div class="tp-field">
+                                <label class="tp-label" for="tp-wa">WhatsApp</label>
+                                <input id="tp-wa" class="tp-input" placeholder="(11) 99999-9999" value="${esc(c.whatsapp || '')}">
+                            </div>
+                            <div class="tp-field">
+                                <label class="tp-label" for="tp-email">Email público</label>
+                                <input id="tp-email" class="tp-input" placeholder="contato@..." value="${esc(c.email_publico || '')}">
+                            </div>
+                            <div class="tp-field">
+                                <label class="tp-label" for="tp-instagram">Instagram</label>
+                                <input id="tp-instagram" class="tp-input" placeholder="@seu.perfil" value="${esc(c.instagram || '')}">
+                            </div>
+                            <div class="tp-field">
+                                <label class="tp-label" for="tp-site">Site</label>
+                                <input id="tp-site" class="tp-input" placeholder="seusite.com" value="${esc(c.site || '')}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tp-acoes">
+                        <button type="button" id="btn-tp-salvar" class="tp-btn">Salvar</button>
+                        ${publicado
+                            ? '<button type="button" id="btn-tp-pausar" class="tp-btn-sec">Pausar da vitrine</button>'
+                            : '<button type="button" id="btn-tp-publicar" class="tp-btn-sec">Publicar na vitrine</button>'}
+                        <span id="tp-status" class="tp-msg"></span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function vincularPainelTerapeuta() {
+            const raiz = document.getElementById('terapeuta-panel');
+            if (!raiz) return;
+
+            const btnAdd = document.getElementById('btn-tp-add-servico');
+            if (btnAdd) {
+                btnAdd.addEventListener('click', function () {
+                    const box = document.getElementById('tp-servicos');
+                    if (box) box.insertAdjacentHTML('beforeend', linhaServico());
+                });
+            }
+
+            // Remover atendimento (delegado: vale para linhas novas também)
+            raiz.addEventListener('click', function (ev) {
+                const btn = ev.target.closest('.tp-remover');
+                if (!btn) return;
+                const linha = btn.closest('.tp-servico');
+                if (linha) linha.remove();
+            });
+
+            const btnSalvar = document.getElementById('btn-tp-salvar');
+            if (btnSalvar) {
+                btnSalvar.addEventListener('click', function () {
+                    const status = _meuPerfilTera && _meuPerfilTera.status
+                        ? _meuPerfilTera.status
+                        : 'rascunho';
+                    salvarPainelTerapeuta(status);
+                });
+            }
+
+            const btnPublicar = document.getElementById('btn-tp-publicar');
+            if (btnPublicar) {
+                btnPublicar.addEventListener('click', function () { salvarPainelTerapeuta('publicado'); });
+            }
+
+            const btnPausar = document.getElementById('btn-tp-pausar');
+            if (btnPausar) {
+                btnPausar.addEventListener('click', function () { salvarPainelTerapeuta('pausado'); });
+            }
+        }
+
+        // Coleta o formulário, grava perfil → atendimentos → contatos e
+        // redesenha o painel com o estado vindo do banco.
+        async function salvarPainelTerapeuta(status) {
+            const msg = document.getElementById('tp-status');
+            const dizer = function (texto, cor) {
+                if (!msg) return;
+                msg.innerText = texto;
+                msg.style.color = cor || '#aaa';
+            };
+            const campo = function (id) {
+                const el = document.getElementById(id);
+                return el ? el.value : '';
+            };
+
+            const nome = campo('tp-nome').trim();
+            if (!nome) {
+                dizer('Informe o nome público.', '#ff6b6b');
+                const el = document.getElementById('tp-nome');
+                if (el) el.focus();
+                return;
+            }
+
+            const especialidades = campo('tp-especs')
+                .split(',')
+                .map(function (s) { return s.trim(); })
+                .filter(Boolean);
+
+            const servicos = Array.prototype.map.call(
+                document.querySelectorAll('#tp-servicos .tp-servico'),
+                function (linha) {
+                    return {
+                        nome: (linha.querySelector('.tp-serv-nome').value || '').trim(),
+                        duracao_min: linha.querySelector('.tp-serv-dur').value,
+                        preco: (linha.querySelector('.tp-serv-preco').value || '').trim()
+                    };
+                }
+            ).filter(function (s) { return s.nome; });
+
+            const contatos = {
+                whatsapp: campo('tp-wa').trim(),
+                email_publico: campo('tp-email').trim(),
+                instagram: campo('tp-instagram').trim(),
+                site: campo('tp-site').trim()
+            };
+
+            const btn = document.getElementById('btn-tp-salvar');
+            if (btn) btn.disabled = true;
+            dizer('Salvando...', '#d4af37');
+
+            try {
+                const r = await salvarPerfilTerapeuta({
+                    id: _meuPerfilTera ? _meuPerfilTera.id : undefined,
+                    user_id: user.id,
+                    nome: nome,
+                    titulo: campo('tp-titulo').trim(),
+                    especialidades: especialidades,
+                    cidade: campo('tp-cidade').trim(),
+                    modalidade: campo('tp-modalidade'),
+                    anos: campo('tp-anos'),
+                    bio: campo('tp-bio').trim(),
+                    foto_url: campo('tp-foto').trim(),
+                    status: status
+                });
+
+                if (r && r.indisponivel) {
+                    dizer('A tabela therapists ainda não existe. Rode a seção 8 do supabase-schema.sql.', '#ffab40');
+                    return;
+                }
+                if (!r || r.error) {
+                    dizer('Erro ao salvar: ' + ((r && r.error && r.error.message) || 'desconhecido'), '#ff6b6b');
+                    return;
+                }
+
+                _meuPerfilTera = r.data;
+                const id = r.data && r.data.id;
+
+                const rs = await salvarServicosTerapeuta(id, servicos);
+                const rc = await salvarContatosTerapeuta(id, contatos);
+
+                const avisos = [];
+                if (rs && rs.error) avisos.push('atendimentos: ' + rs.error.message);
+                if (rc && rc.error) avisos.push('contatos: ' + rc.error.message);
+
+                // Recarrega do banco (serviços voltam com id e ordem)
+                const atual = await obterMeuPerfilTerapeuta(user.id);
+                if (atual && atual.data) _meuPerfilTera = atual.data;
+
+                const sucesso = status === 'publicado'
+                    ? '✅ Perfil publicado! Ele já aparece na vitrine.'
+                    : (status === 'pausado' ? '✅ Perfil pausado: fora da vitrine.' : '✅ Perfil salvo como rascunho.');
+
+                const alvo = document.getElementById('terapeuta-panel');
+                if (alvo) {
+                    alvo.innerHTML = painelTerapeutaHTML(
+                        _meuPerfilTera,
+                        avisos.length ? 'Perfil salvo, mas: ' + avisos.join(' · ') : sucesso
+                    );
+                    vincularPainelTerapeuta();
+                }
+            } catch (e) {
+                dizer('Erro inesperado: ' + e.message, '#ff6b6b');
+            } finally {
+                const b = document.getElementById('btn-tp-salvar');
+                if (b) b.disabled = false;
+            }
         }
 
         // --- Visualizador de leitura (usa os dados ja gravados no Supabase) ---

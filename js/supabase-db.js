@@ -389,3 +389,258 @@ export async function migrateLocalDataToSupabase(userId) {
 
     return results;
 }
+
+// ======================================================================
+// VITRINE DE TERAPEUTAS (Fase F2)
+//   therapists / therapist_services / therapist_contatos
+//
+// Se o SQL da secao 8 do supabase-schema.sql ainda nao rodou, as funcoes
+// devolvem { indisponivel: true } em vez de estourar erro: a vitrine cai
+// para os perfis de exemplo e o painel mostra as instrucoes de migracao.
+// ======================================================================
+
+function tabelaAusente(error) {
+    if (!error) return false;
+    const msg = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+    return error.code === 'PGRST205' || error.code === '42P01'
+        || /Could not find the table|relation .* does not exist/i.test(msg);
+}
+
+// Converte a linha do banco (+ servicos e contatos embutidos) no formato
+// que a vitrine e o painel ja usam.
+export function normalizarTerapeuta(row) {
+    if (!row) return null;
+
+    const servicos = (Array.isArray(row.therapist_services) ? row.therapist_services : [])
+        .slice()
+        .sort(function (a, b) { return (a.ordem || 0) - (b.ordem || 0); })
+        .map(function (s) {
+            return {
+                id: s.id,
+                nome: s.nome,
+                descricao: s.descricao || '',
+                duracao_min: s.duracao_min,
+                preco: s.preco || '',
+                ativo: s.ativo !== false
+            };
+        });
+
+    // therapist_id e PK em contatos: o Supabase devolve objeto, mas
+    // versoes antigas do PostgREST devolvem array de 1.
+    const bruto = row.therapist_contatos;
+    const contatos = Array.isArray(bruto) ? (bruto[0] || null) : (bruto || null);
+
+    return {
+        id: row.id,
+        user_id: row.user_id,
+        slug: row.slug || '',
+        nome: row.nome || '',
+        titulo: row.titulo || '',
+        especialidades: Array.isArray(row.especialidades) ? row.especialidades : [],
+        cidade: row.cidade || '',
+        modalidade: row.modalidade || 'ambos',
+        anos: row.anos || 0,
+        bio: row.bio || '',
+        foto_url: row.foto_url || '',
+        destaque: !!row.destaque,
+        status: row.status || 'rascunho',
+        servicos: servicos,
+        contatos: contatos
+    };
+}
+
+const SELECT_TERAPEUTA = '*, therapist_services(*), therapist_contatos(*)';
+
+// Vitrine: os perfis publicados (a RLS ja bloqueia o resto; o filtro
+// explicito deixa a consulta direta).
+export async function listarTerapeutasPublicos() {
+    const client = await getSupabase();
+    if (!client) return { data: [], error: null, local: true, indisponivel: true };
+
+    const { data, error } = await client
+        .from('therapists')
+        .select(SELECT_TERAPEUTA)
+        .eq('status', 'publicado')
+        .order('destaque', { ascending: false })
+        .order('nome', { ascending: true });
+
+    if (error) {
+        if (tabelaAusente(error)) return { data: [], error: null, indisponivel: true };
+        return { data: [], error, indisponivel: false };
+    }
+
+    return { data: (data || []).map(normalizarTerapeuta), error: null, indisponivel: false };
+}
+
+// Painel do terapeuta: o perfil da conta logada (qualquer status).
+export async function obterMeuPerfilTerapeuta(userId) {
+    if (!userId) return { data: null, error: null, indisponivel: false };
+
+    const client = await getSupabase();
+    if (!client) return { data: null, error: null, local: true, indisponivel: true };
+
+    const { data, error } = await client
+        .from('therapists')
+        .select(SELECT_TERAPEUTA)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) {
+        if (tabelaAusente(error)) return { data: null, error: null, indisponivel: true };
+        return { data: null, error, indisponivel: false };
+    }
+
+    return { data: normalizarTerapeuta(data), error: null, indisponivel: false };
+}
+
+// Gera o identificador do perfil a partir do nome: "Ana Solar" -> "ana-solar"
+export function slugifyTerapeuta(texto) {
+    return String(texto || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60);
+}
+
+function sufixoAleatorio() {
+    return Math.random().toString(36).slice(2, 6);
+}
+
+// Cria ou atualiza o perfil (1 por conta, upsert em user_id).
+// `status` controla a visibilidade: 'rascunho' | 'publicado' | 'pausado'.
+export async function salvarPerfilTerapeuta(dados) {
+    const client = await getSupabase();
+    if (!client) return { data: null, error: { message: 'Supabase nao conectado.' }, local: true, indisponivel: true };
+    if (!dados || !dados.user_id) return { data: null, error: { message: 'Usuario nao identificado.' } };
+    if (!String(dados.nome || '').trim()) return { data: null, error: { message: 'Informe o nome que aparece na vitrine.' } };
+
+    const payload = {
+        user_id: dados.user_id,
+        nome: String(dados.nome).trim(),
+        titulo: dados.titulo ? String(dados.titulo).trim() : null,
+        especialidades: Array.isArray(dados.especialidades) ? dados.especialidades : [],
+        cidade: dados.cidade ? String(dados.cidade).trim() : null,
+        modalidade: dados.modalidade || 'ambos',
+        anos: dados.anos ? Number(dados.anos) : null,
+        bio: dados.bio ? String(dados.bio).trim() : null,
+        foto_url: dados.foto_url ? String(dados.foto_url).trim() : null,
+        status: dados.status || 'rascunho'
+    };
+    if (dados.id) payload.id = dados.id;
+    if (dados.slug) payload.slug = dados.slug;
+    if (typeof dados.destaque === 'boolean') payload.destaque = dados.destaque;
+
+    const gravar = function (p) {
+        return client.from('therapists').upsert(p, { onConflict: 'user_id' }).select().maybeSingle();
+    };
+
+    if (!payload.slug) payload.slug = slugifyTerapeuta(payload.nome) || 'terapeuta';
+
+    let { data, error } = await gravar(payload);
+
+    // Slug ja usado por outro terapeuta: reenvia com sufixo unico.
+    // (Perfis que ja existem mantem o slug antigo — links nao quebram.)
+    let tentativas = 0;
+    while (error && error.code === '23505' && !dados.slug && tentativas < 3
+           && /slug/i.test((error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || ''))) {
+        tentativas++;
+        payload.slug = (slugifyTerapeuta(payload.nome) || 'terapeuta') + '-' + sufixoAleatorio();
+        ({ data, error } = await gravar(payload));
+    }
+
+    if (error) {
+        if (tabelaAusente(error)) return { data: null, error: null, indisponivel: true };
+        return { data: null, error };
+    }
+
+    return { data: normalizarTerapeuta(data), error: null, indisponivel: false };
+}
+
+// Regrava a lista de servicos na ordem da tela.
+// Estrategia "apaga e insere": simples de manter e a lista e pequena.
+export async function salvarServicosTerapeuta(therapistId, servicos) {
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase nao conectado.' }, local: true };
+    if (!therapistId) return { error: { message: 'Perfil sem identificador.' } };
+
+    const lista = (servicos || []).filter(function (s) {
+        return s && String(s.nome || '').trim();
+    });
+
+    const { error: erroDel } = await client
+        .from('therapist_services')
+        .delete()
+        .eq('therapist_id', therapistId);
+
+    if (erroDel) {
+        if (tabelaAusente(erroDel)) return { error: null, indisponivel: true };
+        return { error: erroDel };
+    }
+
+    if (!lista.length) return { error: null, total: 0 };
+
+    const rows = lista.map(function (s, i) {
+        const dur = parseInt(s.duracao_min, 10);
+        return {
+            therapist_id: therapistId,
+            nome: String(s.nome).trim(),
+            descricao: s.descricao ? String(s.descricao).trim() : null,
+            duracao_min: isNaN(dur) ? null : dur,
+            preco: s.preco ? String(s.preco).trim() : null,
+            ordem: i,
+            ativo: s.ativo === false ? false : true
+        };
+    });
+
+    const { error } = await client.from('therapist_services').insert(rows);
+    if (error) {
+        if (tabelaAusente(error)) return { error: null, indisponivel: true };
+        return { error };
+    }
+
+    return { error: null, total: rows.length };
+}
+
+// Canais de contato do perfil. Sem nenhum preenchido, a linha e apagada
+// (o perfil publicado nao mostra botao de contato nenhum).
+export async function salvarContatosTerapeuta(therapistId, contatos) {
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase nao conectado.' }, local: true };
+    if (!therapistId) return { error: { message: 'Perfil sem identificador.' } };
+
+    const c = contatos || {};
+    const limpar = function (v) { return v && String(v).trim() ? String(v).trim() : null; };
+
+    const row = {
+        therapist_id: therapistId,
+        whatsapp: limpar(c.whatsapp),
+        email_publico: limpar(c.email_publico),
+        instagram: limpar(c.instagram),
+        site: limpar(c.site)
+    };
+
+    const vazio = !row.whatsapp && !row.email_publico && !row.instagram && !row.site;
+
+    if (vazio) {
+        const { error } = await client.from('therapist_contatos').delete().eq('therapist_id', therapistId);
+        if (error) {
+            if (tabelaAusente(error)) return { error: null, indisponivel: true };
+            return { error };
+        }
+        return { error: null };
+    }
+
+    const { error } = await client
+        .from('therapist_contatos')
+        .upsert(row, { onConflict: 'therapist_id' });
+
+    if (error) {
+        if (tabelaAusente(error)) return { error: null, indisponivel: true };
+        return { error };
+    }
+
+    return { error: null };
+}
+
+

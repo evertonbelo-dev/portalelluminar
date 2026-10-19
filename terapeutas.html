@@ -110,7 +110,7 @@
                     <p class="tera-vazio">Sintonizando os terapeutas...</p>
                 </div>
 
-                <p style="text-align:center;color:#6f6f85;font-size:0.75rem;margin-top:26px;font-style:italic;">
+                <p id="tera-nota" hidden style="text-align:center;color:#6f6f85;font-size:0.75rem;margin-top:26px;font-style:italic;">
                     Prévia do diretório: os perfis acima são ilustrativos. Os perfis reais
                     entram no ar com o cadastro dos terapeutas da Egrégora.
                 </p>
@@ -156,9 +156,14 @@
         const filtros = document.getElementById('tera-filtros');
         const modal = document.getElementById('modal-tera');
         const modalConteudo = document.getElementById('modal-tera-conteudo');
+        const nota = document.getElementById('tera-nota');
 
         const ROTULO_MODALIDADE = { online: 'Online', presencial: 'Presencial', ambos: 'Online e presencial' };
         let filtroAtual = 'todos';
+
+        // Perfis exibidos. Comeca vazio e e preenchido por carregarTerapeutas():
+        // dados do Supabase (status 'publicado') ou, na falta deles, os exemplos.
+        let TERAPEUTAS = [];
 
         // Escapa texto antes de entrar no HTML (mesmo padrao do dashboard)
         function esc(v) {
@@ -169,7 +174,7 @@
 
         function montarFiltros() {
             const especs = [];
-            TERAPEUTAS_EXEMPLO.forEach(function (t) {
+            TERAPEUTAS.forEach(function (t) {
                 (t.especialidades || []).forEach(function (e) {
                     if (especs.indexOf(e) === -1) especs.push(e);
                 });
@@ -198,8 +203,8 @@
 
         function renderizar() {
             const lista = filtroAtual === 'todos'
-                ? TERAPEUTAS_EXEMPLO
-                : TERAPEUTAS_EXEMPLO.filter(function (t) {
+                ? TERAPEUTAS
+                : TERAPEUTAS.filter(function (t) {
                     return (t.especialidades || []).indexOf(filtroAtual) !== -1;
                 });
 
@@ -216,7 +221,10 @@
 
                 return '<article class="tera-card">' +
                     (t.destaque ? '<span class="tera-selo">Destaque</span>' : '') +
-                    '<div class="tera-foto-inicial">' + esc(inicial) + '</div>' +
+                    (t.foto_url
+                        ? '<div class="tera-foto-inicial has-foto">' + esc(inicial) +
+                          '<img src="' + esc(t.foto_url) + '" alt="" loading="lazy" onerror="this.remove()"></div>'
+                        : '<div class="tera-foto-inicial">' + esc(inicial) + '</div>') +
                     '<h3 class="tera-nome">' + esc(t.nome) + '</h3>' +
                     '<div class="tera-titulo">' + esc(t.titulo) + '</div>' +
                     '<div class="tera-tags">' + tags + '</div>' +
@@ -228,11 +236,38 @@
             }).join('');
         }
 
+        // Normaliza o telefone para o link do WhatsApp (55 + DDD + numero)
+        function linkWhatsApp(numero) {
+            const digitos = String(numero || '').replace(/\D/g, '');
+            if (!digitos) return '';
+            return 'https://wa.me/' + (digitos.length <= 11 ? '55' + digitos : digitos);
+        }
+
+        // Botoes de contato: so aparecem os canais que o terapeuta preencheu
+        function blocoContatos(t) {
+            const c = t.contatos || {};
+            const itens = [];
+            const wa = linkWhatsApp(c.whatsapp);
+            if (wa) itens.push('<a class="btn-contato" href="' + esc(wa) + '" target="_blank" rel="noopener">💬 WhatsApp</a>');
+            if (c.email_publico) itens.push('<a class="btn-contato" href="mailto:' + esc(c.email_publico) + '">✉️ Email</a>');
+            if (c.instagram) {
+                const ig = String(c.instagram).replace(/^@/, '').trim();
+                if (ig) itens.push('<a class="btn-contato" href="https://instagram.com/' + encodeURIComponent(ig) + '" target="_blank" rel="noopener">📸 Instagram</a>');
+            }
+            if (c.site) {
+                const site = /^https?:\/\//i.test(c.site) ? c.site : 'https://' + c.site;
+                itens.push('<a class="btn-contato" href="' + esc(site) + '" target="_blank" rel="noopener">🔗 Site</a>');
+            }
+            return itens.length ? '<div class="modal-contatos">' + itens.join('') + '</div>' : '';
+        }
+
         function abrirPerfil(slug) {
-            const t = TERAPEUTAS_EXEMPLO.find(function (x) { return x.slug === slug; });
+            const t = TERAPEUTAS.find(function (x) { return x.slug === slug; });
             if (!t) return;
 
-            const servicos = (t.servicos || []).map(function (s) {
+            const servicos = (t.servicos || []).filter(function (s) {
+                return s.ativo !== false;
+            }).map(function (s) {
                 return '<div class="servico-item">' +
                     '<div><div class="nome">' + esc(s.nome) + '</div>' +
                     '<div class="detalhe">' + esc(s.duracao_min) + ' min &middot; ' +
@@ -241,14 +276,20 @@
                     '</div>';
             }).join('');
 
+            const contatos = blocoContatos(t);
+
             modalConteudo.innerHTML =
                 '<h2>' + esc(t.nome) + '</h2>' +
                 '<div class="modal-sub">' + esc(t.titulo) + ' &middot; ' + esc(t.cidade || '') + '</div>' +
                 '<p class="modal-bio">' + esc(t.bio) + '</p>' +
                 '<h3>Atendimentos</h3>' +
                 (servicos || '<p class="tera-vazio">Serviços a combinar.</p>') +
+                contatos +
                 '<div class="modal-aviso">✦ O agendamento online entra em breve. ' +
-                'Enquanto isso, fale com o terapeuta pelo Portal para combinar dia e horário.</div>';
+                (contatos
+                    ? 'Enquanto isso, fale direto com o terapeuta pelos canais acima.'
+                    : 'Enquanto isso, solicite o contato pelo Portal para combinar dia e horário.') +
+                '</div>';
 
             modal.classList.add('aberto');
             document.body.style.overflow = 'hidden';
@@ -271,8 +312,34 @@
             if (b) abrirPerfil(b.dataset.slug);
         });
 
-        montarFiltros();
-        renderizar();
+        // F2: carrega os perfis publicados no Supabase.
+        // Sem banco configurado, com a tabela ainda nao criada ou sem nenhum
+        // perfil publicado, a vitrine segue com os exemplos — e a nota abaixo
+        // do diretorio deixa claro que sao ilustrativos.
+        async function carregarTerapeutas() {
+            let doBanco = [];
+
+            try {
+                const db = await import('./js/supabase-db.js?v=2.1.0');
+                const r = await db.listarTerapeutasPublicos();
+                if (r && Array.isArray(r.data)) doBanco = r.data;
+            } catch (e) {
+                console.warn('Vitrine: Supabase indisponivel, usando perfis de exemplo.', e);
+            }
+
+            if (doBanco.length) {
+                TERAPEUTAS = doBanco;
+                if (nota) nota.hidden = true;
+            } else {
+                TERAPEUTAS = TERAPEUTAS_EXEMPLO;
+                if (nota) nota.hidden = false;
+            }
+
+            montarFiltros();
+            renderizar();
+        }
+
+        carregarTerapeutas();
 
         // Nav: mostra o nome do usuario logado (mesmo comportamento do index.html)
         (async function () {
