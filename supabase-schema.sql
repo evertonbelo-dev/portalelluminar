@@ -966,4 +966,224 @@ BEGIN
     );
 END $$;
 
+-- ==========================================================
+-- 12. NOTIFICACOES POR EMAIL (Fase F5b — Resend + pg_net)
+--
+--    O envio sai do proprio Postgres (extensao pg_net), sem Edge
+--    Function: um trigger em therapist_bookings dispara o e-mail
+--    quando a solicitacao nasce ou muda de status.
+--
+--    A chave da API fica no VAULT (criptografada), nunca no codigo
+--    nem no navegador:
+--      select vault.create_secret('re_...', 'resend_api_key');
+--      select vault.create_secret('Portal El''Luminar <agenda@dominio>', 'resend_from');
+--
+--    Sem a chave, o sistema apenas registra em email_log e segue:
+--    o agendamento NUNCA quebra por causa de e-mail.
+-- ==========================================================
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+CREATE TABLE IF NOT EXISTS public.email_log (
+    id BIGSERIAL PRIMARY KEY,
+    tipo TEXT NOT NULL,
+    booking_id UUID,
+    destinatario TEXT,
+    assunto TEXT,
+    status TEXT NOT NULL DEFAULT 'enfileirado',
+    request_id BIGINT,
+    detalhe TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_log_created
+    ON public.email_log (created_at DESC);
+
+ALTER TABLE public.email_log ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins leem o log de emails" ON public.email_log;
+CREATE POLICY "Admins leem o log de emails"
+    ON public.email_log FOR SELECT
+    USING (public.is_admin(auth.uid()));
+
+-- Escapa texto livre antes de entrar no HTML do e-mail
+CREATE OR REPLACE FUNCTION public.esc_html(t text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+    SELECT replace(replace(replace(COALESCE(t, ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;');
+$$;
+
+-- Moldura visual dos e-mails (mesma identidade do Portal)
+CREATE OR REPLACE FUNCTION public.email_layout(p_titulo text, p_corpo text)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+    SELECT '<div style="font-family:Arial,Helvetica,sans-serif;background:#0b0b16;padding:28px;">'
+        || '<div style="max-width:520px;margin:0 auto;background:#12121f;border:1px solid #d4af37;border-radius:14px;padding:26px;color:#e8e8f0;">'
+        || '<h2 style="color:#d4af37;font-family:Georgia,serif;margin:0 0 14px;font-size:20px;">' || p_titulo || '</h2>'
+        || p_corpo
+        || '<p style="color:#8b8b9e;font-size:12px;margin-top:24px;border-top:1px solid #23233a;padding-top:12px;">Portal El''Luminar - mensagem gerada automaticamente.</p>'
+        || '</div></div>';
+$$;
+
+-- Enfileira o e-mail no Resend. Nunca lanca excecao para o chamador:
+-- sem chave, sem destinatario ou com erro, grava em email_log e segue.
+CREATE OR REPLACE FUNCTION public.enviar_email_resend(
+    p_para text,
+    p_assunto text,
+    p_html text,
+    p_tipo text,
+    p_booking uuid DEFAULT NULL
+)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+    chave text;
+    remetente text;
+    req bigint;
+BEGIN
+    IF p_para IS NULL OR p_para = '' THEN
+        INSERT INTO public.email_log (tipo, booking_id, destinatario, assunto, status, detalhe)
+        VALUES (p_tipo, p_booking, p_para, p_assunto, 'sem_destinatario', 'Contato ausente');
+        RETURN NULL;
+    END IF;
+
+    SELECT decrypted_secret INTO chave FROM vault.decrypted_secrets
+     WHERE name = 'resend_api_key' ORDER BY updated_at DESC LIMIT 1;
+
+    IF chave IS NULL OR chave = '' THEN
+        INSERT INTO public.email_log (tipo, booking_id, destinatario, assunto, status, detalhe)
+        VALUES (p_tipo, p_booking, p_para, p_assunto, 'sem_chave', 'Crie o segredo resend_api_key no Vault');
+        RETURN NULL;
+    END IF;
+
+    SELECT decrypted_secret INTO remetente FROM vault.decrypted_secrets
+     WHERE name = 'resend_from' ORDER BY updated_at DESC LIMIT 1;
+    remetente := COALESCE(remetente, 'Portal El''Luminar <onboarding@resend.dev>');
+
+    req := net.http_post(
+        url := 'https://api.resend.com/emails',
+        body := jsonb_build_object(
+            'from', remetente,
+            'to', jsonb_build_array(p_para),
+            'subject', p_assunto,
+            'html', p_html
+        ),
+        headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || chave
+        ),
+        timeout_milliseconds := 10000
+    );
+
+    INSERT INTO public.email_log (tipo, booking_id, destinatario, assunto, request_id, status)
+    VALUES (p_tipo, p_booking, p_para, p_assunto, req, 'enfileirado');
+
+    RETURN req;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.enviar_email_resend(text, text, text, text, uuid) FROM PUBLIC;
+
+-- Dispara os avisos quando a solicitacao nasce ou muda de status.
+-- O bloco EXCEPTION garante que uma falha de e-mail nunca derrube
+-- a transacao do agendamento.
+CREATE OR REPLACE FUNCTION public.notificar_booking()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+    v_email_terapeuta text;
+    v_nome_terapeuta text;
+    v_quando text;
+    v_servico text;
+    v_corpo text;
+    v_base text;
+BEGIN
+    BEGIN
+        SELECT u.email, t.nome INTO v_email_terapeuta, v_nome_terapeuta
+          FROM public.therapists t
+          JOIN auth.users u ON u.id = t.user_id
+         WHERE t.id = NEW.therapist_id;
+
+        v_quando := to_char(NEW.data, 'DD/MM/YYYY') || ' as ' || to_char(NEW.hora_inicio, 'HH24:MI');
+        v_servico := COALESCE(NEW.servico_nome, 'Atendimento a combinar');
+        v_base := '<p style="font-size:18px;color:#d4af37;margin:6px 0 14px;"><strong>' || v_quando || '</strong></p>'
+               || '<p>' || public.esc_html(v_servico)
+               || CASE WHEN NEW.servico_preco IS NOT NULL THEN ' - ' || public.esc_html(NEW.servico_preco) ELSE '' END
+               || ' - ' || NEW.duracao_min || ' min</p>';
+
+        -- 1) Nova solicitacao -> terapeuta
+        IF TG_OP = 'INSERT' THEN
+            IF NEW.status = 'pendente' THEN
+                v_corpo := '<p><strong>' || public.esc_html(NEW.consulente_nome) || '</strong> pediu um horario.</p>'
+                    || v_base
+                    || CASE WHEN NEW.consulente_contato IS NOT NULL THEN '<p>Contato: ' || public.esc_html(NEW.consulente_contato) || '</p>' ELSE '' END
+                    || CASE WHEN NEW.observacao IS NOT NULL THEN '<p style="background:#1c1c2e;padding:12px;border-radius:8px;">"' || public.esc_html(NEW.observacao) || '"</p>' ELSE '' END
+                    || '<p style="color:#ffcc80;">Responda em ate 24h (ou antes do horario) em Minha Jornada. Sem resposta, o horario e liberado automaticamente.</p>';
+
+                PERFORM public.enviar_email_resend(
+                    v_email_terapeuta,
+                    'Nova solicitacao: ' || v_quando,
+                    public.email_layout('Nova solicitacao de agendamento', v_corpo),
+                    'solicitacao', NEW.id);
+            END IF;
+            RETURN NEW;
+        END IF;
+
+        -- 2) Mudanca de status
+        IF OLD.status IS NOT DISTINCT FROM NEW.status THEN
+            RETURN NEW;
+        END IF;
+
+        IF NEW.status = 'confirmado' THEN
+            v_corpo := '<p>Ola, ' || public.esc_html(NEW.consulente_nome) || '!</p>'
+                || '<p><strong>' || public.esc_html(v_nome_terapeuta) || '</strong> confirmou seu atendimento.</p>'
+                || v_base
+                || CASE WHEN NEW.resposta IS NOT NULL THEN '<p style="background:#1c1c2e;padding:12px;border-radius:8px;">' || public.esc_html(NEW.resposta) || '</p>' ELSE '' END;
+            PERFORM public.enviar_email_resend(NEW.consulente_contato,
+                'Agendamento confirmado: ' || v_quando,
+                public.email_layout('Seu agendamento foi confirmado', v_corpo), 'confirmado', NEW.id);
+
+        ELSIF NEW.status = 'recusado' THEN
+            v_corpo := '<p>Ola, ' || public.esc_html(NEW.consulente_nome) || '.</p>'
+                || '<p>Seu pedido nao pode ser confirmado.</p>' || v_base
+                || '<p>Escolha outro horario na vitrine - a agenda e atualizada em tempo real.</p>';
+            PERFORM public.enviar_email_resend(NEW.consulente_contato,
+                'Horario indisponivel: ' || v_quando,
+                public.email_layout('Sua solicitacao nao foi confirmada', v_corpo), 'recusado', NEW.id);
+
+        ELSIF NEW.status = 'cancelado' THEN
+            v_corpo := '<p>Ola, ' || public.esc_html(NEW.consulente_nome) || '.</p>'
+                || '<p>Seu pedido foi cancelado.</p>' || v_base
+                || CASE WHEN NEW.resposta IS NOT NULL THEN '<p style="background:#1c1c2e;padding:12px;border-radius:8px;">' || public.esc_html(NEW.resposta) || '</p>' ELSE '' END
+                || '<p style="color:#ffcc80;">Se nao foi voce, escolha outro horario na vitrine.</p>';
+            PERFORM public.enviar_email_resend(NEW.consulente_contato,
+                'Solicitacao cancelada: ' || v_quando,
+                public.email_layout('Sua solicitacao foi cancelada', v_corpo), 'cancelado', NEW.id);
+
+            PERFORM public.enviar_email_resend(v_email_terapeuta,
+                'Agendamento cancelado: ' || v_quando,
+                public.email_layout('Um horario foi liberado',
+                    '<p>O pedido de <strong>' || public.esc_html(NEW.consulente_nome) || '</strong> foi cancelado.</p>' || v_base),
+                'cancelado_terapeuta', NEW.id);
+        END IF;
+
+        RETURN NEW;
+    EXCEPTION WHEN OTHERS THEN
+        INSERT INTO public.email_log (tipo, booking_id, destinatario, assunto, status, detalhe)
+        VALUES ('erro', NEW.id, NULL, NULL, 'erro', SQLERRM);
+        RETURN NEW;
+    END;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.notificar_booking() FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS trg_booking_notificar ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_notificar
+    AFTER INSERT OR UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.notificar_booking();
+
 
