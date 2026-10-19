@@ -7,4 +7,7 @@ dist/
 .firebase/
 .firebaserc
 
+# Config local com chaves — NUNCA versionar (o build gera no dist)
+js/env-config.js
+
 dist/
