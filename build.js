@@ -20,6 +20,8 @@ const ITEMS_TO_COPY = [
     'cursos.html',
     'curso-player.html',
     'mestres.html',
+    'terapeutas.html',
+    'seja-terapeuta.html',
     'js/',
     'css/',
     'assets/'
@@ -78,7 +80,8 @@ console.log('✅ Gerado: js/env-config.js com variáveis de ambiente');
 const htmlFiles = [
     'index.html', 'admin.html', 'taro2.html', 'login.html', 'dashboard.html',
     'dna.html', 'numerologia.html', 'hawkins.html', 'bovis.html',
-    'cursos.html', 'curso-player.html', 'mestres.html'
+    'cursos.html', 'curso-player.html', 'mestres.html',
+    'terapeutas.html', 'seja-terapeuta.html'
 ];
 
 for (const file of htmlFiles) {

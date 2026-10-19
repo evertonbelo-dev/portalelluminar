@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terapeutas | Portal El’Luminar</title>
+    <meta name="description" content="Conheça os terapeutas da Egrégora El'Luminar: tarô, radiônica, numerologia, energia e DNA Solar. Encontre quem caminha com você ou divulgue o seu trabalho.">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/portal.css">
+    <link rel="stylesheet" href="css/terapeutas.css">
+    <script src="js/env-config.js"></script>
+</head>
+<body>
+
+    <header class="portal-header">
+        <a href="index.html" class="logo-area" style="text-decoration:none;">
+            <img src="assets/PortalElluminar/Simbolo_Portal.png" alt="Símbolo El’Luminar" class="simbolo-img">
+            <h1>Portal El’Luminar</h1>
+        </a>
+
+        <nav class="portal-nav">
+            <span id="nav-user-info" style="color:#aaa;font-size:0.8rem;margin-right:10px;display:none;"></span>
+            <a href="login.html" id="btn-login-nav"
+               style="color: var(--ouro-solar); text-decoration: none; padding: 6px 14px; border: 1px solid var(--dourado-antigo); border-radius: 20px; font-size: 0.8rem; transition: all 0.3s;">🔮 Entrar</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ================= HERO: os dois botões ================= -->
+        <section class="tera-hero">
+            <div class="selo-egregora">✦ Egrégora El’Luminar</div>
+
+            <h1>Encontre quem<br>caminha com você</h1>
+
+            <p class="texto-hero">
+                Uma rede de terapeutas que unem técnica e canalização — tarô, radiônica,
+                numerologia, leitura energética e DNA Solar. Escolha pela especialidade,
+                pela modalidade ou pela cidade. E se o seu dom pede espaço, o Portal é seu.
+            </p>
+
+            <div class="hero-ctas">
+                <a href="#diretorio" class="btn-cta btn-cta-primario">
+                    👥 Conhecer terapeutas
+                </a>
+                <a href="seja-terapeuta.html" class="btn-cta btn-cta-terapeuta">
+                    ✨ Sou Terapeuta: Quero divulgar meu trabalho
+                </a>
+            </div>
+        </section>
+
+        <!-- ================= COMO FUNCIONA (5 PASSOS) ================= -->
+        <section id="como-funciona" class="tera-secao">
+            <div class="tera-wrap" style="padding-top:0;padding-bottom:0;">
+                <h2 class="titulo-secao">Como Funciona</h2>
+                <div class="linha-ouro"></div>
+                <p class="subtitulo-secao">
+                    Do primeiro cadastro ao atendimento confirmado — em cinco passos.
+                </p>
+
+                <ol class="passos">
+                    <li class="passo">
+                        <span class="passo-numero">01</span>
+                        <h3>Cadastre-se</h3>
+                        <p>Crie sua conta gratuita e ative seu perfil de terapeuta no Portal.</p>
+                        <a href="seja-terapeuta.html" class="passo-link">Entenda o Portal →</a>
+                    </li>
+
+                    <li class="passo">
+                        <span class="passo-numero">02</span>
+                        <h3>Monte seu perfil</h3>
+                        <p>Foto, especialidades, formação e a sua canalização. Você decide o que aparece.</p>
+                    </li>
+
+                    <li class="passo">
+                        <span class="passo-numero">03</span>
+                        <h3>Publique seus serviços</h3>
+                        <p>Cada atendimento com nome, duração, valor e modalidade — do seu jeito.</p>
+                    </li>
+
+                    <li class="passo">
+                        <span class="passo-numero">04</span>
+                        <h3>Receba solicitações</h3>
+                        <p>O consulente escolhe um horário livre na sua agenda. Você confirma em um clique.</p>
+                    </li>
+
+                    <li class="passo destaque">
+                        <span class="passo-numero">05</span>
+                        <h3>Gerencie</h3>
+                        <p>Utilize nossa agenda integrada e foque no seu atendimento.</p>
+                    </li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- ================= DIRETÓRIO ================= -->
+        <section id="diretorio" class="tera-secao">
+            <div class="tera-wrap" style="padding-top:0;padding-bottom:0;">
+                <h2 class="titulo-secao">Nossos Terapeutas</h2>
+                <div class="linha-ouro"></div>
+                <p class="subtitulo-secao">
+                    Conheça quem já faz parte da Egrégora. Toque em um perfil para ver a
+                    apresentação completa e os atendimentos oferecidos.
+                </p>
+
+                <div class="filtros" id="tera-filtros">
+                    <button type="button" class="chip ativo" data-filtro="todos">Todos</button>
+                </div>
+
+                <div class="tera-grid" id="tera-grid">
+                    <p class="tera-vazio">Sintonizando os terapeutas...</p>
+                </div>
+
+                <p style="text-align:center;color:#6f6f85;font-size:0.75rem;margin-top:26px;font-style:italic;">
+                    Prévia do diretório: os perfis acima são ilustrativos. Os perfis reais
+                    entram no ar com o cadastro dos terapeutas da Egrégora.
+                </p>
+            </div>
+        </section>
+
+        <!-- ================= CTA FINAL ================= -->
+        <section class="tera-secao">
+            <div class="tera-wrap" style="padding-top:0;padding-bottom:0;">
+                <div class="faixa-cta">
+                    <h2>Você é terapeuta?</h2>
+                    <p>Seu trabalho merece ser visto por quem já está buscando.</p>
+                    <a href="seja-terapeuta.html" class="btn-cta btn-cta-terapeuta">
+                        ✨ Quero divulgar meu trabalho
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= MODAL DE PERFIL ================= -->
+        <div id="modal-tera" class="modal-tera">
+            <div class="modal-tera-caixa">
+                <button type="button" class="modal-tera-fechar" id="modal-tera-fechar" aria-label="Fechar">&times;</button>
+                <div id="modal-tera-conteudo"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="portal-footer">
+        <div class="afirmacao-footer">"Que a Luz de Sirius guie teus passos."</div>
+        <div class="info-rodape">
+            <span></span>
+            <p class="copyright">&copy; 2025 Portal El’Luminar. Guiado pelo Criamor.</p>
+            <span class="footer-versao" title="O Voo da Águia">v2.1.0 &mdash; O Voo da Águia</span>
+        </div>
+    </footer>
+
+<script type="module">
+        import { TERAPEUTAS_EXEMPLO } from './js/terapeutas-exemplo.js?v=2.1.0';
+
+        const grid = document.getElementById('tera-grid');
+        const filtros = document.getElementById('tera-filtros');
+        const modal = document.getElementById('modal-tera');
+        const modalConteudo = document.getElementById('modal-tera-conteudo');
+
+        const ROTULO_MODALIDADE = { online: 'Online', presencial: 'Presencial', ambos: 'Online e presencial' };
+        let filtroAtual = 'todos';
+
+        // Escapa texto antes de entrar no HTML (mesmo padrao do dashboard)
+        function esc(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function montarFiltros() {
+            const especs = [];
+            TERAPEUTAS_EXEMPLO.forEach(function (t) {
+                (t.especialidades || []).forEach(function (e) {
+                    if (especs.indexOf(e) === -1) especs.push(e);
+                });
+            });
+            especs.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+
+            especs.forEach(function (e) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'chip';
+                b.dataset.filtro = e;
+                b.textContent = e;
+                filtros.appendChild(b);
+            });
+
+            filtros.addEventListener('click', function (ev) {
+                const b = ev.target.closest('.chip');
+                if (!b) return;
+                filtroAtual = b.dataset.filtro;
+                Array.prototype.forEach.call(filtros.querySelectorAll('.chip'), function (c) {
+                    c.classList.toggle('ativo', c === b);
+                });
+                renderizar();
+            });
+        }
+
+        function renderizar() {
+            const lista = filtroAtual === 'todos'
+                ? TERAPEUTAS_EXEMPLO
+                : TERAPEUTAS_EXEMPLO.filter(function (t) {
+                    return (t.especialidades || []).indexOf(filtroAtual) !== -1;
+                });
+
+            if (!lista.length) {
+                grid.innerHTML = '<p class="tera-vazio">Nenhum terapeuta com essa especialidade por enquanto.</p>';
+                return;
+            }
+
+            grid.innerHTML = lista.map(function (t) {
+                const inicial = String(t.nome || '?').trim().charAt(0).toUpperCase();
+                const tags = (t.especialidades || []).map(function (e) {
+                    return '<span class="tera-tag">' + esc(e) + '</span>';
+                }).join('');
+
+                return '<article class="tera-card">' +
+                    (t.destaque ? '<span class="tera-selo">Destaque</span>' : '') +
+                    '<div class="tera-foto-inicial">' + esc(inicial) + '</div>' +
+                    '<h3 class="tera-nome">' + esc(t.nome) + '</h3>' +
+                    '<div class="tera-titulo">' + esc(t.titulo) + '</div>' +
+                    '<div class="tera-tags">' + tags + '</div>' +
+                    '<div class="tera-meta">' + esc(t.cidade || '') +
+                        '<br>' + esc(ROTULO_MODALIDADE[t.modalidade] || '') +
+                        ' &middot; ' + esc(t.anos || 0) + ' anos</div>' +
+                    '<button type="button" class="btn-card" data-slug="' + esc(t.slug) + '">Ver perfil</button>' +
+                    '</article>';
+            }).join('');
+        }
+
+        function abrirPerfil(slug) {
+            const t = TERAPEUTAS_EXEMPLO.find(function (x) { return x.slug === slug; });
+            if (!t) return;
+
+            const servicos = (t.servicos || []).map(function (s) {
+                return '<div class="servico-item">' +
+                    '<div><div class="nome">' + esc(s.nome) + '</div>' +
+                    '<div class="detalhe">' + esc(s.duracao_min) + ' min &middot; ' +
+                        esc(ROTULO_MODALIDADE[t.modalidade] || '') + '</div></div>' +
+                    '<div class="preco">' + esc(s.preco || 'A combinar') + '</div>' +
+                    '</div>';
+            }).join('');
+
+            modalConteudo.innerHTML =
+                '<h2>' + esc(t.nome) + '</h2>' +
+                '<div class="modal-sub">' + esc(t.titulo) + ' &middot; ' + esc(t.cidade || '') + '</div>' +
+                '<p class="modal-bio">' + esc(t.bio) + '</p>' +
+                '<h3>Atendimentos</h3>' +
+                (servicos || '<p class="tera-vazio">Serviços a combinar.</p>') +
+                '<div class="modal-aviso">✦ O agendamento online entra em breve. ' +
+                'Enquanto isso, fale com o terapeuta pelo Portal para combinar dia e horário.</div>';
+
+            modal.classList.add('aberto');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function fecharPerfil() {
+            modal.classList.remove('aberto');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('modal-tera-fechar').addEventListener('click', fecharPerfil);
+        modal.addEventListener('click', function (ev) {
+            if (ev.target === modal) fecharPerfil();
+        });
+        document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape') fecharPerfil();
+        });
+        grid.addEventListener('click', function (ev) {
+            const b = ev.target.closest('[data-slug]');
+            if (b) abrirPerfil(b.dataset.slug);
+        });
+
+        montarFiltros();
+        renderizar();
+
+        // Nav: mostra o nome do usuario logado (mesmo comportamento do index.html)
+        (async function () {
+            try {
+                const mod = await import('./js/supabase-auth.js?v=2.1.0');
+                const session = await mod.getSession();
+                const btn = document.getElementById('btn-login-nav');
+                const info = document.getElementById('nav-user-info');
+                if (session && btn) {
+                    const nome = session.user.user_metadata?.name
+                        || session.user.email?.split('@')[0] || '';
+                    if (info) {
+                        info.innerText = '✨ ' + (session.user.email || '');
+                        info.style.display = 'inline';
+                    }
+                    btn.innerHTML = '🌟 ' + nome;
+                    btn.href = 'dashboard.html';
+                }
+            } catch (e) {
+                // Supabase nao configurado: segue como visitante
+            }
+        })();
+    </script>
+</body>
+</html>
+
