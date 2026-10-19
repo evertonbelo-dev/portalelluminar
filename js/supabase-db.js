@@ -602,6 +602,25 @@ export async function salvarServicosTerapeuta(therapistId, servicos) {
     return { error: null, total: rows.length };
 }
 
+// Telefone no formato +pais (DDD) numero — assume Brasil quando o codigo
+// nao vem. Usado pelo painel (mascara) e pela gravacao (normalizacao),
+// para que dado antigo/cru vire formato consistente ao salvar.
+export function formatarWhatsApp(v) {
+    let d = String(v || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.length > 13) d = d.slice(0, 13);
+    if (d.length <= 11) d = '55' + d;
+    const pais = d.slice(0, 2);
+    const ddd = d.slice(2, 4);
+    const resto = d.slice(4);
+    let out = '+' + pais;
+    if (ddd) out += ' (' + ddd + ')';
+    if (resto) {
+        out += ' ' + (resto.length > 4 ? resto.slice(0, resto.length - 4) + '-' + resto.slice(-4) : resto);
+    }
+    return out;
+}
+
 // Canais de contato do perfil. Sem nenhum preenchido, a linha e apagada
 // (o perfil publicado nao mostra botao de contato nenhum).
 export async function salvarContatosTerapeuta(therapistId, contatos) {
@@ -614,7 +633,7 @@ export async function salvarContatosTerapeuta(therapistId, contatos) {
 
     const row = {
         therapist_id: therapistId,
-        whatsapp: limpar(c.whatsapp),
+        whatsapp: limpar(c.whatsapp) ? formatarWhatsApp(c.whatsapp) : null,
         email_publico: limpar(c.email_publico),
         instagram: limpar(c.instagram),
         facebook: limpar(c.facebook),

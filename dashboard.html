@@ -146,7 +146,8 @@
         import { getSession, getCurrentUser, signOut, onAuthChange, getAuthErrorFromUrl } from './js/supabase-auth.js?v=2.1.0';
         import { getUserReadings, getCourseProgress, getSessionHistory, saveUserProfile, syncUserProfile,
                  obterMeuPerfilTerapeuta, salvarPerfilTerapeuta, salvarServicosTerapeuta, salvarContatosTerapeuta,
-                 uploadFotoTerapeuta, caminhoFotoTerapeuta, removerFotoTerapeuta } from './js/supabase-db.js?v=2.1.0';
+                 uploadFotoTerapeuta, caminhoFotoTerapeuta, removerFotoTerapeuta,
+                 formatarWhatsApp } from './js/supabase-db.js?v=2.1.0';
 
         await initSupabase();
 
@@ -364,22 +365,8 @@
             return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        // Telefone: +pais (DDD) numero — assume Brasil quando o código não vem
-        function formatarTelefone(v) {
-            let d = String(v || '').replace(/\D/g, '');
-            if (!d) return '';
-            if (d.length > 13) d = d.slice(0, 13);
-            if (d.length <= 11) d = '55' + d;
-            const pais = d.slice(0, 2);
-            const ddd = d.slice(2, 4);
-            const resto = d.slice(4);
-            let out = '+' + pais;
-            if (ddd) out += ' (' + ddd + ')';
-            if (resto) {
-                out += ' ' + (resto.length > 4 ? resto.slice(0, resto.length - 4) + '-' + resto.slice(-4) : resto);
-            }
-            return out;
-        }
+        // Telefone: a formatação vive em supabase-db.js (formatarWhatsApp),
+        // a mesma usada na gravação — uma implementação só.
 
         async function carregarPainelTerapeuta() {
             const alvo = document.getElementById('terapeuta-panel');
@@ -510,7 +497,7 @@
                         <div class="tp-grid">
                             <div class="tp-field">
                                 <label class="tp-label" for="tp-wa">WhatsApp (país + DDD + número)</label>
-                                <input id="tp-wa" class="tp-input" placeholder="+55 (11) 99999-9999" value="${esc(c.whatsapp || '')}">
+                                <input id="tp-wa" class="tp-input" placeholder="+55 (11) 99999-9999" value="${esc(formatarWhatsApp(c.whatsapp || ''))}">
                             </div>
                             <div class="tp-field">
                                 <label class="tp-label" for="tp-email">Email público</label>
@@ -627,7 +614,7 @@
                 if (el.classList.contains('tp-serv-preco')) {
                     el.value = formatarMoeda(el.value);
                 } else if (el.id === 'tp-wa') {
-                    el.value = formatarTelefone(el.value);
+                    el.value = formatarWhatsApp(el.value);
                 }
             }, true);
         }
