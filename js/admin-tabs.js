@@ -20,6 +20,7 @@ export async function initTabs(containerEl, userEmail) {
                     case 'leads': await renderLeads(containerEl); break;
                     case 'emails': await renderEmails(containerEl); break;
                     case 'cupons': await renderCupons(containerEl); break;
+                    case 'financeiro': await renderFinanceiro(containerEl); break;
                     case 'banco': renderBanco(containerEl); break;
                 }
             } catch(e) {
@@ -335,6 +336,136 @@ window._cupomCopiar = function (btn, codigo) {
     var antigo = btn.textContent;
     btn.textContent = 'Copiado';
     setTimeout(function () { btn.textContent = antigo; }, 1400);
+};
+
+// ---------- FINANCEIRO (F7) ----------
+// O Portal não retém nada: todo valor cobrado tem que chegar ao terapeuta.
+// Aqui o admin vê o que falta repassar e o que o consulente acerta direto.
+async function renderFinanceiro(el) {
+    try {
+        var s = await getSupabase();
+        if (!s) {
+            el.innerHTML = '<div class="admin-card"><h2>Financeiro</h2><p style="color:#ff6b6b;">Supabase indisponivel</p></div>';
+            return;
+        }
+
+        var r = await s.rpc('admin_listar_financeiro', { p_limite: 300 });
+
+        if (r.error) {
+            el.innerHTML = '<div class="admin-card"><h2>💰 Financeiro</h2>'
+                + '<p style="color:#ff6b6b;">' + escTera(r.error.message) + '</p>'
+                + '<p style="color:#888;margin-top:10px;">Se a funcao nao existe, rode a secao 20 do supabase-schema.sql.</p>'
+                + '</div>';
+            return;
+        }
+
+        var lista = r.data || [];
+        var aRepassar = 0, aReceberDireto = 0, repassado = 0, taxas = 0;
+        var porTerapeuta = {};
+
+        lista.forEach(function (l) {
+            var valor = Number(l.valor) || 0;
+            var taxa = Number(l.taxa) || 0;
+            taxas += taxa;
+
+            if (!porTerapeuta[l.terapeuta]) porTerapeuta[l.terapeuta] = { repassar: 0, direto: 0 };
+
+            if (l.status === 'a_receber') {
+                if (l.tipo === 'repasse_portal') {
+                    aRepassar += Math.max(0, valor - taxa);
+                    porTerapeuta[l.terapeuta].repassar += Math.max(0, valor - taxa);
+                } else {
+                    aReceberDireto += valor;
+                    porTerapeuta[l.terapeuta].direto += valor;
+                }
+            } else if (l.status === 'acertado' && l.tipo === 'repasse_portal') {
+                repassado += valor;
+            }
+        });
+
+        var brl = function (v) {
+            return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        var cartao = function (titulo, valor, nota, cor) {
+            return '<div style="flex:1;min-width:180px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,175,55,0.25);border-radius:12px;padding:14px 16px;">'
+                + '<div style="font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:#8f8fa5;">' + titulo + '</div>'
+                + '<div style="font-size:1.4rem;font-weight:bold;margin:6px 0 2px;color:' + (cor || 'var(--ouro-solar)') + ';">' + brl(valor) + '</div>'
+                + '<div style="font-size:0.7rem;color:#7f7f95;line-height:1.4;">' + nota + '</div>'
+                + '</div>';
+        };
+
+        var html = '<div class="admin-card"><h2>💰 Financeiro</h2>';
+        html += '<p style="color:#888;margin-bottom:14px;line-height:1.6;">'
+             + 'O Portal não retém nenhum valor: o sinal cai no Stripe e é repassado ao terapeuta, '
+             + 'e a diferença é acertada direto entre consulente e terapeuta.</p>';
+
+        html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">'
+             + cartao('A repassar aos terapeutas', aRepassar, 'já sem a taxa do Stripe', '#ffcc80')
+             + cartao('A receber direto', aReceberDireto, 'acerto entre consulente e terapeuta')
+             + cartao('Já repassado', repassado, 'acertos confirmados')
+             + cartao('Taxas do Stripe', taxas, 'custo por transação', '#cfcfdc')
+             + '</div>';
+
+        var nomes = Object.keys(porTerapeuta);
+        if (nomes.length) {
+            html += '<h3 style="font-size:0.95rem;color:var(--dourado-antigo);margin:0 0 8px;">Por terapeuta</h3>';
+            html += '<table class="admin-tabela"><tr><th>Terapeuta</th><th>A repassar</th><th>A receber direto</th></tr>';
+            nomes.forEach(function (n) {
+                html += '<tr><td>' + escTera(n) + '</td>'
+                     + '<td style="color:#ffcc80;">' + brl(porTerapeuta[n].repassar) + '</td>'
+                     + '<td style="color:#cfcfdc;">' + brl(porTerapeuta[n].direto) + '</td></tr>';
+            });
+            html += '</table>';
+        }
+
+        if (!lista.length) {
+            html += '<p style="color:#888;margin-top:16px;">Nenhum lançamento ainda. Eles nascem quando um atendimento é pago.</p>';
+        } else {
+            html += '<h3 style="font-size:0.95rem;color:var(--dourado-antigo);margin:22px 0 8px;">Lançamentos</h3>';
+            html += '<table class="admin-tabela"><tr><th>Data</th><th>Terapeuta</th><th>Consulente</th><th>Tipo</th><th>Valor</th><th>Taxa</th><th>Situação</th><th></th></tr>';
+
+            lista.forEach(function (l) {
+                var tipo = l.tipo === 'repasse_portal' ? 'Sinal (Portal)' : 'Restante (direto)';
+                var cor = l.status === 'acertado' ? '#4caf50' : (l.status === 'cancelado' ? '#777' : 'var(--ouro-solar)');
+                var situacao = l.status === 'acertado' ? 'recebido'
+                    : (l.status === 'cancelado' ? 'cancelado' : 'a receber');
+                var data = l.data_atendimento ? String(l.data_atendimento).split('-').reverse().join('/') : '-';
+                var acao = l.status === 'a_receber'
+                    ? '<button class="btn-admin-save" style="padding:5px 10px;font-size:0.7rem;margin:0;" onclick="window._finAcertar(\'' + l.id + '\')">Marcar recebido</button>'
+                    : '';
+
+                html += '<tr>'
+                     + '<td style="font-size:0.78rem;white-space:nowrap;">' + escTera(data) + '</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(l.terapeuta || '-') + '</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(l.consulente || '-') + '</td>'
+                     + '<td style="font-size:0.75rem;">' + tipo + '</td>'
+                     + '<td style="font-size:0.82rem;color:' + cor + ';">' + brl(l.valor) + '</td>'
+                     + '<td style="font-size:0.75rem;color:#888;">' + (Number(l.taxa) > 0 ? brl(l.taxa) : '-') + '</td>'
+                     + '<td style="font-size:0.75rem;color:' + cor + ';">' + situacao + (l.forma ? ' · ' + escTera(l.forma) : '') + '</td>'
+                     + '<td>' + acao + '</td>'
+                     + '</tr>';
+            });
+
+            html += '</table>';
+        }
+
+        el.innerHTML = html + '</div>';
+    } catch (e) {
+        el.innerHTML = '<div class="admin-card"><h2>Erro</h2><p style="color:#ff6b6b;">' + escTera(e.message) + '</p></div>';
+    }
+}
+
+window._finAcertar = async function (id) {
+    var forma = prompt('Forma do acerto com o terapeuta (pix, transferencia ou dinheiro):', 'pix');
+    if (forma === null) return;
+
+    var s = await getSupabase();
+    var r = await s.rpc('admin_marcar_repasse', { p_ids: [id], p_forma: forma || 'pix' });
+
+    if (r.error) { alert(r.error.message); return; }
+
+    await renderFinanceiro(document.getElementById('admin-content'));
 };
 
 // ---------- VITRINE DE TERAPEUTAS (F2) ----------

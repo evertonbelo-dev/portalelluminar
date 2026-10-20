@@ -334,6 +334,11 @@
                     <p class="tp-vazio-lista">Carregando...</p>
                 </div>
 
+                <h2 class="dash-section-title">💵 Meus recebimentos</h2>
+                <div id="meus-recebimentos">
+                    <p class="tp-vazio-lista">Carregando...</p>
+                </div>
+
                 <!-- Visualizador de leitura (aberto ao clicar em "Ver leitura") -->
                 <div id="leitura-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;overflow-y:auto;padding:40px 16px;">
                     <div style="max-width:760px;margin:0 auto;background:rgba(5,5,16,0.98);border:1px solid rgba(212,175,55,0.4);border-radius:15px;padding:28px;position:relative;">
@@ -396,6 +401,7 @@
             carregarPainelTerapeuta();
             carregarSolicitacoesRecebidas();
             carregarMinhasSolicitacoes();
+            carregarMeusRecebimentos();
         }
 
         // --- Painel do Terapeuta (F2) ---
@@ -702,7 +708,23 @@
             if (!id) return;
 
             if (acao === 'cancelar') {
-                if (!confirm('Cancelar esta solicitação?')) return;
+                // Mostra a consequência ANTES: reembolso integral ou retenção
+                let aviso = 'Cancelar esta solicitação?';
+                try {
+                    const s = await getSupabase();
+                    const p = await s.rpc('politica_cancelamento', { p_booking: id });
+                    const pol = (p.data && p.data[0]) || null;
+                    if (pol) {
+                        if (pol.reembolso_integral) {
+                            aviso = 'Cancelar?\n\n' + pol.motivo + '\nO reembolso integral será solicitado automaticamente.';
+                        } else {
+                            aviso = 'Cancelar?\n\nATENÇÃO: ' + pol.motivo
+                                + (pol.permite_remarcar ? '\n\nSe preferir, use "Remarcar" para não perder o valor.' : '');
+                        }
+                    }
+                } catch (e) { /* mantém o aviso padrão */ }
+
+                if (!confirm(aviso)) return;
                 const r = await cancelarSolicitacao(id);
                 if (r.error) { alert(r.error.message); return; }
             } else {
@@ -714,6 +736,86 @@
 
             await carregarSolicitacoesRecebidas();
             await carregarMinhasSolicitacoes();
+            await carregarMeusRecebimentos();
+        }
+
+        // --- Recebimentos do terapeuta (F7) ---
+        // Dois saldos: o que o Portal cobrou (e deve repassar) e o restante
+        // que o consulente acerta direto. O Portal nao retem nada.
+        async function carregarMeusRecebimentos() {
+            const alvo = document.getElementById('meus-recebimentos');
+            if (!alvo) return;
+
+            try {
+                const s = await getSupabase();
+                if (!s) { alvo.innerHTML = '<p class="tp-vazio-lista">Supabase indisponivel.</p>'; return; }
+
+                const r = await s.rpc('meus_creditos');
+                if (r.error) {
+                    alvo.innerHTML = '<p class="tp-vazio-lista">Recebimentos ainda nao ativos. Rode a secao 20 do supabase-schema.sql.</p>';
+                    return;
+                }
+
+                const c = (r.data && r.data[0]) || null;
+                if (!c) {
+                    alvo.innerHTML = '<p class="tp-vazio-lista">Crie seu perfil de terapeuta para acompanhar os recebimentos.</p>';
+                    return;
+                }
+
+                const e = await s.rpc('meus_extratos', { p_limite: 30 });
+                const lista = (e.data || []);
+
+                const cartao = function (titulo, valor, nota, cor) {
+                    return '<div style="flex:1;min-width:170px;background:rgba(255,255,255,0.03);border:1px solid rgba(212,175,55,0.25);border-radius:12px;padding:14px 16px;">'
+                        + '<div style="font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;color:#8f8fa5;">' + titulo + '</div>'
+                        + '<div style="font-size:1.35rem;font-weight:bold;margin:6px 0 2px;color:' + (cor || 'var(--ouro-solar)') + ';">' + reais(valor) + '</div>'
+                        + '<div style="font-size:0.7rem;color:#7f7f95;line-height:1.4;">' + nota + '</div>'
+                        + '</div>';
+                };
+
+                let html = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">'
+                    + cartao('A receber do Portal', c.a_receber_portal, 'sinal cobrado no cartão/Pix, já sem a taxa do Stripe')
+                    + cartao('A receber do consulente', c.a_receber_consulente, 'restante acertado no dia do atendimento')
+                    + cartao('Recebido no mês', c.recebido_mes, 'acertos confirmados neste mês')
+                    + cartao('Recebido total', c.recebido_total, 'histórico completo', '#cfcfdc')
+                    + '</div>';
+
+                if (!lista.length) {
+                    html += '<p class="tp-vazio-lista">Nada por aqui ainda. Os lançamentos aparecem quando um atendimento é pago.</p>';
+                } else {
+                    html += '<div style="overflow-x:auto;"><table class="admin-tabela" style="width:100%;border-collapse:collapse;">'
+                        + '<tr><th style="text-align:left;font-size:0.72rem;color:#9a9aad;padding:8px;">Quando</th>'
+                        + '<th style="text-align:left;font-size:0.72rem;color:#9a9aad;padding:8px;">Origem</th>'
+                        + '<th style="text-align:left;font-size:0.72rem;color:#9a9aad;padding:8px;">Consulente</th>'
+                        + '<th style="text-align:right;font-size:0.72rem;color:#9a9aad;padding:8px;">Valor</th>'
+                        + '<th style="text-align:left;font-size:0.72rem;color:#9a9aad;padding:8px;">Situação</th></tr>';
+
+                    lista.forEach(function (l) {
+                        const origem = l.tipo === 'repasse_portal' ? 'Portal (sinal)' : 'Consulente (restante)';
+                        const situacao = l.status === 'acertado' ? '✔ recebido'
+                            : (l.status === 'cancelado' ? '— cancelado' : '⏳ a receber');
+                        const cor = l.status === 'acertado' ? '#4caf50' : (l.status === 'cancelado' ? '#777' : 'var(--ouro-solar)');
+                        const taxa = Number(l.taxa || 0) > 0 ? ' <span style="color:#777;font-size:0.7rem;">(taxa ' + reais(l.taxa) + ')</span>' : '';
+
+                        html += '<tr>'
+                            + '<td style="padding:8px;font-size:0.78rem;color:#bbb;">' + (l.data_atendimento ? String(l.data_atendimento).split('-').reverse().join('/') : '—') + '</td>'
+                            + '<td style="padding:8px;font-size:0.8rem;">' + origem + '</td>'
+                            + '<td style="padding:8px;font-size:0.8rem;color:#bbb;">' + esc(l.consulente || '—') + '</td>'
+                            + '<td style="padding:8px;font-size:0.85rem;text-align:right;color:' + cor + ';">' + reais(l.valor) + taxa + '</td>'
+                            + '<td style="padding:8px;font-size:0.78rem;color:' + cor + ';">' + situacao + '</td>'
+                            + '</tr>';
+                    });
+
+                    html += '</table></div>';
+                    html += '<p style="color:#666;font-size:0.72rem;margin-top:10px;">'
+                        + 'O Portal não fica com nenhuma parte do valor. O sinal é recebido no Stripe em nome do Portal e repassado a você; '
+                        + 'a diferença é acertada direto com o consulente.</p>';
+                }
+
+                alvo.innerHTML = html;
+            } catch (err) {
+                alvo.innerHTML = '<p class="tp-msg-erro">Erro: ' + esc(err.message) + '</p>';
+            }
         }
 
         // Formulário do perfil (vazio = primeiro cadastro; preenchido = edição)

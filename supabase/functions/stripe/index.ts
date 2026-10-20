@@ -204,6 +204,30 @@ async function marcarPago(bookingId: string, pi: Stripe.PaymentIntent) {
     if (pi.metadata?.cupom) {
         await admin.rpc('marcar_cupom_usado', { p_codigo: pi.metadata.cupom, p_booking: bookingId });
     }
+
+    // Taxa real do Stripe: o repasse ao terapeuta e liquido dela.
+    // Best effort: o balanco pode nao existir no instante do webhook.
+    await sincronizarTaxa(bookingId, pi.id);
+}
+
+async function sincronizarTaxa(bookingId: string, paymentIntentId: string) {
+    try {
+        const cheio = await stripe.paymentIntents.retrieve(paymentIntentId, {
+            expand: ['latest_charge.balance_transaction'],
+        });
+
+        const charge = cheio.latest_charge as Stripe.Charge | null;
+        const saldo = charge?.balance_transaction as Stripe.BalanceTransaction | null;
+
+        if (!saldo || typeof saldo.fee !== 'number') return;
+
+        await admin.from('therapist_ledger')
+            .update({ taxa_stripe: arredondar(saldo.fee / 100) })
+            .eq('booking_id', bookingId)
+            .eq('tipo', 'repasse_portal');
+    } catch (e) {
+        console.warn('[stripe] taxa indisponivel', String(e));
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -462,16 +486,17 @@ async function refund(req: Request): Promise<Response> {
     const interno = (RECONCILE_TOKEN && enviado === RECONCILE_TOKEN)
         || (SB_SERVICE && enviado === SB_SERVICE);
 
-    // 1) Cron: reembolso automatico do que o proprio Portal cancelou.
-    //    Cancelamento pedido pelo cliente fica na fila para o admin decidir.
+    // 1) Cron: reembolso do que a politica de cancelamento autorizou.
+    //    A elegibilidade ja foi decidida no instante do cancelamento
+    //    (trigger booking_reembolso, regra das 24h) - aqui so executamos.
     if (interno) {
         const { data: fila } = await admin
             .from('therapist_bookings')
             .select('id, stripe_payment_intent, valor_cobrado')
             .eq('status', 'cancelado')
             .eq('pagamento_status', 'pago')
+            .eq('reembolso_elegivel', true)
             .not('reembolso_solicitado_em', 'is', null)
-            .ilike('resposta', 'Cancelad%automaticamente%')
             .limit(25);
 
         const feitos: string[] = [];
