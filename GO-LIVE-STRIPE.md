@@ -159,7 +159,28 @@ delete from public.coupons where codigo = 'LUMINAR15-D9EA18';
 
 ---
 
-## Riscos conhecidos (já mapeados)
+## Registro da virada — 20/10/2026
+
+| Verificação | Resultado |
+|---|---|
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` atualizados | 02:21 / 02:22 |
+| `/status` → modo | **live** |
+| `/webhook` (sem assinatura) | 400 "assinatura inválida" (não 401) |
+| Pagamento real (Reiki R$ 62,00) | cupom 15% → R$ 52,70 → sinal **R$ 15,81** |
+| `evt_…` em `stripe_events` | ✅ `payment_intent.succeeded` |
+| `pago_em` / cupom queimado | ✅ / ✅ |
+| E-mails (consulente + terapeuta) | ✅ HTTP 200 |
+
+**Bugs encontrados durante a virada e corrigidos:**
+
+1. **Ping-pong pago ⇄ reembolsado** (v15): depois do estorno o PaymentIntent
+   continua `succeeded`; a reconciliação remarcava o pedido como pago e o job
+   de reembolso estornava de novo, a cada 15 min. Agora os dois ignoram
+   `pagamento_status = 'reembolsado'`.
+2. **Alerta falso de reconciliação** (v16): no retorno do checkout o webhook
+   chega milissegundos depois, então `/confirmar` gravava primeiro e alertava.
+   O alerta agora existe **apenas** no cron.
+
 
 | Risco | O que acontece | Como resolvo |
 |---|---|---|
