@@ -11,6 +11,9 @@
 //                           falha/reembolso
 //   POST /stripe/confirmar → autenticado: pergunta ao Stripe o estado real
 //                           do PaymentIntent (rede de segurança do webhook)
+//   POST /stripe/reconciliar → chamado pelo cron (token do Vault): varre os
+//                           pedidos vencidos com cobrança criada e salva os
+//                           que o Stripe já aprovou
 //   POST /stripe/refund   → autenticado (admin) reembolso manual
 //
 // Deploy (a flag é obrigatória: sem ela o Stripe recebe 401 no webhook):
@@ -30,6 +33,7 @@ const WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '';
 const SB_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SB_SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const SINAL_PCT = 30;
+const RECONCILE_TOKEN = Deno.env.get('RECONCILE_TOKEN') ?? '';
 
 const stripe = new Stripe(STRIPE_KEY, { apiVersion: '2024-06-20' });
 const admin = createClient(SB_URL, SB_SERVICE, { auth: { persistSession: false } });
@@ -76,6 +80,7 @@ Deno.serve(async (req) => {
         if (rota === 'webhook') return await webhook(req);
         if (rota === 'intent') return await intent(req);
         if (rota === 'confirmar') return await confirmar(req);
+        if (rota === 'reconciliar') return await reconciliar(req);
         if (rota === 'refund') return await refund(req);
         return json({ erro: 'Rota desconhecida: ' + rota }, 404);
     } catch (e) {
@@ -301,6 +306,66 @@ async function confirmar(req: Request): Promise<Response> {
         pago: true,
         valor_cobrado: pi.amount_received ? arredondar(pi.amount_received / 100) : b.valor_cobrado,
     });
+}
+
+// --------------------------------------------------------------------------
+// /reconciliar — chamada pelo cron (pg_cron + pg_net) a cada 15 minutos,
+// sempre 3 minutos ANTES do job que cancela pagamentos vencidos.
+// Sem isso, um webhook atrasado faz o consulente perder o horário com o
+// dinheiro já cobrado. Aqui a fonte da verdade é o Stripe.
+// --------------------------------------------------------------------------
+async function reconciliar(req: Request): Promise<Response> {
+    const enviado = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    const autorizado = (RECONCILE_TOKEN && enviado === RECONCILE_TOKEN)
+        || (SB_SERVICE && enviado === SB_SERVICE);
+
+    if (!autorizado) return json({ erro: 'Não autorizado' }, 401);
+
+    const agora = new Date();
+    const resultado = { verificados: 0, pagos: 0, reembolso_na_fila: 0 };
+
+    // 1) Pendentes com prazo vencido — exatamente os que o job vai cancelar.
+    const { data: pendentes } = await admin
+        .from('therapist_bookings')
+        .select('id, status, pagamento_status, stripe_payment_intent')
+        .eq('status', 'pendente')
+        .not('stripe_payment_intent', 'is', null)
+        .lt('pagamento_deadline', agora.toISOString());
+
+    // 2) Cancelados nos últimos 30 dias com cobrança criada: se o Stripe
+    //    aprovou, o dinheiro entrou num pedido que não existe mais e precisa
+    //    ir para a fila de reembolso do admin.
+    const desde = new Date(agora.getTime() - 30 * 24 * 3600 * 1000).toISOString();
+    const { data: cancelados } = await admin
+        .from('therapist_bookings')
+        .select('id, status, pagamento_status, stripe_payment_intent')
+        .eq('status', 'cancelado')
+        .not('stripe_payment_intent', 'is', null)
+        .gte('pagamento_deadline', desde)
+        .lt('pagamento_deadline', agora.toISOString());
+
+    for (const b of [...(pendentes || []), ...(cancelados || [])]) {
+        if (b.pagamento_status === 'pago') continue;
+
+        resultado.verificados++;
+
+        const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent).catch(() => null);
+        if (!pi || pi.status !== 'succeeded') continue;
+
+        await marcarPago(b.id, pi);
+        await admin.from('stripe_events').insert({ id: 'cron_' + pi.id, tipo: 'cron.reconciled' });
+        resultado.pagos++;
+
+        if (b.status === 'cancelado') {
+            await admin.from('therapist_bookings')
+                .update({ reembolso_solicitado_em: new Date().toISOString() })
+                .eq('id', b.id)
+                .is('reembolso_solicitado_em', null);
+            resultado.reembolso_na_fila++;
+        }
+    }
+
+    return json({ ...resultado, em: agora.toISOString() });
 }
 
 // --------------------------------------------------------------------------

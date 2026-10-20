@@ -1496,4 +1496,73 @@ CREATE INDEX IF NOT EXISTS idx_stripe_events_data
 ALTER TABLE public.stripe_events ENABLE ROW LEVEL SECURITY;
 -- Sem policies: apenas service_role (a Edge Function) acessa.
 
+-- ==========================================================================
+-- 15) RECONCILIACAO DE PAGAMENTOS (F6)
+-- O webhook e o caminho rapido, mas nao pode ser o unico: se ele atrasar ou
+-- falhar, o job de expiracao cancelaria um pedido JA PAGO - e o consulente
+-- perderia o horario com o dinheiro cobrado.
+-- A ordem importa: reconcilia em :02/:17/:32/:47 e cancela em :05/:20/:35/:50.
+-- ==========================================================================
+
+-- Token compartilhado entre o cron (Vault) e a Edge Function (secret
+-- RECONCILE_TOKEN). Use o MESMO valor nos dois lugares.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'reconcile_token') THEN
+        PERFORM vault.create_secret(
+            'TROQUE-ESTE-TOKEN',
+            'reconcile_token',
+            'Token do cron de reconciliacao de pagamentos'
+        );
+    END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION public.reconciliar_pagamentos_pendentes()
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    token text;
+    req bigint;
+BEGIN
+    SELECT decrypted_secret INTO token FROM vault.decrypted_secrets
+     WHERE name = 'reconcile_token' ORDER BY updated_at DESC LIMIT 1;
+
+    IF token IS NULL OR token = '' THEN
+        RETURN NULL;
+    END IF;
+
+    req := net.http_post(
+        -- Ajuste o subdominio ao recriar o banco em outro projeto.
+        url := 'https://frvqvnusjnnmbpztiokn.supabase.co/functions/v1/stripe/reconciliar',
+        body := '{}'::jsonb,
+        headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || token
+        ),
+        timeout_milliseconds := 20000
+    );
+
+    RETURN req;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.reconciliar_pagamentos_pendentes() FROM PUBLIC;
+
+DO $$
+BEGIN
+    BEGIN
+        PERFORM cron.unschedule('reconciliar-pagamentos');
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+    PERFORM cron.schedule(
+        'reconciliar-pagamentos',
+        '2,17,32,47 * * * *',
+        $cron$SELECT public.reconciliar_pagamentos_pendentes();$cron$
+    );
+END $$;
+
+
 
