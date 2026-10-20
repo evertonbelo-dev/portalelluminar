@@ -197,7 +197,11 @@ async function webhook(req: Request): Promise<Response> {
 
     let evento: Stripe.Event;
     try {
-        evento = stripe.webhooks.constructEvent(corpo, assinatura, WEBHOOK_SECRET);
+        // IMPORTANTE: no Deno (Supabase Edge Functions) o crypto é WebCrypto,
+        // que só existe de forma assíncrona. Usar constructEvent() síncrono
+        // lança sempre "SubtleCryptoProvider cannot be used in a synchronous
+        // context" — e o webhook respondia 400 para todo evento do Stripe.
+        evento = await stripe.webhooks.constructEventAsync(corpo, assinatura, WEBHOOK_SECRET);
     } catch (e) {
         const msg = String((e as Error)?.message || e).slice(0, 300);
         console.warn('[stripe] assinatura inválida', msg);
