@@ -288,6 +288,12 @@
                 const dados = await resp.json();
 
                 if (!resp.ok) {
+                    if (dados.pago) {
+                        mostrarPago(dados.valor_cobrado);
+                        dizer('Este atendimento já está pago. Até breve!', 'ok');
+                        return;
+                    }
+
                     dizer(dados.erro || 'Não foi possível iniciar o pagamento.', 'erro');
                     return;
                 }
@@ -341,9 +347,7 @@
         // Depois do Stripe, perguntamos a ELE se o pagamento foi aprovado.
         // Assim o pedido é confirmado mesmo se o webhook estiver atrasado
         // ou mal configurado — a resposta vem assinada pelo servidor.
-        async function esperarConfirmacao(tentativas) {
-            let d = null;
-
+        async function confirmarNoServidor() {
             try {
                 const resp = await fetch(SUPABASE_URL + '/functions/v1/stripe/confirmar', {
                     method: 'POST',
@@ -353,16 +357,33 @@
                     },
                     body: JSON.stringify({ booking_id: bookingId })
                 });
-                d = await resp.json();
-            } catch (e) { d = null; }
+                return await resp.json();
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function mostrarPago(valor) {
+            const partes = [
+                '<div class="linha"><span>Status</span><strong style="color:#7bd67f;">Pagamento confirmado</strong></div>'
+            ];
+
+            const v = Number(valor || 0);
+            if (v > 0) {
+                partes.push('<div class="linha total"><span>Pago</span><strong>' + brl(v) + '</strong></div>');
+            }
+
+            $('pag-sub').innerText = '';
+            $('pag-conteudo').hidden = true;
+            $('pag-resumo').innerHTML = partes.join('');
+            $('pag-resumo').hidden = false;
+        }
+
+        async function esperarConfirmacao(tentativas) {
+            const d = await confirmarNoServidor();
 
             if (d && d.pago) {
-                $('pag-sub').innerText = '';
-                $('pag-conteudo').hidden = true;
-                $('pag-resumo').innerHTML =
-                    '<div class="linha"><span>Status</span><strong style="color:#7bd67f;">Pagamento confirmado</strong></div>' +
-                    '<div class="linha total"><span>Pago</span><strong>' + brl(d.valor_cobrado) + '</strong></div>';
-                $('pag-resumo').hidden = false;
+                mostrarPago(d.valor_cobrado);
                 dizer('Tudo certo! O terapeuta foi avisado do seu agendamento.', 'ok');
                 return;
             }
@@ -375,14 +396,7 @@
             setTimeout(function () { esperarConfirmacao(tentativas - 1); }, 2500);
         }
 
-        $('pag-conteudo').hidden = false;
-        pintar();
-
-        if (voltouDoStripe === 'ok') {
-            $('pag-conteudo').hidden = true;
-            dizer('Confirmando seu pagamento…', 'info');
-            esperarConfirmacao(8);
-        } else {
+        async function sugerirCupom() {
             // Oferece o cupom de primeira compra, se houver
             try {
                 const { data } = await client.rpc('gerar_cupom_primeira_compra', { p_user: session.user.id });
@@ -393,6 +407,28 @@
                     dizer('Encontramos seu cupom de primeira compra: ' + c.codigo + ' (' + c.percentual + '%). Clique em Aplicar.', 'info');
                 }
             } catch (e) { /* opcional */ }
+        }
+
+        $('pag-conteudo').hidden = false;
+        pintar();
+
+        if (voltouDoStripe === 'ok') {
+            $('pag-conteudo').hidden = true;
+            dizer('Confirmando seu pagamento…', 'info');
+            esperarConfirmacao(8);
+        } else if (b.stripe_payment_intent) {
+            // Já existe cobrança criada neste pedido: pergunta ao Stripe antes
+            // de oferecer pagar de novo (evita cobrança duplicada).
+            const d = await confirmarNoServidor();
+
+            if (d && d.pago) {
+                mostrarPago(d.valor_cobrado);
+                dizer('Este atendimento já está pago. Até breve!', 'ok');
+            } else {
+                await sugerirCupom();
+            }
+        } else {
+            await sugerirCupom();
         }
     </script>
 </body>

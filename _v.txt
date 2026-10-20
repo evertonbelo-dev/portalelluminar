@@ -1,0 +1,21 @@
+OK    pagamento.html script OK
+OK    pagamento.html <div> 20/20
+OK    pagamento.html fecha com </html>
+OK    checkout: chama a reconciliação
+OK    checkout: função de reconciliação
+OK    checkout: tela de pago reutilizável
+OK    checkout: reconcilia ao reabrir a página
+OK    checkout: trata "já pago" no /intent
+OK    checkout: cupom sugerido
+OK    checkout: aguarda após o Stripe
+OK    função: rota /confirmar registrada
+OK    função: handler confirmar
+OK    função: reconcilia só com succeeded
+OK    função: marcarPago compartilhado
+OK    função: webhook usa marcarPago
+OK    função: intent não cobra duas vezes
+OK    função: erro de assinatura registrado
+OK    função: idempotência da reconciliação
+OK    SQL: coluna erro no stripe_events
+
+==> RECONCILIACAO_OK
