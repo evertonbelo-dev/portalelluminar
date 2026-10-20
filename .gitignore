@@ -15,3 +15,9 @@ dist/
 # arquivos temporarios de validacao
 _v.mjs
 _v.txt
+
+# rascunhos de validacao
+_s.txt
+_c.txt
+_g.txt
+_t.mjs
