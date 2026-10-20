@@ -1564,5 +1564,225 @@ BEGIN
     );
 END $$;
 
+-- ==========================================================================
+-- 16) E-MAILS DE PAGAMENTO (F6)
+-- Um unico gatilho cobre todos os caminhos que mudam o pagamento: webhook do
+-- Stripe, /confirmar do checkout, reconciliacao do cron e reembolso.
+-- ==========================================================================
+
+CREATE OR REPLACE FUNCTION public.fmt_brl(p numeric)
+RETURNS text LANGUAGE sql IMMUTABLE AS $$
+    SELECT CASE WHEN p IS NULL OR p = 0 THEN '—'
+                ELSE 'R$ ' || replace(to_char(p, 'FM999999990.00'), '.', ',') END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.notificar_pagamento()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_email_terapeuta text;
+    v_nome_terapeuta text;
+    v_quando text;
+    v_servico text;
+    v_corpo text;
+    v_restante numeric;
+BEGIN
+    BEGIN
+        IF TG_OP <> 'UPDATE' THEN RETURN NEW; END IF;
+        IF OLD.pagamento_status IS NOT DISTINCT FROM NEW.pagamento_status THEN RETURN NEW; END IF;
+
+        SELECT u.email, t.nome INTO v_email_terapeuta, v_nome_terapeuta
+          FROM public.therapists t
+          JOIN auth.users u ON u.id = t.user_id
+         WHERE t.id = NEW.therapist_id;
+
+        v_quando := to_char(NEW.data, 'DD/MM/YYYY') || ' às ' || to_char(NEW.hora_inicio, 'HH24:MI');
+        v_servico := COALESCE(NEW.servico_nome, 'Atendimento a combinar');
+
+        IF NEW.pagamento_status = 'pago' THEN
+            v_restante := GREATEST(0, COALESCE(NEW.valor_total,0) - COALESCE(NEW.valor_desconto,0) - COALESCE(NEW.valor_cobrado,0));
+
+            v_corpo := '<p>Olá, ' || public.esc_html(NEW.consulente_nome) || '!</p>'
+                || '<p>Seu pagamento de <strong>' || public.fmt_brl(NEW.valor_cobrado) || '</strong> foi <strong style="color:#4caf50;">confirmado</strong>.</p>'
+                || '<p style="font-size:18px;color:#d4af37;"><strong>' || v_quando || '</strong></p>'
+                || '<p>' || public.esc_html(v_servico) || ' · ' || NEW.duracao_min || ' min</p>'
+                || '<p>Terapeuta: <strong>' || public.esc_html(v_nome_terapeuta) || '</strong></p>'
+                || CASE WHEN NEW.cupom_codigo IS NOT NULL THEN '<p>Cupom aplicado: ' || public.esc_html(NEW.cupom_codigo) || ' (desconto de ' || public.fmt_brl(NEW.valor_desconto) || ')</p>' ELSE '' END
+                || CASE WHEN NEW.forma_pagamento = 'sinal' AND v_restante > 0 THEN '<p style="color:#ffcc80;">Você pagou o sinal de 30%. O restante (' || public.fmt_brl(v_restante) || ') é acertado direto com o terapeuta.</p>' ELSE '' END
+                || '<p style="color:#aaa;">O terapeuta foi avisado e vai confirmar o atendimento.</p>';
+
+            PERFORM public.enviar_email_resend(NEW.consulente_contato,
+                'Pagamento confirmado: ' || v_quando,
+                public.email_layout('Pagamento confirmado', v_corpo), 'pagamento_confirmado', NEW.id);
+
+            PERFORM public.enviar_email_resend(v_email_terapeuta,
+                'Novo agendamento pago: ' || v_quando,
+                public.email_layout('Agendamento pago',
+                    '<p><strong>' || public.esc_html(NEW.consulente_nome) || '</strong> pagou ' || public.fmt_brl(NEW.valor_cobrado) || '.</p>'
+                    || '<p style="font-size:18px;color:#d4af37;"><strong>' || v_quando || '</strong></p>'
+                    || '<p>' || public.esc_html(v_servico) || ' · ' || NEW.duracao_min || ' min</p>'
+                    || '<p style="color:#ffcc80;">Confirme o atendimento em Minha Jornada.</p>'),
+                'pagamento_terapeuta', NEW.id);
+
+        ELSIF NEW.pagamento_status = 'falhou' THEN
+            v_corpo := '<p>Olá, ' || public.esc_html(NEW.consulente_nome) || '.</p>'
+                || '<p>O pagamento de <strong>' || public.fmt_brl(NEW.valor_cobrado) || '</strong> não foi aprovado.</p>'
+                || '<p style="font-size:18px;color:#d4af37;"><strong>' || v_quando || '</strong></p>'
+                || '<p>Seu horário continua reservado até o prazo. Entre no portal, abra <strong>Meus agendamentos</strong> e clique em <strong>Pagar agora</strong> para tentar de novo.</p>';
+
+            PERFORM public.enviar_email_resend(NEW.consulente_contato,
+                'Pagamento não aprovado: ' || v_quando,
+                public.email_layout('Pagamento não aprovado', v_corpo), 'pagamento_falhou', NEW.id);
+
+        ELSIF NEW.pagamento_status = 'reembolsado' THEN
+            v_corpo := '<p>Olá, ' || public.esc_html(NEW.consulente_nome) || '.</p>'
+                || '<p>O reembolso de <strong>' || public.fmt_brl(NEW.valor_cobrado) || '</strong> foi enviado ao Stripe e volta para o seu meio de pagamento em alguns dias úteis.</p>'
+                || '<p style="font-size:18px;color:#d4af37;"><strong>' || v_quando || '</strong></p>';
+
+            PERFORM public.enviar_email_resend(NEW.consulente_contato,
+                'Reembolso: ' || v_quando,
+                public.email_layout('Reembolso do seu pagamento', v_corpo), 'reembolsado', NEW.id);
+        END IF;
+
+        RETURN NEW;
+    EXCEPTION WHEN OTHERS THEN
+        INSERT INTO public.email_log (tipo, booking_id, destinatario, assunto, status, detalhe)
+        VALUES ('erro', NEW.id, NULL, NULL, 'erro', SQLERRM);
+        RETURN NEW;
+    END;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_booking_pagamento ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_pagamento
+    AFTER UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.notificar_pagamento();
+
+-- ==========================================================================
+-- 17) CUPONS NO ADMIN (F6)
+-- O cupom de primeira compra nasce sozinho no checkout. Estas funcoes
+-- atendem quem pediu desconto por e-mail: o admin cria e vincula a uma conta.
+-- ==========================================================================
+
+CREATE OR REPLACE FUNCTION public.admin_listar_cupons(p_limite integer DEFAULT 100)
+RETURNS TABLE (
+    id uuid, codigo text, percentual integer, origem text, email text,
+    valido_ate timestamptz, usado_em timestamptz, usado_booking_id uuid, created_at timestamptz
+)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.user_roles r
+                    WHERE r.user_id = auth.uid() AND r.role IN ('admin','master')) THEN
+        RAISE EXCEPTION 'Apenas administrador';
+    END IF;
+
+    RETURN QUERY
+    SELECT c.id, c.codigo, c.percentual, c.origem, u.email::text,
+           c.valido_ate, c.usado_em, c.usado_booking_id, c.created_at
+      FROM public.coupons c
+      LEFT JOIN auth.users u ON u.id = c.user_id
+     ORDER BY c.created_at DESC
+     LIMIT GREATEST(1, LEAST(COALESCE(p_limite, 100), 500));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_listar_cupons(integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_listar_cupons(integer) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.admin_criar_cupom(
+    p_email text, p_percentual integer DEFAULT 15, p_dias integer DEFAULT 30
+)
+RETURNS TABLE (codigo text, percentual integer, valido_ate timestamptz, email text)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$
+DECLARE
+    v_user uuid;
+    v_codigo text;
+    v_validade timestamptz;
+    v_pct integer;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM public.user_roles r
+                    WHERE r.user_id = auth.uid() AND r.role IN ('admin','master')) THEN
+        RAISE EXCEPTION 'Apenas administrador';
+    END IF;
+
+    IF p_email IS NULL OR btrim(p_email) = '' THEN
+        RAISE EXCEPTION 'Informe o e-mail de quem pediu o cupom';
+    END IF;
+
+    v_pct := GREATEST(1, LEAST(COALESCE(p_percentual, 15), 100));
+
+    SELECT u.id INTO v_user FROM auth.users u
+     WHERE lower(u.email) = lower(btrim(p_email)) LIMIT 1;
+
+    IF v_user IS NULL THEN
+        RAISE EXCEPTION 'Nenhuma conta com o e-mail %', btrim(p_email);
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM public.coupons c WHERE c.user_id = v_user) THEN
+        RAISE EXCEPTION 'Esta conta já possui um cupom';
+    END IF;
+
+    v_codigo := 'LUMINAR' || v_pct || '-' || upper(substr(md5(random()::text || clock_timestamp()::text), 1, 6));
+    v_validade := NOW() + (GREATEST(1, LEAST(COALESCE(p_dias, 30), 365)) || ' days')::interval;
+
+    INSERT INTO public.coupons (codigo, percentual, user_id, origem, valido_ate, criado_por)
+    VALUES (v_codigo, v_pct, v_user, 'solicitado', v_validade, auth.uid());
+
+    RETURN QUERY SELECT v_codigo, v_pct, v_validade, btrim(p_email);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.admin_criar_cupom(text, integer, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.admin_criar_cupom(text, integer, integer) TO authenticated;
+
+-- ==========================================================================
+-- 18) REEMBOLSO AUTOMATICO (F6)
+-- Reembolsa so o que o PROPRIO Portal cancelou (marca "Cancelad...
+-- automaticamente" na resposta). Cancelamento pedido pelo cliente fica na
+-- fila (reembolso_solicitado_em) para o admin decidir pelo /refund manual.
+-- A idempotency key no Stripe impede reembolso duplo.
+-- ==========================================================================
+
+CREATE OR REPLACE FUNCTION public.reembolsar_pagos_automaticos()
+RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    token text;
+    req bigint;
+BEGIN
+    SELECT decrypted_secret INTO token FROM vault.decrypted_secrets
+     WHERE name = 'reconcile_token' ORDER BY updated_at DESC LIMIT 1;
+
+    IF token IS NULL OR token = '' THEN
+        RETURN NULL;
+    END IF;
+
+    req := net.http_post(
+        url := 'https://frvqvnusjnnmbpztiokn.supabase.co/functions/v1/stripe/refund',
+        body := '{}'::jsonb,
+        headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || token
+        ),
+        timeout_milliseconds := 20000
+    );
+
+    RETURN req;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.reembolsar_pagos_automaticos() FROM PUBLIC;
+
+DO $$
+BEGIN
+    BEGIN
+        PERFORM cron.unschedule('reembolsar-pagos');
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+    PERFORM cron.schedule(
+        'reembolsar-pagos',
+        '10,25,40,55 * * * *',
+        $cron$SELECT public.reembolsar_pagos_automaticos();$cron$
+    );
+END $$;
+
 
 

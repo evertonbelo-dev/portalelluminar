@@ -1,3 +1,0 @@
-﻿58: .tp-btn { background: linear-gradient(135deg, var(--dourado-antigo), var(--ouro-solar)); color: #000; border: none; border-radius: 30px; padding: 12px 28px; font-weight: bold; font-size: 0.88rem; cursor: pointer; }
-60: .tp-btn-sec { background: rgba(212, 175, 55, 0.1); color: var(--ouro-solar); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 30px; padding: 11px 22px; font-size: 0.85rem; cursor: pointer; }
-87: .tp-book-acoes .tp-btn-sec { padding: 8px 16px; font-size: 0.78rem; }

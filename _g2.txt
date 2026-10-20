@@ -1,2 +1,0 @@
-﻿896: export async function listarMinhasSolicitacoes(userId) {
-918: export async function listarSolicitacoesTerapeuta(therapistId) {
