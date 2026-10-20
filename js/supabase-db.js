@@ -775,6 +775,9 @@ export async function listarHorariosOcupados(therapistId) {
     // roda a cada 15 min; isto garante que a vitrine nunca mostre horario
     // preso por um pedido que ja caducou).
     try { await client.rpc('expirar_solicitacoes_pendentes'); } catch (e) { /* opcional */ }
+    // Idem para quem abriu o checkout e nao pagou: o horario volta a ficar
+    // livre assim que o prazo de pagamento vence.
+    try { await client.rpc('cancelar_pagamentos_vencidos'); } catch (e) { /* opcional */ }
 
     const { data, error } = await client.rpc('horarios_ocupados', { p_therapist: therapistId });
 

@@ -870,13 +870,15 @@ SET search_path = public
 STABLE
 AS $$
     SELECT b.data, b.hora_inicio, b.duracao_min
-    FROM public.therapist_bookings b
-    JOIN public.therapists t ON t.id = b.therapist_id
-    WHERE b.therapist_id = p_therapist
-      AND b.status IN ('pendente', 'confirmado')
-      AND t.status = 'publicado'
-      AND b.data >= CURRENT_DATE - 1
-    ORDER BY b.data, b.hora_inicio;
+      FROM public.therapist_bookings b
+     WHERE b.therapist_id = p_therapist
+       AND b.status IN ('pendente', 'confirmado')
+       AND b.data >= CURRENT_DATE - 1
+       -- Pedido sem pagamento cujo prazo venceu nao segura mais o horario,
+       -- mesmo antes de o cron cancelar a linha.
+       AND NOT (COALESCE(b.pagamento_status, 'aguardando') <> 'pago'
+                AND b.pagamento_deadline IS NOT NULL
+                AND b.pagamento_deadline < NOW());
 $$;
 
 REVOKE ALL ON FUNCTION public.horarios_ocupados(uuid) FROM PUBLIC;
@@ -1408,17 +1410,19 @@ DO $$ BEGIN
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
--- Prazo de pagamento: 24h, mas nunca depois de 24h antes do atendimento
+-- Prazo de pagamento: reserva curta de 30 min para concluir o checkout,
+-- limitada ao horario do atendimento. Antes era LEAST(24h, horario-24h):
+-- um checkout abandonado travava o horario por dias.
 CREATE OR REPLACE FUNCTION public.booking_prazo_pagamento()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.pagamento_deadline IS NULL THEN
         NEW.pagamento_deadline := LEAST(
-            NOW() + INTERVAL '24 hours',
-            ((NEW.data + NEW.hora_inicio) AT TIME ZONE 'America/Sao_Paulo') - INTERVAL '24 hours'
+            NOW() + INTERVAL '30 minutes',
+            ((NEW.data + NEW.hora_inicio) AT TIME ZONE 'America/Sao_Paulo')
         );
         IF NEW.pagamento_deadline <= NOW() THEN
-            NEW.pagamento_deadline := NOW() + INTERVAL '30 minutes';
+            NEW.pagamento_deadline := NOW() + INTERVAL '5 minutes';
         END IF;
     END IF;
     RETURN NEW;
