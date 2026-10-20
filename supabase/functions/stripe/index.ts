@@ -13,6 +13,9 @@
 //                           do PaymentIntent (rede de segurança do webhook)
 //   POST /stripe/refund   → autenticado (admin) reembolso manual
 //
+// Deploy (a flag é obrigatória: sem ela o Stripe recebe 401 no webhook):
+//   supabase functions deploy stripe --no-verify-jwt
+//
 // Secrets (Supabase → Edge Functions → Secrets):
 //   STRIPE_SECRET_KEY       sk_live_... ou sk_test_...
 //   STRIPE_WEBHOOK_SECRET   whsec_...
