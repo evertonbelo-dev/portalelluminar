@@ -1488,6 +1488,9 @@ CREATE TABLE IF NOT EXISTS public.stripe_events (
     tipo TEXT,
     recebido_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Guarda o motivo quando a assinatura do webhook falha. Sem isso, um
+-- STRIPE_WEBHOOK_SECRET errado nao deixa rastro nenhum no banco.
+ALTER TABLE public.stripe_events ADD COLUMN IF NOT EXISTS erro TEXT;
 CREATE INDEX IF NOT EXISTS idx_stripe_events_data
     ON public.stripe_events (recebido_em DESC);
 ALTER TABLE public.stripe_events ENABLE ROW LEVEL SECURITY;

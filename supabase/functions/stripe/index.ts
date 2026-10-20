@@ -9,6 +9,8 @@
 //   POST /stripe/webhook  → chamado pelo Stripe (assinatura verificada)
 //                           confirma o pagamento, queima o cupom e trata
 //                           falha/reembolso
+//   POST /stripe/confirmar → autenticado: pergunta ao Stripe o estado real
+//                           do PaymentIntent (rede de segurança do webhook)
 //   POST /stripe/refund   → autenticado (admin) reembolso manual
 //
 // Secrets (Supabase → Edge Functions → Secrets):
@@ -70,6 +72,7 @@ Deno.serve(async (req) => {
     try {
         if (rota === 'webhook') return await webhook(req);
         if (rota === 'intent') return await intent(req);
+        if (rota === 'confirmar') return await confirmar(req);
         if (rota === 'refund') return await refund(req);
         return json({ erro: 'Rota desconhecida: ' + rota }, 404);
     } catch (e) {
@@ -124,9 +127,16 @@ async function intent(req: Request): Promise<Response> {
 
     let pi: Stripe.PaymentIntent | null = null;
 
-    // Reaproveita o intent anterior se ele ainda puder receber cobrança
+    // Reaproveita o intent anterior se ele ainda puder receber cobrança.
+    // Se ele já foi pago, NUNCA criamos outro — isso cobraria duas vezes.
     if (b.stripe_payment_intent) {
         const existente = await stripe.paymentIntents.retrieve(b.stripe_payment_intent).catch(() => null);
+
+        if (existente && existente.status === 'succeeded') {
+            await marcarPago(b.id, existente);
+            return json({ erro: 'Este agendamento já foi pago', pago: true }, 409);
+        }
+
         if (existente && ['requires_payment_method', 'requires_confirmation', 'requires_action'].includes(existente.status)) {
             pi = await stripe.paymentIntents.update(existente.id, dados);
         }
@@ -159,6 +169,22 @@ async function intent(req: Request): Promise<Response> {
 }
 
 // --------------------------------------------------------------------------
+// Efeito único de "pagamento aprovado". Webhook e reconciliação passam por
+// aqui, para que o resultado seja idêntico nos dois caminhos.
+// --------------------------------------------------------------------------
+async function marcarPago(bookingId: string, pi: Stripe.PaymentIntent) {
+    await admin.from('therapist_bookings').update({
+        pagamento_status: 'pago',
+        pago_em: new Date().toISOString(),
+        stripe_payment_intent: pi.id,
+    }).eq('id', bookingId);
+
+    if (pi.metadata?.cupom) {
+        await admin.rpc('marcar_cupom_usado', { p_codigo: pi.metadata.cupom, p_booking: bookingId });
+    }
+}
+
+// --------------------------------------------------------------------------
 // /webhook — fonte da verdade do pagamento. Idempotente por event.id:
 // o Stripe reenvia eventos, e nunca podemos queimar um cupom duas vezes.
 // --------------------------------------------------------------------------
@@ -170,8 +196,18 @@ async function webhook(req: Request): Promise<Response> {
     try {
         evento = stripe.webhooks.constructEvent(corpo, assinatura, WEBHOOK_SECRET);
     } catch (e) {
-        console.warn('[stripe] assinatura inválida', e);
-        return new Response('assinatura inválida', { status: 400 });
+        const msg = String((e as Error)?.message || e).slice(0, 300);
+        console.warn('[stripe] assinatura inválida', msg);
+
+        // Sem este registro, um STRIPE_WEBHOOK_SECRET errado fica invisível:
+        // o Stripe recebe 400 e nenhum evento aparece no banco.
+        await admin.from('stripe_events').insert({
+            id: 'erro_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+            tipo: 'assinatura_invalida',
+            erro: msg,
+        });
+
+        return new Response('assinatura inválida: ' + msg, { status: 400 });
     }
 
     const { error: erroDup } = await admin.from('stripe_events').insert({ id: evento.id, tipo: evento.type });
@@ -181,15 +217,7 @@ async function webhook(req: Request): Promise<Response> {
     const bookingId = pi?.metadata?.booking_id;
 
     if (evento.type === 'payment_intent.succeeded' && bookingId) {
-        await admin.from('therapist_bookings').update({
-            pagamento_status: 'pago',
-            pago_em: new Date().toISOString(),
-            stripe_payment_intent: pi.id,
-        }).eq('id', bookingId);
-
-        if (pi.metadata?.cupom) {
-            await admin.rpc('marcar_cupom_usado', { p_codigo: pi.metadata.cupom, p_booking: bookingId });
-        }
+        await marcarPago(bookingId, pi);
     }
 
     if (evento.type === 'payment_intent.payment_failed' && bookingId) {
@@ -209,6 +237,51 @@ async function webhook(req: Request): Promise<Response> {
     }
 
     return json({ recebido: evento.type });
+}
+
+// --------------------------------------------------------------------------
+// /confirmar — rede de segurança do webhook.
+// O checkout chama esta rota ao voltar do Stripe: em vez de confiar no
+// redirecionamento (que o cliente pode forjar), perguntamos ao Stripe qual é
+// o estado real do PaymentIntent. Funciona mesmo com o webhook quebrado.
+// --------------------------------------------------------------------------
+async function confirmar(req: Request): Promise<Response> {
+    const user = await usuarioDoPedido(req);
+    if (!user) return json({ erro: 'Faça login para conferir o pagamento' }, 401);
+
+    const body = await req.json().catch(() => ({}));
+    const bookingId = String(body.booking_id || '');
+
+    const { data: b } = await admin.from('therapist_bookings').select('*').eq('id', bookingId).single();
+    if (!b) return json({ erro: 'Agendamento não encontrado' }, 404);
+
+    if (b.consulente_id !== user.id) {
+        const { data: papel } = await admin.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+        if (!papel || !['admin', 'master'].includes(papel.role)) {
+            return json({ erro: 'Este agendamento não é seu' }, 403);
+        }
+    }
+
+    if (b.pagamento_status === 'pago') {
+        return json({ pago: true, ja: true, valor_cobrado: b.valor_cobrado });
+    }
+    if (!b.stripe_payment_intent) return json({ pago: false, status: b.pagamento_status });
+
+    const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent).catch(() => null);
+    if (!pi) return json({ pago: false, status: b.pagamento_status });
+
+    if (pi.status !== 'succeeded') {
+        return json({ pago: false, stripe: pi.status, pagamento_status: b.pagamento_status });
+    }
+
+    // Mesma idempotência do webhook, com marca própria da reconciliação
+    await admin.from('stripe_events').insert({ id: 'recon_' + pi.id, tipo: 'reconciled.succeeded' });
+    await marcarPago(b.id, pi);
+
+    return json({
+        pago: true,
+        valor_cobrado: pi.amount_received ? arredondar(pi.amount_received / 100) : b.valor_cobrado,
+    });
 }
 
 // --------------------------------------------------------------------------

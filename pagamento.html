@@ -338,30 +338,41 @@
             return pronto ? confirmarPagamento() : prepararPagamento();
         });
 
-        // Depois do Stripe, a verdade vem do webhook — então conferimos no banco
+        // Depois do Stripe, perguntamos a ELE se o pagamento foi aprovado.
+        // Assim o pedido é confirmado mesmo se o webhook estiver atrasado
+        // ou mal configurado — a resposta vem assinada pelo servidor.
         async function esperarConfirmacao(tentativas) {
-            const { data } = await client.from('therapist_bookings')
-                .select('pagamento_status, valor_cobrado')
-                .eq('id', bookingId)
-                .maybeSingle();
+            let d = null;
 
-            if (data && data.pagamento_status === 'pago') {
+            try {
+                const resp = await fetch(SUPABASE_URL + '/functions/v1/stripe/confirmar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + session.access_token
+                    },
+                    body: JSON.stringify({ booking_id: bookingId })
+                });
+                d = await resp.json();
+            } catch (e) { d = null; }
+
+            if (d && d.pago) {
                 $('pag-sub').innerText = '';
                 $('pag-conteudo').hidden = true;
                 $('pag-resumo').innerHTML =
                     '<div class="linha"><span>Status</span><strong style="color:#7bd67f;">Pagamento confirmado</strong></div>' +
-                    '<div class="linha total"><span>Pago</span><strong>' + brl(data.valor_cobrado) + '</strong></div>';
+                    '<div class="linha total"><span>Pago</span><strong>' + brl(d.valor_cobrado) + '</strong></div>';
                 $('pag-resumo').hidden = false;
                 dizer('Tudo certo! O terapeuta foi avisado do seu agendamento.', 'ok');
                 return;
             }
 
             if (tentativas <= 0) {
-                dizer('Recebemos seu pagamento e estamos aguardando a confirmação do Stripe. Pode fechar esta página — o agendamento se atualiza sozinho.', 'info');
+                dizer('Ainda não recebemos a aprovação do Stripe. Se o valor saiu do seu cartão, ele será confirmado automaticamente; em caso de dúvida, fale com o suporte.', 'info');
                 return;
             }
 
-            setTimeout(function () { esperarConfirmacao(tentativas - 1); }, 2000);
+            setTimeout(function () { esperarConfirmacao(tentativas - 1); }, 2500);
         }
 
         $('pag-conteudo').hidden = false;
