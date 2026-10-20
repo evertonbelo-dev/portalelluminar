@@ -1843,5 +1843,431 @@ $$;
 REVOKE ALL ON FUNCTION public.alerta_reconciliacao(integer, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.alerta_reconciliacao(integer, jsonb) TO service_role;
 
+-- ==========================================================================
+-- 20) FINANCEIRO, POLITICA DE CANCELAMENTO E REMARCACAO (F7)
+-- O Portal NAO retem nada: o sinal cai no Stripe em nome do Portal e precisa
+-- ser repassado ao terapeuta; a diferenca e acertada direto entre consulente
+-- e terapeuta. Por isso o razao tem DOIS lancamentos por pedido pago.
+-- ==========================================================================
+
+ALTER TABLE public.therapist_bookings
+    ADD COLUMN IF NOT EXISTS reembolso_elegivel boolean,
+    ADD COLUMN IF NOT EXISTS reembolso_motivo text,
+    ADD COLUMN IF NOT EXISTS remarcacoes integer NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS remarcado_em timestamptz;
+
+CREATE TABLE IF NOT EXISTS public.therapist_ledger (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    therapist_id uuid NOT NULL REFERENCES public.therapists(id) ON DELETE CASCADE,
+    booking_id uuid REFERENCES public.therapist_bookings(id) ON DELETE SET NULL,
+    tipo text NOT NULL CHECK (tipo IN ('repasse_portal', 'direto_consulente', 'ajuste')),
+    valor numeric(10,2) NOT NULL,
+    taxa_stripe numeric(10,2) NOT NULL DEFAULT 0,
+    status text NOT NULL DEFAULT 'a_receber' CHECK (status IN ('a_receber', 'acertado', 'cancelado')),
+    forma text,
+    acertado_em timestamptz,
+    observacao text,
+    criado_em timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_ledger_booking_tipo
+    ON public.therapist_ledger (booking_id, tipo) WHERE booking_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ledger_therapist_status
+    ON public.therapist_ledger (therapist_id, status, criado_em DESC);
+
+ALTER TABLE public.therapist_ledger ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS ledger_terapeuta_le ON public.therapist_ledger;
+CREATE POLICY ledger_terapeuta_le ON public.therapist_ledger
+    FOR SELECT TO authenticated
+    USING (therapist_id IN (SELECT t.id FROM public.therapists t WHERE t.user_id = auth.uid()));
+
+DROP POLICY IF EXISTS ledger_admin_le ON public.therapist_ledger;
+CREATE POLICY ledger_admin_le ON public.therapist_ledger
+    FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.user_roles r
+                    WHERE r.user_id = auth.uid() AND r.role IN ('admin','master')));
+
+REVOKE ALL ON public.therapist_ledger FROM anon;
+
+-- Backfill para pedidos pagos antes da F7
+INSERT INTO public.therapist_ledger (therapist_id, booking_id, tipo, valor, status, observacao)
+SELECT b.therapist_id, b.id, 'repasse_portal', COALESCE(b.valor_cobrado, 0),
+       CASE WHEN b.pagamento_status = 'reembolsado' THEN 'cancelado' ELSE 'a_receber' END,
+       'Backfill F7'
+  FROM public.therapist_bookings b
+ WHERE b.pagamento_status IN ('pago','reembolsado')
+ON CONFLICT DO NOTHING;
+
+-- Dois creditos ao confirmar o pagamento: o sinal (a repassar) e o restante
+-- (acerto direto). Se o pedido for estornado, os dois sao cancelados.
+CREATE OR REPLACE FUNCTION public.lancar_creditos_terapeuta()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_liquido numeric;
+    v_cobrado numeric;
+    v_direto numeric;
+BEGIN
+    IF NEW.pagamento_status IS NOT DISTINCT FROM OLD.pagamento_status THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.pagamento_status = 'pago' THEN
+        v_cobrado := COALESCE(NEW.valor_cobrado, 0);
+        v_liquido := GREATEST(0, COALESCE(NEW.valor_total, 0) - COALESCE(NEW.valor_desconto, 0));
+        v_direto := GREATEST(0, v_liquido - v_cobrado);
+
+        INSERT INTO public.therapist_ledger (therapist_id, booking_id, tipo, valor, observacao)
+        VALUES (NEW.therapist_id, NEW.id, 'repasse_portal', v_cobrado,
+                'Recebido pelo Portal no Stripe - a transferir ao terapeuta')
+        ON CONFLICT DO NOTHING;
+
+        IF v_direto > 0 THEN
+            INSERT INTO public.therapist_ledger (therapist_id, booking_id, tipo, valor, observacao)
+            VALUES (NEW.therapist_id, NEW.id, 'direto_consulente', v_direto,
+                    'Restante acertado direto entre consulente e terapeuta')
+            ON CONFLICT DO NOTHING;
+        END IF;
+
+    ELSIF NEW.pagamento_status = 'reembolsado' THEN
+        UPDATE public.therapist_ledger
+           SET status = 'cancelado'
+         WHERE booking_id = NEW.id AND status = 'a_receber';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_ledger_creditos ON public.therapist_bookings;
+CREATE TRIGGER trg_ledger_creditos
+    AFTER UPDATE OF pagamento_status ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.lancar_creditos_terapeuta();
+
+-- Politica: >= 24h antes = reembolso integral; < 24h = sem reembolso (permite
+-- remarcar); pedido ainda pendente (terapeuta nao confirmou) = integral sempre.
+CREATE OR REPLACE FUNCTION public.booking_reembolso()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
+DECLARE
+    v_horas numeric;
+BEGIN
+    IF NEW.status = 'cancelado' AND OLD.status <> 'cancelado'
+       AND NEW.pagamento_status = 'pago'
+       AND NEW.reembolso_elegivel IS NULL THEN
+
+        v_horas := EXTRACT(EPOCH FROM (((NEW.data + NEW.hora_inicio) AT TIME ZONE 'America/Sao_Paulo') - NOW())) / 3600;
+
+        IF OLD.status = 'pendente' THEN
+            NEW.reembolso_elegivel := true;
+            NEW.reembolso_motivo := 'O terapeuta ainda nao havia confirmado: reembolso integral.';
+        ELSIF v_horas >= 24 THEN
+            NEW.reembolso_elegivel := true;
+            NEW.reembolso_motivo := 'Cancelado com ' || round(v_horas) || 'h de antecedencia: reembolso integral.';
+        ELSE
+            NEW.reembolso_elegivel := false;
+            NEW.reembolso_motivo := 'Cancelado com menos de 24h: sem reembolso, valor fica como garantia do horario.';
+        END IF;
+
+        IF NEW.reembolso_elegivel THEN
+            NEW.reembolso_solicitado_em := NOW();
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.politica_cancelamento(p_booking uuid)
+RETURNS TABLE (reembolso_integral boolean, permite_remarcar boolean,
+               horas_para_atendimento numeric, motivo text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    b record;
+    v_horas numeric;
+BEGIN
+    SELECT * INTO b FROM public.therapist_bookings WHERE id = p_booking;
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+
+    v_horas := round(EXTRACT(EPOCH FROM (((b.data + b.hora_inicio) AT TIME ZONE 'America/Sao_Paulo') - NOW())) / 3600, 1);
+    horas_para_atendimento := v_horas;
+
+    IF b.status = 'pendente' THEN
+        reembolso_integral := true;
+        permite_remarcar := false;
+        motivo := 'O terapeuta ainda nao confirmou: reembolso integral.';
+    ELSIF v_horas >= 24 THEN
+        reembolso_integral := true;
+        permite_remarcar := true;
+        motivo := 'Faltam ' || round(v_horas) || 'h: reembolso integral.';
+    ELSE
+        reembolso_integral := false;
+        permite_remarcar := COALESCE(b.remarcacoes, 0) < 2;
+        motivo := 'Faltam ' || v_horas || 'h: sem reembolso, mas voce pode remarcar.';
+    END IF;
+
+    RETURN NEXT;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.politica_cancelamento(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.politica_cancelamento(uuid) TO authenticated;
+
+-- Remarcacao: o horario continua imutavel, exceto dentro desta RPC
+-- (marca a transacao com app.remarcando = on).
+CREATE OR REPLACE FUNCTION public.booking_horario_imutavel()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN
+    IF NOT public.is_admin(auth.uid())
+       AND current_setting('app.remarcando', true) IS DISTINCT FROM 'on' THEN
+        IF NEW.therapist_id <> OLD.therapist_id
+           OR NEW.consulente_id <> OLD.consulente_id
+           OR NEW.data <> OLD.data
+           OR NEW.hora_inicio <> OLD.hora_inicio
+           OR NEW.duracao_min <> OLD.duracao_min THEN
+            RAISE EXCEPTION 'O horario de uma solicitacao nao pode ser alterado. Cancele e crie outra.';
+        END IF;
+    END IF;
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.remarcar_solicitacao(p_booking uuid, p_data date, p_hora time)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    b record;
+BEGIN
+    SELECT * INTO b FROM public.therapist_bookings WHERE id = p_booking;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Agendamento nao encontrado';
+    END IF;
+
+    IF b.consulente_id <> auth.uid() AND NOT public.is_admin(auth.uid()) THEN
+        RAISE EXCEPTION 'Este agendamento nao e seu';
+    END IF;
+
+    IF b.status NOT IN ('pendente','confirmado') THEN
+        RAISE EXCEPTION 'So e possivel remarcar pedidos abertos';
+    END IF;
+
+    IF b.pagamento_status <> 'pago' THEN
+        RAISE EXCEPTION 'Conclua o pagamento antes de remarcar';
+    END IF;
+
+    IF COALESCE(b.remarcacoes, 0) >= 2 THEN
+        RAISE EXCEPTION 'Limite de 2 remarcacoes atingido. Fale com o terapeuta.';
+    END IF;
+
+    IF ((p_data + p_hora) AT TIME ZONE 'America/Sao_Paulo') <= NOW() + INTERVAL '24 hours' THEN
+        RAISE EXCEPTION 'Escolha um horario com pelo menos 24h de antecedencia';
+    END IF;
+
+    PERFORM set_config('app.remarcando', 'on', true);
+
+    BEGIN
+        UPDATE public.therapist_bookings
+           SET data = p_data,
+               hora_inicio = p_hora,
+               expira_em = NULL,
+               remarcacoes = COALESCE(remarcacoes, 0) + 1,
+               remarcado_em = NOW()
+         WHERE id = p_booking;
+    EXCEPTION WHEN exclusion_violation THEN
+        RAISE EXCEPTION 'Este horario acabou de ser reservado. Escolha outro.';
+    END;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.remarcar_solicitacao(uuid, date, time) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.remarcar_solicitacao(uuid, date, time) TO authenticated;
+
+-- Leituras: visao do terapeuta e visao do admin
+CREATE OR REPLACE FUNCTION public.meus_creditos()
+RETURNS TABLE (a_receber_portal numeric, a_receber_consulente numeric,
+               recebido_total numeric, recebido_mes numeric)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_therapist uuid;
+BEGIN
+    SELECT t.id INTO v_therapist FROM public.therapists t WHERE t.user_id = auth.uid() LIMIT 1;
+    IF v_therapist IS NULL THEN RETURN; END IF;
+
+    RETURN QUERY
+    SELECT
+        COALESCE(SUM(CASE WHEN l.tipo = 'repasse_portal' AND l.status = 'a_receber'
+                          THEN GREATEST(0, l.valor - l.taxa_stripe) END), 0),
+        COALESCE(SUM(CASE WHEN l.tipo = 'direto_consulente' AND l.status = 'a_receber'
+                          THEN l.valor END), 0),
+        COALESCE(SUM(CASE WHEN l.status = 'acertado' THEN l.valor END), 0),
+        COALESCE(SUM(CASE WHEN l.status = 'acertado'
+                           AND l.acertado_em >= date_trunc('month', NOW())
+                          THEN l.valor END), 0)
+      FROM public.therapist_ledger l
+     WHERE l.therapist_id = v_therapist AND l.status <> 'cancelado';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.meus_extratos(p_limite integer DEFAULT 100)
+RETURNS TABLE (id uuid, booking_id uuid, tipo text, valor numeric, taxa numeric,
+               status text, forma text, acertado_em timestamptz, criado_em timestamptz,
+               consulente text, data_atendimento date)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_therapist uuid;
+BEGIN
+    SELECT t.id INTO v_therapist FROM public.therapists t WHERE t.user_id = auth.uid() LIMIT 1;
+    IF v_therapist IS NULL THEN RETURN; END IF;
+
+    RETURN QUERY
+    SELECT l.id, l.booking_id, l.tipo, l.valor, l.taxa_stripe, l.status, l.forma,
+           l.acertado_em, l.criado_em, b.consulente_nome::text, b.data
+      FROM public.therapist_ledger l
+      LEFT JOIN public.therapist_bookings b ON b.id = l.booking_id
+     WHERE l.therapist_id = v_therapist
+     ORDER BY l.criado_em DESC
+     LIMIT GREATEST(1, LEAST(COALESCE(p_limite, 100), 500));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_listar_financeiro(p_limite integer DEFAULT 200)
+RETURNS TABLE (id uuid, booking_id uuid, terapeuta text, consulente text, data_atendimento date,
+               tipo text, valor numeric, taxa numeric, status text, forma text,
+               acertado_em timestamptz, criado_em timestamptz)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF NOT public.is_admin(auth.uid()) THEN
+        RAISE EXCEPTION 'Apenas administrador';
+    END IF;
+
+    RETURN QUERY
+    SELECT l.id, l.booking_id, t.nome::text, b.consulente_nome::text, b.data,
+           l.tipo, l.valor, l.taxa_stripe, l.status, l.forma, l.acertado_em, l.criado_em
+      FROM public.therapist_ledger l
+      JOIN public.therapists t ON t.id = l.therapist_id
+      LEFT JOIN public.therapist_bookings b ON b.id = l.booking_id
+     ORDER BY l.criado_em DESC
+     LIMIT GREATEST(1, LEAST(COALESCE(p_limite, 200), 1000));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_marcar_repasse(p_ids uuid[], p_forma text DEFAULT 'pix')
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_total integer;
+BEGIN
+    IF NOT public.is_admin(auth.uid()) THEN
+        RAISE EXCEPTION 'Apenas administrador';
+    END IF;
+
+    UPDATE public.therapist_ledger
+       SET status = 'acertado', forma = COALESCE(p_forma, 'pix'), acertado_em = NOW()
+     WHERE id = ANY(p_ids) AND status = 'a_receber';
+
+    GET DIAGNOSTICS v_total = ROW_COUNT;
+    RETURN v_total;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.meus_creditos() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.meus_extratos(integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.admin_listar_financeiro(integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.admin_marcar_repasse(uuid[], text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.meus_creditos() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.meus_extratos(integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_listar_financeiro(integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_marcar_repasse(uuid[], text) TO authenticated;
+
+-- Mensalidade do terapeuta (receita do Portal). Estrutura pronta; a cobranca
+-- entra depois do contrato. Bloqueio de novos pedidos apos 7 dias de atraso.
+CREATE TABLE IF NOT EXISTS public.therapist_subscriptions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    therapist_id uuid NOT NULL UNIQUE REFERENCES public.therapists(id) ON DELETE CASCADE,
+    plano text NOT NULL DEFAULT 'mensal',
+    valor numeric(10,2) NOT NULL DEFAULT 0,
+    dia_vencimento integer NOT NULL DEFAULT 5 CHECK (dia_vencimento BETWEEN 1 AND 28),
+    inicio_em date NOT NULL DEFAULT CURRENT_DATE,
+    vence_em date,
+    status text NOT NULL DEFAULT 'ativa' CHECK (status IN ('ativa','atrasada','bloqueada','cancelada','isenta')),
+    bloqueado_em timestamptz,
+    observacao text,
+    criado_em timestamptz NOT NULL DEFAULT NOW(),
+    atualizado_em timestamptz NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.therapist_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS assinatura_terapeuta_le ON public.therapist_subscriptions;
+CREATE POLICY assinatura_terapeuta_le ON public.therapist_subscriptions
+    FOR SELECT TO authenticated
+    USING (therapist_id IN (SELECT t.id FROM public.therapists t WHERE t.user_id = auth.uid()));
+
+DROP POLICY IF EXISTS assinatura_admin_le ON public.therapist_subscriptions;
+CREATE POLICY assinatura_admin_le ON public.therapist_subscriptions
+    FOR SELECT TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.user_roles r
+                    WHERE r.user_id = auth.uid() AND r.role IN ('admin','master')));
+
+REVOKE ALL ON public.therapist_subscriptions FROM anon;
+
+CREATE OR REPLACE FUNCTION public.terapeuta_pode_receber(p_therapist uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT COALESCE((
+        SELECT CASE
+            WHEN s.status IN ('cancelada','isenta') THEN true
+            WHEN s.status = 'bloqueada' THEN false
+            WHEN s.status = 'atrasada' AND s.vence_em IS NOT NULL
+                 AND s.vence_em < CURRENT_DATE - 7 THEN false
+            ELSE true
+        END
+          FROM public.therapist_subscriptions s
+         WHERE s.therapist_id = p_therapist
+    ), true);
+$$;
+
+-- Retencao: quita a mensalidade vencida usando os repasses ainda a receber.
+CREATE OR REPLACE FUNCTION public.quitar_mensalidade_com_retencao(p_therapist uuid)
+RETURNS numeric LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_devido numeric;
+    v_linha record;
+    v_retido numeric := 0;
+BEGIN
+    SELECT s.valor INTO v_devido
+      FROM public.therapist_subscriptions s
+     WHERE s.therapist_id = p_therapist AND s.status IN ('ativa','atrasada')
+       AND s.vence_em IS NOT NULL AND s.vence_em < CURRENT_DATE
+     ORDER BY s.vence_em LIMIT 1;
+
+    IF COALESCE(v_devido, 0) <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    FOR v_linha IN
+        SELECT l.id, l.valor FROM public.therapist_ledger l
+         WHERE l.therapist_id = p_therapist AND l.tipo = 'repasse_portal' AND l.status = 'a_receber'
+         ORDER BY l.criado_em
+    LOOP
+        EXIT WHEN v_retido >= v_devido;
+
+        UPDATE public.therapist_ledger
+           SET status = 'acertado', forma = 'retencao_mensalidade', acertado_em = NOW()
+         WHERE id = v_linha.id;
+
+        v_retido := v_retido + v_linha.valor;
+    END LOOP;
+
+    UPDATE public.therapist_subscriptions
+       SET status = 'ativa', vence_em = (vence_em + INTERVAL '1 month')::date, atualizado_em = NOW()
+     WHERE therapist_id = p_therapist AND status IN ('ativa','atrasada')
+       AND vence_em IS NOT NULL AND vence_em < CURRENT_DATE;
+
+    RETURN v_retido;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.quitar_mensalidade_com_retencao(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.quitar_mensalidade_com_retencao(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.terapeuta_pode_receber(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.terapeuta_pode_receber(uuid) TO anon, authenticated;
+
 
 
