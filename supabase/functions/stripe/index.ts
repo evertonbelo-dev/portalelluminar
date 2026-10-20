@@ -302,6 +302,9 @@ async function confirmar(req: Request): Promise<Response> {
     await admin.from('stripe_events').insert({ id: 'recon_' + pi.id, tipo: 'reconciled.succeeded' });
     await marcarPago(b.id, pi);
 
+    // O cliente pagou e o webhook não avisou: o admin precisa saber.
+    await admin.rpc('alerta_reconciliacao', { p_total: 1, p_pedidos: [b.id] });
+
     return json({
         pago: true,
         valor_cobrado: pi.amount_received ? arredondar(pi.amount_received / 100) : b.valor_cobrado,
@@ -344,6 +347,8 @@ async function reconciliar(req: Request): Promise<Response> {
         .gte('pagamento_deadline', desde)
         .lt('pagamento_deadline', agora.toISOString());
 
+    const pagos: string[] = [];
+
     for (const b of [...(pendentes || []), ...(cancelados || [])]) {
         if (b.pagamento_status === 'pago') continue;
 
@@ -354,6 +359,7 @@ async function reconciliar(req: Request): Promise<Response> {
 
         await marcarPago(b.id, pi);
         await admin.from('stripe_events').insert({ id: 'cron_' + pi.id, tipo: 'cron.reconciled' });
+        pagos.push(b.id);
         resultado.pagos++;
 
         if (b.status === 'cancelado') {
@@ -363,6 +369,12 @@ async function reconciliar(req: Request): Promise<Response> {
                 .is('reembolso_solicitado_em', null);
             resultado.reembolso_na_fila++;
         }
+    }
+
+    // Webhook atrasado ou quebrado: o admin precisa saber que quem salvou o
+    // pedido foi o cron, e não o Stripe.
+    if (resultado.pagos > 0) {
+        await admin.rpc('alerta_reconciliacao', { p_total: resultado.pagos, p_pedidos: pagos });
     }
 
     return json({ ...resultado, em: agora.toISOString() });
