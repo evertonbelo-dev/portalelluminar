@@ -1784,5 +1784,60 @@ BEGIN
     );
 END $$;
 
+-- ==========================================================================
+-- 19) ALERTA DE RECONCILIACAO (F6)
+-- Se a reconciliacao salvou um pagamento, o webhook do Stripe NAO entregou.
+-- O sistema se cura sozinho, mas o admin precisa saber que algo esta errado -
+-- senao a falha passa em silencio e so aparece no dia em que nao houver cron.
+-- ==========================================================================
+
+CREATE OR REPLACE FUNCTION public.alerta_reconciliacao(
+    p_total integer, p_pedidos jsonb DEFAULT '[]'::jsonb
+)
+RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_dest text;
+    v_corpo text;
+    v_lista text;
+    v_enviados integer := 0;
+BEGIN
+    IF COALESCE(p_total, 0) <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    SELECT string_agg(sub.item, ', ') INTO v_lista
+      FROM jsonb_array_elements_text(COALESCE(p_pedidos, '[]'::jsonb)) AS sub(item);
+
+    v_corpo := '<p><strong>O webhook do Stripe nao entregou o evento</strong>, mas a reconciliacao salvou o pagamento.</p>'
+        || '<p style="font-size:18px;color:#d4af37;"><strong>' || p_total || ' pedido(s)</strong> confirmado(s) pelo cron.</p>'
+        || CASE WHEN v_lista IS NOT NULL
+                THEN '<p style="color:#aaa;font-size:13px;">Pedidos: ' || public.esc_html(v_lista) || '</p>'
+                ELSE '' END
+        || '<p>O cliente nao perdeu o horario. Mas vale conferir por que o Stripe nao conseguiu avisar:</p>'
+        || '<p>Stripe &rarr; Developers &rarr; Webhooks &rarr; entregas. O esperado e HTTP 200. '
+        || 'Se aparecer 400, o STRIPE_WEBHOOK_SECRET esta diferente do endpoint; '
+        || 'se aparecer 401, falta a flag <code>--no-verify-jwt</code> no deploy.</p>';
+
+    FOR v_dest IN
+        SELECT u.email
+          FROM public.user_roles r
+          JOIN auth.users u ON u.id = r.user_id
+         WHERE r.role IN ('admin','master') AND u.email IS NOT NULL
+    LOOP
+        PERFORM public.enviar_email_resend(
+            v_dest,
+            'Alerta: o webhook do Stripe nao entregou o pagamento',
+            public.email_layout('Reconciliacao salvou um pagamento', v_corpo),
+            'alerta_reconciliacao', NULL);
+        v_enviados := v_enviados + 1;
+    END LOOP;
+
+    RETURN v_enviados;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.alerta_reconciliacao(integer, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.alerta_reconciliacao(integer, jsonb) TO service_role;
+
 
 
