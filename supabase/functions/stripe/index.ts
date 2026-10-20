@@ -291,6 +291,12 @@ async function confirmar(req: Request): Promise<Response> {
     if (b.pagamento_status === 'pago') {
         return json({ pago: true, ja: true, valor_cobrado: b.valor_cobrado });
     }
+
+    // Pedido já estornado: o PaymentIntent continua "succeeded", então nunca
+    // podemos reconfirmá-lo aqui.
+    if (b.pagamento_status === 'reembolsado') {
+        return json({ pago: false, reembolsado: true, status: 'reembolsado' });
+    }
     if (!b.stripe_payment_intent) return json({ pago: false, status: b.pagamento_status });
 
     const pi = await stripe.paymentIntents.retrieve(b.stripe_payment_intent).catch(() => null);
@@ -398,7 +404,10 @@ async function reconciliar(req: Request): Promise<Response> {
     const pagos: string[] = [];
 
     for (const b of [...(pendentes || []), ...(cancelados || [])]) {
-        if (b.pagamento_status === 'pago') continue;
+        // 'reembolsado' fica de fora: depois do estorno o PaymentIntent
+        // continua "succeeded" no Stripe (o estorno é na charge), e marcar
+        // pago de novo criaria um ping-pong com o job de reembolso.
+        if (b.pagamento_status === 'pago' || b.pagamento_status === 'reembolsado') continue;
 
         resultado.verificados++;
 
