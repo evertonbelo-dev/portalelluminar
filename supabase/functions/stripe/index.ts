@@ -306,12 +306,12 @@ async function confirmar(req: Request): Promise<Response> {
         return json({ pago: false, stripe: pi.status, pagamento_status: b.pagamento_status });
     }
 
-    // Mesma idempotência do webhook, com marca própria da reconciliação
+    // Mesma idempotência do webhook, com marca própria da reconciliação.
+    // NÃO alertamos o admin daqui: no retorno do checkout o webhook chega
+    // milissegundos depois, então este caminho "salvar" é normal e geraria
+    // alarme falso em todo pagamento. O alerta vive no /reconciliar (cron).
     await admin.from('stripe_events').insert({ id: 'recon_' + pi.id, tipo: 'reconciled.succeeded' });
     await marcarPago(b.id, pi);
-
-    // O cliente pagou e o webhook não avisou: o admin precisa saber.
-    await admin.rpc('alerta_reconciliacao', { p_total: 1, p_pedidos: [b.id] });
 
     return json({
         pago: true,
