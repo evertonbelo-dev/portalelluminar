@@ -89,12 +89,20 @@ Roteiro para virar do modo de teste para cobrança real.
 - [ ] `/webhook` responde do código, não do gateway:
       abrir `…/functions/v1/stripe/webhook` no navegador deve dar **400 “assinatura inválida…”**.
       Se der **401 UNAUTHORIZED**, o `verify_jwt` está ligado — me avise.
+- [ ] Diagnóstico do modo: eu consulto `/status` com o token interno.
+      Esperado: `{"modo":"live","webhook_secret_definido":true}`.
+      Se vier `"modo":"teste"`, a `sk_live_` não foi salva (ou voltou a de teste).
 
 ---
 
-## 5. Teste real de R$ 5 — faço com você
+## 5. Teste real — faço com você
 
-1. Crie um agendamento na vitrine e pague **R$ 5** (serviço de teste ou o sinal de um serviço barato).
+**Valor:** o sinal do serviço mais barato. Hoje: *Reiki On Line* R$ 62,00 → sinal 30% = **R$ 18,60**
+(com o cupom de 15% que nasce neste teste: R$ 62,00 → R$ 52,70 → sinal **R$ 15,81**).
+
+> O cupom de primeira compra é gerado automaticamente, porque o cupom de teste está queimado e o único pedido pago foi reembolsado. Este teste também valida o cupom em produção.
+
+1. Crie um agendamento na vitrine e pague com **cartão real**.
 2. Critérios de aceite:
    - [ ] Checkout mostra **cartão** (e Pix, se ativado em 1.3)
    - [ ] Volta para `pagamento.html` com “Pagamento confirmado”
