@@ -176,11 +176,23 @@ async function intent(req: Request): Promise<Response> {
 // aqui, para que o resultado seja idêntico nos dois caminhos.
 // --------------------------------------------------------------------------
 async function marcarPago(bookingId: string, pi: Stripe.PaymentIntent) {
-    await admin.from('therapist_bookings').update({
+    const { data: atual } = await admin
+        .from('therapist_bookings')
+        .select('pago_em')
+        .eq('id', bookingId)
+        .maybeSingle();
+
+    const patch: Record<string, unknown> = {
         pagamento_status: 'pago',
-        pago_em: new Date().toISOString(),
         stripe_payment_intent: pi.id,
-    }).eq('id', bookingId);
+    };
+
+    // O Stripe reenvia o mesmo evento e o /confirmar pode chegar antes: o
+    // instante real da aprovação não pode ser sobrescrito pelo horário do
+    // recebimento, senão o histórico financeiro mente.
+    if (!atual?.pago_em) patch.pago_em = new Date().toISOString();
+
+    await admin.from('therapist_bookings').update(patch).eq('id', bookingId);
 
     if (pi.metadata?.cupom) {
         await admin.rpc('marcar_cupom_usado', { p_codigo: pi.metadata.cupom, p_booking: bookingId });
