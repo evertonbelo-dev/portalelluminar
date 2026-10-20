@@ -869,7 +869,22 @@ export function normalizarSolicitacao(row) {
         resposta: row.resposta || '',
         expira_em: row.expira_em || null,
         minutos_para_expirar: minutosParaExpirar,
-        created_at: row.created_at || null
+        created_at: row.created_at || null,
+        pagamento_status: row.pagamento_status || 'aguardando',
+        forma_pagamento: row.forma_pagamento || null,
+        cupom_codigo: row.cupom_codigo || null,
+        valor_cobrado: row.valor_cobrado === null || row.valor_cobrado === undefined
+            ? null
+            : Number(row.valor_cobrado),
+        pagamento_deadline: row.pagamento_deadline || null,
+        // Só oferece "Pagar agora" enquanto o prazo está aberto e o pedido
+        // ainda vale: depois disso o job cancela e o horário é liberado.
+        pode_pagar: (function () {
+            if (!row.pagamento_deadline) return false;
+            if (row.pagamento_status === 'pago' || row.pagamento_status === 'reembolsado') return false;
+            if (row.status === 'cancelado' || row.status === 'recusado' || row.status === 'concluido') return false;
+            return new Date(row.pagamento_deadline).getTime() > Date.now();
+        })()
     };
 }
 

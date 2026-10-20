@@ -19,6 +19,7 @@ export async function initTabs(containerEl, userEmail) {
                     case 'terapeutas': await renderTerapeutas(containerEl); break;
                     case 'leads': await renderLeads(containerEl); break;
                     case 'emails': await renderEmails(containerEl); break;
+                    case 'cupons': await renderCupons(containerEl); break;
                     case 'banco': renderBanco(containerEl); break;
                 }
             } catch(e) {
@@ -238,6 +239,102 @@ async function renderEmails(el) {
 
 window._emailsAtualizar = function () {
     renderEmails(document.getElementById('admin-content'));
+};
+
+// ---------- CUPONS (F6) ----------
+async function renderCupons(el) {
+    try {
+        var s = await getSupabase();
+        if (!s) {
+            el.innerHTML = '<div class="admin-card"><h2>Cupons</h2><p style="color:#ff6b6b;">Supabase indisponivel</p></div>';
+            return;
+        }
+
+        var r = await s.rpc('admin_listar_cupons', { p_limite: 200 });
+
+        if (r.error) {
+            el.innerHTML = '<div class="admin-card"><h2>🎟️ Cupons</h2>'
+                + '<p style="color:#ff6b6b;">' + escTera(r.error.message) + '</p>'
+                + '<p style="color:#888;margin-top:10px;">Se a funcao nao existe, rode a secao 17 do supabase-schema.sql.</p>'
+                + '</div>';
+            return;
+        }
+
+        var lista = r.data || [];
+        var ativos = lista.filter(function (c) { return !c.usado_em && new Date(c.valido_ate) > new Date(); }).length;
+        var usados = lista.filter(function (c) { return !!c.usado_em; }).length;
+
+        var html = '<div class="admin-card"><h2>🎟️ Cupons (' + lista.length + ')</h2>';
+        html += '<p style="color:#888;margin-bottom:14px;line-height:1.6;">'
+             + ativos + ' disponiveis · ' + usados + ' usados.<br>'
+             + 'Cada cupom vale uma unica vez, so para a conta dona dele. O cupom de primeira compra nasce automatico no checkout; '
+             + 'use o campo abaixo para atender quem pediu desconto por e-mail.</p>';
+
+        html += '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;">'
+             + '<label style="flex:1;min-width:220px;font-size:0.78rem;color:#aaa;">E-mail de quem pediu<br>'
+             + '<input id="cupom-email" type="email" placeholder="pessoa@email.com" style="width:100%;margin-top:6px;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#fff;"></label>'
+             + '<label style="font-size:0.78rem;color:#aaa;">Desconto (%)<br>'
+             + '<input id="cupom-pct" type="number" min="1" max="100" value="15" style="width:110px;margin-top:6px;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#fff;"></label>'
+             + '<label style="font-size:0.78rem;color:#aaa;">Validade (dias)<br>'
+             + '<input id="cupom-dias" type="number" min="1" max="365" value="30" style="width:110px;margin-top:6px;padding:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(212,175,55,0.3);border-radius:8px;color:#fff;"></label>'
+             + '<button class="btn-admin-save" onclick="window._cupomCriar()" style="margin:0;">Criar cupom</button>'
+             + '</div>';
+
+        if (!lista.length) {
+            html += '<p style="color:#888;">Nenhum cupom cadastrado ainda.</p>';
+        } else {
+            html += '<table class="admin-tabela"><tr><th>Codigo</th><th>%</th><th>Dono</th><th>Origem</th><th>Validade</th><th>Situacao</th><th></th></tr>';
+            lista.forEach(function (c) {
+                var vencido = !c.usado_em && new Date(c.valido_ate) < new Date();
+                var situacao = c.usado_em ? '<span style="color:#4caf50;">usado</span>'
+                    : (vencido ? '<span style="color:#ff6b6b;">vencido</span>' : '<span style="color:var(--ouro-solar);">disponivel</span>');
+                var validade = new Date(c.valido_ate).toLocaleDateString('pt-BR');
+
+                html += '<tr>'
+                     + '<td><code style="color:var(--ouro-solar);">' + escTera(c.codigo) + '</code></td>'
+                     + '<td>' + escTera(c.percentual) + '%</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(c.email || '-') + '</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(c.origem) + '</td>'
+                     + '<td style="font-size:0.78rem;">' + escTera(validade) + '</td>'
+                     + '<td style="font-size:0.78rem;">' + situacao + '</td>'
+                     + '<td><button class="btn-admin-save" style="padding:6px 10px;font-size:0.72rem;margin:0;" onclick="window._cupomCopiar(this,\'' + escTera(c.codigo) + '\')">Copiar</button></td>'
+                     + '</tr>';
+            });
+            html += '</table>';
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<div class="admin-card"><h2>Erro</h2><p style="color:#ff6b6b;">' + escTera(e.message) + '</p></div>';
+    }
+}
+
+window._cupomCriar = async function () {
+    var email = (document.getElementById('cupom-email') || {}).value || '';
+    var pct = Number((document.getElementById('cupom-pct') || {}).value || 15);
+    var dias = Number((document.getElementById('cupom-dias') || {}).value || 30);
+
+    if (!email.trim()) { alert('Informe o e-mail de quem pediu o cupom.'); return; }
+
+    var s = await getSupabase();
+    if (!s) { alert('Supabase indisponivel'); return; }
+
+    var r = await s.rpc('admin_criar_cupom', { p_email: email.trim(), p_percentual: pct, p_dias: dias });
+
+    if (r.error) { alert(r.error.message); return; }
+
+    var c = (r.data || [])[0] || {};
+    await renderCupons(document.getElementById('admin-content'));
+    alert('Cupom criado: ' + (c.codigo || '') + ' (' + (c.percentual || pct) + '%)');
+};
+
+window._cupomCopiar = function (btn, codigo) {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
+    navigator.clipboard.writeText(codigo);
+    var antigo = btn.textContent;
+    btn.textContent = 'Copiado';
+    setTimeout(function () { btn.textContent = antigo; }, 1400);
 };
 
 // ---------- VITRINE DE TERAPEUTAS (F2) ----------

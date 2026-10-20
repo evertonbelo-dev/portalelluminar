@@ -1,0 +1,4 @@
+﻿1194: CREATE OR REPLACE FUNCTION public.admin_listar_emails(p_limite integer DEFAULT 100)
+1226: REVOKE ALL ON FUNCTION public.admin_listar_emails(integer) FROM PUBLIC;
+1227: GRANT EXECUTE ON FUNCTION public.admin_listar_emails(integer) TO authenticated;
+1229: REVOKE EXECUTE ON FUNCTION public.admin_listar_emails(integer) FROM anon;

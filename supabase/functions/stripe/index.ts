@@ -372,7 +372,51 @@ async function reconciliar(req: Request): Promise<Response> {
 // /refund — admin libera o reembolso de um pedido pago.
 // A fila nasce no trigger booking_reembolso (pedido pago que foi cancelado).
 // --------------------------------------------------------------------------
+// Reembolso de um pedido. A idempotency key evita cobrança dupla: se o
+// Stripe já processou este PaymentIntent, ele devolve o mesmo refund.
+async function reembolsar(b: { id: string; stripe_payment_intent: string }) {
+    const r = await stripe.refunds.create(
+        { payment_intent: b.stripe_payment_intent, metadata: { booking_id: b.id } },
+        { idempotencyKey: 'refund_' + b.stripe_payment_intent },
+    );
+
+    await admin.from('therapist_bookings').update({
+        pagamento_status: 'reembolsado',
+        reembolso_solicitado_em: null,
+    }).eq('id', b.id);
+
+    return r;
+}
+
 async function refund(req: Request): Promise<Response> {
+    const enviado = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    const interno = (RECONCILE_TOKEN && enviado === RECONCILE_TOKEN)
+        || (SB_SERVICE && enviado === SB_SERVICE);
+
+    // 1) Cron: reembolso automatico do que o proprio Portal cancelou.
+    //    Cancelamento pedido pelo cliente fica na fila para o admin decidir.
+    if (interno) {
+        const { data: fila } = await admin
+            .from('therapist_bookings')
+            .select('id, stripe_payment_intent, valor_cobrado')
+            .eq('status', 'cancelado')
+            .eq('pagamento_status', 'pago')
+            .not('reembolso_solicitado_em', 'is', null)
+            .ilike('resposta', 'Cancelad%automaticamente%')
+            .limit(25);
+
+        const feitos: string[] = [];
+
+        for (const b of fila || []) {
+            if (!b.stripe_payment_intent) continue;
+            const r = await reembolsar(b).catch(() => null);
+            if (r) feitos.push(b.id);
+        }
+
+        return json({ reembolsados: feitos.length, pedidos: feitos });
+    }
+
+    // 2) Admin: reembolso manual de um pedido especifico
     const user = await usuarioDoPedido(req);
     if (!user) return json({ erro: 'Faça login' }, 401);
 
@@ -386,15 +430,7 @@ async function refund(req: Request): Promise<Response> {
     if (!b || !b.stripe_payment_intent) return json({ erro: 'Pedido sem pagamento registrado' }, 404);
     if (b.pagamento_status === 'reembolsado') return json({ ok: true, ja: true });
 
-    const r = await stripe.refunds.create({
-        payment_intent: b.stripe_payment_intent,
-        metadata: { booking_id: b.id },
-    });
-
-    await admin.from('therapist_bookings').update({
-        pagamento_status: 'reembolsado',
-        reembolso_solicitado_em: null,
-    }).eq('id', b.id);
+    const r = await reembolsar(b);
 
     return json({ ok: true, refund: r.id, valor: r.amount / 100 });
 }

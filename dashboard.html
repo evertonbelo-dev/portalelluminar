@@ -558,6 +558,17 @@
 
         const PESO_STATUS_BOOK = { pendente: 0, confirmado: 1, concluido: 2, recusado: 3, cancelado: 4 };
 
+        const ROTULO_PAGAMENTO = {
+            pago: '💳 Pago',
+            aguardando: '⏳ Pagamento pendente',
+            falhou: '⚠️ Pagamento não aprovado',
+            reembolsado: '↩️ Reembolsado'
+        };
+
+        function reais(v) {
+            return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
         function cardSolicitacao(b, souTerapeuta) {
             const rot = ROTULO_STATUS_BOOK[b.status] || esc(b.status);
             const quando = rotuloData(b.data).texto + ' às ' + b.hora_inicio;
@@ -588,6 +599,19 @@
                 acoes = '<button type="button" class="tp-btn-sec" data-book="cancelar" data-id="' + esc(b.id) + '">Cancelar</button>';
             }
 
+            // Consulente: atalho para concluir um pagamento que ficou em aberto
+            if (!souTerapeuta && b.pode_pagar) {
+                const rotuloPagar = b.pagamento_status === 'falhou' ? 'Tentar pagar de novo' : 'Pagar agora';
+                const valor = b.valor_cobrado ? ' · ' + reais(b.valor_cobrado) : '';
+                acoes = '<a class="tp-btn" style="padding:8px 18px;font-size:0.78rem;text-decoration:none;display:inline-block;"'
+                      + ' href="pagamento.html?agendamento=' + encodeURIComponent(b.id) + '">'
+                      + rotuloPagar + valor + '</a>' + acoes;
+            }
+
+            const rotPag = souTerapeuta
+                ? (b.pagamento_status === 'pago' || b.pagamento_status === 'reembolsado' ? ROTULO_PAGAMENTO[b.pagamento_status] : '')
+                : (ROTULO_PAGAMENTO[b.pagamento_status] || '');
+
             return `
                 <div class="tp-book">
                     <div class="tp-book-topo">
@@ -595,6 +619,7 @@
                         <span class="tp-book-status s-${esc(b.status)}">${rot}</span>
                     </div>
                     <div class="tp-book-info">${quem}<br>${servico} · ${esc(b.duracao_min)} min</div>
+                    ${rotPag ? '<div class="tp-book-info" style="font-size:0.78rem;color:#cfcfdc;">' + rotPag + '</div>' : ''}
                     ${prazo ? '<div class="tp-book-prazo">⏳ ' + prazo + '</div>' : ''}
                     ${b.observacao ? '<div class="tp-book-obs">“' + esc(b.observacao) + '”</div>' : ''}
                     ${b.resposta ? '<div class="tp-book-resp">Resposta: ' + esc(b.resposta) + '</div>' : ''}

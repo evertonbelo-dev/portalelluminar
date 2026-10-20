@@ -1,0 +1,75 @@
+﻿                    perfil = (p && p.data) ? p.data : null;
+                    if (perfil) _meuPerfilTera = perfil;
+                }
+
+                if (!perfil) {
+                    alvo.innerHTML = '<p class="tp-vazio-lista">Crie seu perfil de terapeuta para receber solicitações.</p>';
+                    return;
+                }
+
+                const r = await listarSolicitacoesTerapeuta(perfil.id);
+
+                if (r.indisponivel) {
+                    alvo.innerHTML = '<p class="tp-msg-aviso">As solicitações ainda não estão ativas neste banco. Rode a seção 10 do supabase-schema.sql.</p>';
+                    return;
+                }
+                if (r.error) {
+                    alvo.innerHTML = '<p class="tp-msg-erro">Não foi possível carregar: ' + esc(r.error.message) + '</p>';
+                    return;
+                }
+
+                const lista = (r.data || []).slice().sort(function (a, b) {
+                    return (PESO_STATUS_BOOK[a.status] || 9) - (PESO_STATUS_BOOK[b.status] || 9)
+                        || a.data.localeCompare(b.data)
+                        || a.hora_inicio.localeCompare(b.hora_inicio);
+                });
+
+                alvo.innerHTML = lista.length
+                    ? lista.map(function (b) { return cardSolicitacao(b, true); }).join('')
+                    : '<p class="tp-vazio-lista">Nenhuma solicitação ainda.</p>';
+            } catch (e) {
+                alvo.innerHTML = '<p class="tp-msg-erro">Erro: ' + esc(e.message) + '</p>';
+            }
+        }
+
+        async function carregarMinhasSolicitacoes() {
+            const alvo = document.getElementById('minhas-solicitacoes');
+            if (!alvo) return;
+
+            try {
+                await expirarSolicitacoesPendentes();
+                const r = await listarMinhasSolicitacoes(user.id);
+
+                if (r.indisponivel) {
+                    alvo.innerHTML = '<p class="tp-vazio-lista">Agendamentos ainda não ativos neste banco.</p>';
+                    return;
+                }
+                if (r.error) {
+                    alvo.innerHTML = '<p class="tp-msg-erro">Erro: ' + esc(r.error.message) + '</p>';
+                    return;
+                }
+
+                const lista = r.data || [];
+                alvo.innerHTML = lista.length
+                    ? lista.map(function (b) { return cardSolicitacao(b, false); }).join('')
+                    : '<p class="tp-vazio-lista">Você ainda não solicitou nenhum horário.</p>';
+            } catch (e) {
+                alvo.innerHTML = '<p class="tp-msg-erro">Erro: ' + esc(e.message) + '</p>';
+            }
+        }
+
+        async function acaoSolicitacao(acao, id) {
+            if (!id) return;
+
+            if (acao === 'cancelar') {
+                if (!confirm('Cancelar esta solicitação?')) return;
+                const r = await cancelarSolicitacao(id);
+                if (r.error) { alert(r.error.message); return; }
+            } else {
+                const status = acao === 'confirmar' ? 'confirmado'
+                    : (acao === 'recusar' ? 'recusado' : 'concluido');
+                const r = await responderSolicitacao(id, status, '');
+                if (r.error) { alert(r.error.message); return; }
+            }
+
+            await carregarSolicitacoesRecebidas();

@@ -1,0 +1,28 @@
+﻿// ---------- LOG DE E-MAILS (F5b) ----------
+async function renderEmails(el) {
+    try {
+        var s = await getSupabase();
+        if (!s) {
+            el.innerHTML = '<div class="admin-card"><h2>E-mails</h2><p style="color:#ff6b6b;">Supabase indisponivel</p></div>';
+            return;
+        }
+
+        var r = await s.rpc('admin_listar_emails', { p_limite: 100 });
+
+        if (r.error) {
+            el.innerHTML = '<div class="admin-card"><h2>✉️ E-mails</h2>'
+                + '<p style="color:#ff6b6b;">' + escTera(r.error.message) + '</p>'
+                + '<p style="color:#888;margin-top:10px;">Se a funcao nao existe, rode a secao 13 do supabase-schema.sql.</p>'
+                + '</div>';
+            return;
+        }
+
+        var lista = r.data || [];
+        var ok = lista.filter(function (l) { return l.status_http === 200; }).length;
+        var falhas = lista.length - ok;
+
+        var html = '<div class="admin-card"><h2>✉️ E-mails enviados (' + lista.length + ')</h2>';
+        html += '<p style="color:#888;margin-bottom:14px;line-height:1.6;">'
+333: <div id="minhas-solicitacoes">
+387: const boxMeu = document.getElementById('minhas-solicitacoes');
+651: const alvo = document.getElementById('minhas-solicitacoes');
