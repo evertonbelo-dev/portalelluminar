@@ -14,6 +14,7 @@
 //   POST /stripe/reconciliar → chamado pelo cron (token do Vault): varre os
 //                           pedidos vencidos com cobrança criada e salva os
 //                           que o Stripe já aprovou
+//   GET  /stripe/status   → diagnóstico: diz se a chave em uso é live ou teste
 //   POST /stripe/refund   → autenticado (admin) reembolso manual
 //
 // Deploy (a flag é obrigatória: sem ela o Stripe recebe 401 no webhook):
@@ -81,6 +82,7 @@ Deno.serve(async (req) => {
         if (rota === 'intent') return await intent(req);
         if (rota === 'confirmar') return await confirmar(req);
         if (rota === 'reconciliar') return await reconciliar(req);
+        if (rota === 'status') return await status(req);
         if (rota === 'refund') return await refund(req);
         return json({ erro: 'Rota desconhecida: ' + rota }, 404);
     } catch (e) {
@@ -308,6 +310,52 @@ async function confirmar(req: Request): Promise<Response> {
     return json({
         pago: true,
         valor_cobrado: pi.amount_received ? arredondar(pi.amount_received / 100) : b.valor_cobrado,
+    });
+}
+
+// --------------------------------------------------------------------------
+// /status — diagnóstico do go-live. Diz se a chave em uso é LIVE ou TESTE,
+// sem expor segredo: consulta um PaymentIntent de teste conhecido e lê a
+// resposta do Stripe. "a similar object exists in test mode, but a live mode
+// key was used" é exatamente o que queremos ver depois da virada.
+// --------------------------------------------------------------------------
+async function status(req: Request): Promise<Response> {
+    const enviado = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    const autorizado = (RECONCILE_TOKEN && enviado === RECONCILE_TOKEN)
+        || (SB_SERVICE && enviado === SB_SERVICE);
+
+    if (!autorizado) return json({ erro: 'Não autorizado' }, 401);
+
+    const SONDA = 'pi_3USQnRC4E3K5TVQT2oN7bTdh'; // pagamento de teste de 19/10
+    let modo = 'indefinido';
+    let motivo = '';
+
+    try {
+        const pi = await stripe.paymentIntents.retrieve(SONDA);
+        modo = pi.livemode ? 'live' : 'teste';
+        motivo = 'PaymentIntent de teste encontrado: a chave é do mesmo modo.';
+    } catch (e) {
+        const msg = String((e as Error)?.message || e);
+
+        if (/live mode key/i.test(msg)) {
+            modo = 'live';
+            motivo = 'Objeto de teste recusado pela chave: confirma modo LIVE.';
+        } else if (/test mode/i.test(msg)) {
+            modo = 'teste';
+            motivo = 'Objeto de produção recusado: confirma modo TESTE.';
+        } else if (/invalid api key|no api key|api key/i.test(msg)) {
+            motivo = 'Chave recusada pelo Stripe: ' + msg.slice(0, 160);
+        } else {
+            motivo = msg.slice(0, 200);
+        }
+    }
+
+    return json({
+        modo,
+        motivo,
+        webhook_secret_definido: WEBHOOK_SECRET.startsWith('whsec_'),
+        token_reconciliacao_definido: !!RECONCILE_TOKEN,
+        rotas: ['intent', 'webhook', 'confirmar', 'reconciliar', 'refund', 'status'],
     });
 }
 
