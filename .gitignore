@@ -11,3 +11,7 @@ dist/
 js/env-config.js
 
 dist/
+
+# arquivos temporarios de validacao
+_v.mjs
+_v.txt
