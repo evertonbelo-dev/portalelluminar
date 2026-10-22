@@ -1952,27 +1952,34 @@ CREATE TRIGGER trg_ledger_creditos
     FOR EACH ROW EXECUTE FUNCTION public.lancar_creditos_terapeuta();
 
 -- Politica: >= 24h antes = reembolso integral; < 24h = sem reembolso (permite
--- remarcar); pedido ainda pendente (terapeuta nao confirmou) = integral sempre.
+-- remarcar); pedido ainda pendente (terapeuta nao confirmou) = integral sempre;
+-- pedido RECUSADO pelo terapeuta = integral em qualquer prazo (contrato 5.1e).
 CREATE OR REPLACE FUNCTION public.booking_reembolso()
 RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
 DECLARE
     v_horas numeric;
 BEGIN
-    IF NEW.status = 'cancelado' AND OLD.status <> 'cancelado'
+    IF NEW.status IN ('cancelado', 'recusado')
+       AND OLD.status <> NEW.status
        AND NEW.pagamento_status = 'pago'
        AND NEW.reembolso_elegivel IS NULL THEN
 
-        v_horas := EXTRACT(EPOCH FROM (((NEW.data + NEW.hora_inicio) AT TIME ZONE 'America/Sao_Paulo') - NOW())) / 3600;
-
-        IF OLD.status = 'pendente' THEN
+        IF NEW.status = 'recusado' THEN
             NEW.reembolso_elegivel := true;
-            NEW.reembolso_motivo := 'O terapeuta ainda nao havia confirmado: reembolso integral.';
-        ELSIF v_horas >= 24 THEN
-            NEW.reembolso_elegivel := true;
-            NEW.reembolso_motivo := 'Cancelado com ' || round(v_horas) || 'h de antecedencia: reembolso integral.';
+            NEW.reembolso_motivo := 'O terapeuta recusou o pedido: reembolso integral.';
         ELSE
-            NEW.reembolso_elegivel := false;
-            NEW.reembolso_motivo := 'Cancelado com menos de 24h: sem reembolso, valor fica como garantia do horario.';
+            v_horas := EXTRACT(EPOCH FROM (((NEW.data + NEW.hora_inicio) AT TIME ZONE 'America/Sao_Paulo') - NOW())) / 3600;
+
+            IF OLD.status = 'pendente' THEN
+                NEW.reembolso_elegivel := true;
+                NEW.reembolso_motivo := 'O terapeuta ainda nao havia confirmado: reembolso integral.';
+            ELSIF v_horas >= 24 THEN
+                NEW.reembolso_elegivel := true;
+                NEW.reembolso_motivo := 'Cancelado com ' || round(v_horas) || 'h de antecedencia: reembolso integral.';
+            ELSE
+                NEW.reembolso_elegivel := false;
+                NEW.reembolso_motivo := 'Cancelado com menos de 24h: sem reembolso, valor fica como garantia do horario.';
+            END IF;
         END IF;
 
         IF NEW.reembolso_elegivel THEN
@@ -2362,7 +2369,7 @@ DECLARE
 BEGIN
     BEGIN
         IF TG_OP <> 'UPDATE' THEN RETURN NEW; END IF;
-        IF NEW.status <> 'cancelado' OR OLD.status = 'cancelado' THEN RETURN NEW; END IF;
+        IF NEW.status NOT IN ('cancelado', 'recusado') OR OLD.status = NEW.status THEN RETURN NEW; END IF;
         IF NEW.pagamento_status <> 'pago' OR NEW.reembolso_elegivel IS NULL THEN RETURN NEW; END IF;
 
         v_quando := to_char(NEW.data, 'DD/MM/YYYY') || ' às ' || to_char(NEW.hora_inicio, 'HH24:MI');

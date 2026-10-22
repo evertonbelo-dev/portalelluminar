@@ -487,13 +487,13 @@ async function refund(req: Request): Promise<Response> {
         || (SB_SERVICE && enviado === SB_SERVICE);
 
     // 1) Cron: reembolso do que a politica de cancelamento autorizou.
-    //    A elegibilidade ja foi decidida no instante do cancelamento
+    //    A elegibilidade ja foi decidida no instante do cancelamento/recusa
     //    (trigger booking_reembolso, regra das 24h) - aqui so executamos.
     if (interno) {
         const { data: fila } = await admin
             .from('therapist_bookings')
             .select('id, stripe_payment_intent, valor_cobrado')
-            .eq('status', 'cancelado')
+            .in('status', ['cancelado', 'recusado'])
             .eq('pagamento_status', 'pago')
             .eq('reembolso_elegivel', true)
             .not('reembolso_solicitado_em', 'is', null)
