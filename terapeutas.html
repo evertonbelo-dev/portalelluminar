@@ -167,6 +167,9 @@
         // Perfis exibidos. Comeca vazio e e preenchido por carregarTerapeutas():
         // dados do Supabase (status 'publicado') ou, na falta deles, os exemplos.
         let TERAPEUTAS = [];
+        // F7: quando a vitrine é aberta com ?remarcar=<id>, a agenda serve para
+        // escolher o NOVO horário de um pedido já pago (sem cobrar de novo).
+        let REMARCAR = null;
 
         // F4: sessao do consulente (para solicitar agendamento) e a promise
         // que a carrega — o modal espera por ela antes de montar a agenda.
@@ -455,7 +458,8 @@
             const texto = 'Olá! Vi seu perfil no Portal El\'Luminar e gostaria de confirmar um atendimento em ' + quando + '.';
 
             const servicos = (t.servicos || []).filter(function (s) { return s.ativo !== false; });
-            const opcoes = servicos.length
+            // Na remarcação o serviço não muda: mantém o do pedido original
+            const opcoes = (!REMARCAR && servicos.length)
                 ? '<select class="agenda-select" id="agenda-servico">' +
                     '<option value="">Atendimento a combinar</option>' +
                     servicos.map(function (s, i) {
@@ -475,15 +479,22 @@
             const acao = meuPerfil
                 ? '<a class="btn-agendar" href="dashboard.html">Este é o seu perfil — gerenciar</a>'
                 : (SESSION
-                    ? '<button type="button" class="btn-agendar" id="btn-agendar">✦ Solicitar agendamento</button>'
+                    ? '<button type="button" class="btn-agendar" id="btn-agendar">' +
+                      (REMARCAR ? '✦ Remarcar para este horário' : '✦ Solicitar agendamento') + '</button>'
                     : '<a class="btn-agendar" href="login.html?redirect=terapeutas.html">Entrar para solicitar</a>');
+
+            const nota = REMARCAR
+                ? 'Remarcação: o valor já pago continua valendo, sem cobrança nova. ' +
+                  'Restam <strong>' + Math.max(0, 2 - (Number(REMARCAR.remarcacoes) || 0)) +
+                  '</strong> remarcação(ões) e o novo horário precisa de 24h de antecedência.'
+                : 'O horário fica reservado como <strong>pendente</strong> até o terapeuta confirmar. ' +
+                  'Você acompanha e pode cancelar em Minha Jornada.';
 
             return '<div class="resumo">✦ ' + esc(quando) + '</div>' +
                 opcoes +
                 (SESSION ? '<textarea class="agenda-obs" id="agenda-obs" maxlength="300" placeholder="Alguma observação para o terapeuta? (opcional)"></textarea>' : '') +
                 '<div class="agenda-acoes">' + acao + botaoWa + '</div>' +
-                '<div class="nota" id="agenda-nota">O horário fica reservado como <strong>pendente</strong> até o terapeuta confirmar. ' +
-                'Você acompanha e pode cancelar em Minha Jornada.</div>';
+                '<div class="nota" id="agenda-nota">' + nota + '</div>';
         }
 
         // Recarrega apenas os horários ocupados do terapeuta
@@ -534,9 +545,37 @@
                 : 60;
             const dur = (servico && servico.duracao_min) ? Number(servico.duracao_min) : padraoDur;
 
+            // F7 — Remarcação: muda só o horário. O pagamento, o cupom e o valor
+            // continuam os mesmos; a RPC valida 24h de antecedência e o limite.
+            if (REMARCAR) {
+                if (btn) { btn.disabled = true; btn.innerText = 'Remarcando...'; }
+                dizer('Movendo seu horário...', '#d4af37');
+
+                try {
+                    const db = await import('./js/supabase-db.js?v=2.3.0');
+                    const r = await db.remarcarSolicitacao(REMARCAR.id, _agenda.dia, _agenda.escolhido);
+
+                    if (r.error) {
+                        dizer(r.error.message, '#ff6b6b');
+                        if (btn) { btn.disabled = false; btn.innerText = 'Remarcar para este horário'; }
+
+                        await recarregarOcupados(t);
+                        const box = document.getElementById('agenda-box');
+                        if (box) { _agenda.escolhido = null; box.innerHTML = conteudoAgenda(t); }
+                        return;
+                    }
+
+                    dizer('Horário remarcado! Voltando para os seus agendamentos...', '#4caf50');
+                    window.location.href = 'dashboard.html';
+                } catch (e) {
+                    dizer('Não foi possível remarcar: ' + e.message, '#ff6b6b');
+                    if (btn) { btn.disabled = false; btn.innerText = 'Remarcar para este horário'; }
+                }
+                return;
+            }
+
             if (btn) { btn.disabled = true; btn.innerText = 'Enviando...'; }
             dizer('Enviando sua solicitação...', '#d4af37');
-
             try {
                 const db = await import('./js/supabase-db.js?v=2.3.0');
                 const u = SESSION.user;
@@ -736,7 +775,7 @@
             renderizar();
         }
 
-        carregarTerapeutas();
+        const vitrinePronta = carregarTerapeutas();
 
         // Nav: mostra o nome do usuario logado (mesmo comportamento do index.html)
         // F4: a mesma sessao alimenta a solicitacao de agendamento — por isso
@@ -762,6 +801,37 @@
             } catch (e) {
                 // Supabase nao configurado: segue como visitante
                 SESSION = null;
+            }
+        })();
+
+        // F7: modo remarcacao — abre direto o perfil do terapeuta do pedido
+        // e troca o botao por "Remarcar para este horario".
+        (async function abrirRemarcacao() {
+            const id = new URLSearchParams(location.search).get('remarcar');
+            if (!id) return;
+
+            try {
+                await Promise.all([sessaoPronta, vitrinePronta]);
+
+                if (!SESSION) {
+                    window.location.href = 'login.html?redirect=' +
+                        encodeURIComponent('terapeutas.html?remarcar=' + id);
+                    return;
+                }
+
+                const db = await import('./js/supabase-db.js?v=2.3.0');
+                const r = await db.listarMinhasSolicitacoes(SESSION.user.id);
+                const b = (r.data || []).filter(function (x) { return x.id === id; })[0];
+
+                if (!b) { alert('Não encontramos este agendamento na sua conta.'); return; }
+                if (b.pagamento_status !== 'pago') { alert('Conclua o pagamento antes de remarcar.'); return; }
+                if (b.status !== 'pendente' && b.status !== 'confirmado') { alert('Este pedido não está mais aberto para remarcação.'); return; }
+                if ((Number(b.remarcacoes) || 0) >= 2) { alert('Limite de 2 remarcações atingido. Fale com o terapeuta.'); return; }
+
+                REMARCAR = b;
+                abrirPerfil(b.terapeuta_slug);
+            } catch (e) {
+                alert('Não foi possível abrir a remarcação: ' + e.message);
             }
         })();
     </script>

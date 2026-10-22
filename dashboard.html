@@ -618,6 +618,12 @@
                 ? (b.pagamento_status === 'pago' || b.pagamento_status === 'reembolsado' ? ROTULO_PAGAMENTO[b.pagamento_status] : '')
                 : (ROTULO_PAGAMENTO[b.pagamento_status] || '');
 
+            // Consulente: remarcar mantém o valor pago (sem reembolso após 24h)
+            if (!souTerapeuta && b.pode_remarcar) {
+                acoes += '<a class="tp-btn-sec" style="text-decoration:none;display:inline-block;"'
+                      + ' href="terapeutas.html?remarcar=' + encodeURIComponent(b.id) + '">Remarcar</a>';
+            }
+
             return `
                 <div class="tp-book">
                     <div class="tp-book-topo">

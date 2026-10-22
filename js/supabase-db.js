@@ -887,6 +887,14 @@ export function normalizarSolicitacao(row) {
             if (row.pagamento_status === 'pago' || row.pagamento_status === 'reembolsado') return false;
             if (row.status === 'cancelado' || row.status === 'recusado' || row.status === 'concluido') return false;
             return new Date(row.pagamento_deadline).getTime() > Date.now();
+        })(),
+        remarcacoes: Number(row.remarcacoes) || 0,
+        remarcado_em: row.remarcado_em || null,
+        // Remarcação: pedido já pago e ainda aberto, dentro do limite de 2
+        pode_remarcar: (function () {
+            if (row.pagamento_status !== 'pago') return false;
+            if (row.status !== 'pendente' && row.status !== 'confirmado') return false;
+            return (Number(row.remarcacoes) || 0) < 2;
         })()
     };
 }
@@ -909,6 +917,21 @@ export async function expirarSolicitacoesPendentes() {
 }
 
 const SELECT_SOLICITACAO = '*, therapists(nome, slug)';
+
+// F7: remarca um pedido já pago — mantém valor, cupom e pagamento
+export async function remarcarSolicitacao(id, data, hora) {
+    const client = await getSupabase();
+    if (!client) return { error: { message: 'Supabase indisponivel' } };
+    if (!id || !data || !hora) return { error: { message: 'Horario invalido.' } };
+
+    const { error } = await client.rpc('remarcar_solicitacao', {
+        p_booking: id,
+        p_data: data,
+        p_hora: String(hora).length === 5 ? String(hora) + ':00' : String(hora)
+    });
+
+    return { error: error || null };
+}
 
 // Painel do consulente: "Meus agendamentos"
 export async function listarMinhasSolicitacoes(userId) {
