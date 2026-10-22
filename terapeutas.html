@@ -483,10 +483,14 @@
                       (REMARCAR ? '✦ Remarcar para este horário' : '✦ Solicitar agendamento') + '</button>'
                     : '<a class="btn-agendar" href="login.html?redirect=terapeutas.html">Entrar para solicitar</a>');
 
+            const restam = Math.max(0, 2 - (Number(REMARCAR && REMARCAR.remarcacoes) || 0));
+
             const nota = REMARCAR
-                ? 'Remarcação: o valor já pago continua valendo, sem cobrança nova. ' +
-                  'Restam <strong>' + Math.max(0, 2 - (Number(REMARCAR.remarcacoes) || 0)) +
-                  '</strong> remarcação(ões) e o novo horário precisa de 24h de antecedência.'
+                ? (restam === 1
+                    ? '<strong style="color:#ffcc80;">Atenção: esta é a sua última remarcação.</strong> ' +
+                      'O valor já pago continua valendo e não há cobrança nova — mas depois desta não será possível remarcar de novo.'
+                    : 'Remarcação: o valor já pago continua valendo, sem cobrança nova. ' +
+                      'Restam <strong>' + restam + '</strong> remarcações e o novo horário precisa de 24h de antecedência.')
                 : 'O horário fica reservado como <strong>pendente</strong> até o terapeuta confirmar. ' +
                   'Você acompanha e pode cancelar em Minha Jornada.';
 
@@ -548,6 +552,20 @@
             // F7 — Remarcação: muda só o horário. O pagamento, o cupom e o valor
             // continuam os mesmos; a RPC valida 24h de antecedência e o limite.
             if (REMARCAR) {
+                // Última remarcação: confirma antes de consumir a 2ª
+                if ((Number(REMARCAR.remarcacoes) || 0) >= 1) {
+                    const seguir = confirm(
+                        'ATENÇÃO — última remarcação.\n\n' +
+                        'Você já usou 1 das 2 remarcações deste atendimento. Depois desta não será possível ' +
+                        'remarcar novamente e um cancelamento não terá reembolso.\n\nDeseja continuar?'
+                    );
+
+                    if (!seguir) {
+                        dizer('Remarcação cancelada — você ainda tem 1 remarcação disponível.', '');
+                        return;
+                    }
+                }
+
                 if (btn) { btn.disabled = true; btn.innerText = 'Remarcando...'; }
                 dizer('Movendo seu horário...', '#d4af37');
 

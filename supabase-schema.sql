@@ -1612,7 +1612,14 @@ BEGIN
                 || '<p>Terapeuta: <strong>' || public.esc_html(v_nome_terapeuta) || '</strong></p>'
                 || CASE WHEN NEW.cupom_codigo IS NOT NULL THEN '<p>Cupom aplicado: ' || public.esc_html(NEW.cupom_codigo) || ' (desconto de ' || public.fmt_brl(NEW.valor_desconto) || ')</p>' ELSE '' END
                 || CASE WHEN NEW.forma_pagamento = 'sinal' AND v_restante > 0 THEN '<p style="color:#ffcc80;">Você pagou o sinal de 30%. O restante (' || public.fmt_brl(v_restante) || ') é acertado direto com o terapeuta.</p>' ELSE '' END
-                || '<p style="color:#aaa;">O terapeuta foi avisado e vai confirmar o atendimento.</p>';
+                || '<p style="color:#aaa;">O terapeuta foi avisado e vai confirmar o atendimento.</p>'
+                || '<div style="background:#1c1c2e;border-left:3px solid #d4af37;padding:14px 16px;border-radius:8px;margin-top:18px;font-size:14px;line-height:1.7;">'
+                || '<strong>Cancelamento e remarcação</strong><br>'
+                || '• Reembolso <strong>integral</strong> até <strong>24h antes</strong> do atendimento.<br>'
+                || '• Depois desse prazo o valor fica como garantia do horário e <strong>não há reembolso</strong>.<br>'
+                || '• Você pode <strong>remarcar</strong> até <strong>2 vezes</strong> (com 24h de antecedência), sem cobrança nova.<br>'
+                || '• Remarcações usadas até agora: <strong>0 de 2</strong>.'
+                || '</div>';
 
             PERFORM public.enviar_email_resend(NEW.consulente_contato,
                 'Pagamento confirmado: ' || v_quando,
@@ -2268,6 +2275,132 @@ REVOKE ALL ON FUNCTION public.quitar_mensalidade_com_retencao(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.quitar_mensalidade_com_retencao(uuid) TO authenticated;
 REVOKE ALL ON FUNCTION public.terapeuta_pode_receber(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.terapeuta_pode_receber(uuid) TO anon, authenticated;
+
+-- ==========================================================================
+-- 21) E-MAILS DA POLITICA (F7)
+-- O consulente precisa saber as regras no momento em que paga, quando
+-- remarca (com o contador) e quando cancela (com o destino do dinheiro).
+-- ==========================================================================
+
+CREATE OR REPLACE FUNCTION public.notificar_remarcacao()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_email_terapeuta text;
+    v_nome_terapeuta text;
+    v_quando text;
+    v_servico text;
+    v_usadas integer;
+    v_restam integer;
+    v_base text;
+BEGIN
+    BEGIN
+        IF TG_OP <> 'UPDATE' THEN RETURN NEW; END IF;
+        -- Detecta pela CONTAGEM de remarcacoes: remarcado_em usa NOW(), que e
+        -- constante dentro da mesma transacao.
+        IF COALESCE(NEW.remarcacoes, 0) IS NOT DISTINCT FROM COALESCE(OLD.remarcacoes, 0) THEN
+            RETURN NEW;
+        END IF;
+
+        SELECT u.email, t.nome INTO v_email_terapeuta, v_nome_terapeuta
+          FROM public.therapists t
+          JOIN auth.users u ON u.id = t.user_id
+         WHERE t.id = NEW.therapist_id;
+
+        v_usadas := COALESCE(NEW.remarcacoes, 0);
+        v_restam := GREATEST(0, 2 - v_usadas);
+        v_quando := to_char(NEW.data, 'DD/MM/YYYY') || ' às ' || to_char(NEW.hora_inicio, 'HH24:MI');
+        v_servico := COALESCE(NEW.servico_nome, 'Atendimento a combinar');
+
+        v_base := '<p style="font-size:18px;color:#d4af37;"><strong>' || v_quando || '</strong></p>'
+               || '<p>' || public.esc_html(v_servico) || ' · ' || NEW.duracao_min || ' min</p>'
+               || '<div style="background:#1c1c2e;border-left:3px solid #d4af37;padding:14px 16px;border-radius:8px;margin-top:16px;font-size:14px;line-height:1.7;">'
+               || CASE WHEN v_restam > 0
+                       THEN 'Remarcações usadas: <strong>' || v_usadas || ' de 2</strong>. Ainda restam <strong>' || v_restam || '</strong>.<br>'
+                            || 'Lembre-se: o novo horário precisa de 24h de antecedência e o cancelamento com reembolso integral só vale até 24h antes.'
+                       ELSE '<strong style="color:#ffcc80;">Atenção: esta foi a sua última remarcação.</strong><br>'
+                            || 'Você já usou as 2 remarcações deste atendimento. Não será possível remarcar novamente — '
+                            || 'um novo cancelamento não terá reembolso.' END
+               || '</div>';
+
+        PERFORM public.enviar_email_resend(NEW.consulente_contato,
+            'Horário remarcado: ' || v_quando,
+            public.email_layout('Seu atendimento foi remarcado',
+                '<p>Olá, ' || public.esc_html(NEW.consulente_nome) || '!</p>'
+                || '<p>Seu atendimento com <strong>' || public.esc_html(v_nome_terapeuta) || '</strong> foi movido para:</p>'
+                || v_base
+                || '<p style="color:#aaa;">O valor já pago continua valendo: não houve cobrança nova.</p>'),
+            'remarcado', NEW.id);
+
+        PERFORM public.enviar_email_resend(v_email_terapeuta,
+            'Atendimento remarcado: ' || v_quando,
+            public.email_layout('Um atendimento foi remarcado',
+                '<p><strong>' || public.esc_html(NEW.consulente_nome) || '</strong> remarcou o atendimento.</p>'
+                || v_base),
+            'remarcado_terapeuta', NEW.id);
+
+        RETURN NEW;
+    EXCEPTION WHEN OTHERS THEN
+        INSERT INTO public.email_log (tipo, booking_id, destinatario, assunto, status, detalhe)
+        VALUES ('erro', NEW.id, NULL, NULL, 'erro', SQLERRM);
+        RETURN NEW;
+    END;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_booking_remarcacao ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_remarcacao
+    AFTER UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.notificar_remarcacao();
+
+-- E-mail focado no dinheiro do cancelamento: reembolso integral OU retencao
+-- como garantia (com o lembrete de que remarcar era a alternativa).
+CREATE OR REPLACE FUNCTION public.notificar_cancelamento_politica()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_quando text;
+    v_corpo text;
+BEGIN
+    BEGIN
+        IF TG_OP <> 'UPDATE' THEN RETURN NEW; END IF;
+        IF NEW.status <> 'cancelado' OR OLD.status = 'cancelado' THEN RETURN NEW; END IF;
+        IF NEW.pagamento_status <> 'pago' OR NEW.reembolso_elegivel IS NULL THEN RETURN NEW; END IF;
+
+        v_quando := to_char(NEW.data, 'DD/MM/YYYY') || ' às ' || to_char(NEW.hora_inicio, 'HH24:MI');
+
+        IF NEW.reembolso_elegivel THEN
+            v_corpo := '<p>Olá, ' || public.esc_html(NEW.consulente_nome) || '.</p>'
+                || '<p>O <strong>reembolso integral</strong> de ' || public.fmt_brl(NEW.valor_cobrado) || ' foi solicitado.</p>'
+                || '<p style="font-size:18px;color:#d4af37;"><strong>' || v_quando || '</strong></p>'
+                || '<p>' || public.esc_html(COALESCE(NEW.reembolso_motivo, '')) || '</p>'
+                || '<p style="color:#aaa;">O valor volta ao seu meio de pagamento em alguns dias úteis.</p>';
+        ELSE
+            v_corpo := '<p>Olá, ' || public.esc_html(NEW.consulente_nome) || '.</p>'
+                || '<p>Este cancelamento foi feito com <strong>menos de 24h</strong> do atendimento, então <strong>não há reembolso</strong>: o valor de '
+                || public.fmt_brl(NEW.valor_cobrado) || ' ficou como garantia do horário reservado.</p>'
+                || '<p style="font-size:18px;color:#d4af37;"><strong>' || v_quando || '</strong></p>'
+                || '<div style="background:#1c1c2e;border-left:3px solid #d4af37;padding:14px 16px;border-radius:8px;margin-top:16px;font-size:14px;line-height:1.7;">'
+                || 'Da próxima vez, se não puder comparecer, use <strong>Remarcar</strong> em Minha Jornada: '
+                || 'você tem até <strong>2 remarcações</strong> por atendimento, sem custo adicional.'
+                || '</div>';
+        END IF;
+
+        PERFORM public.enviar_email_resend(NEW.consulente_contato,
+            'Sobre o seu pagamento: ' || v_quando,
+            public.email_layout('Cancelamento e seu pagamento', v_corpo), 'cancelamento_politica', NEW.id);
+
+        RETURN NEW;
+    EXCEPTION WHEN OTHERS THEN
+        INSERT INTO public.email_log (tipo, booking_id, destinatario, assunto, status, detalhe)
+        VALUES ('erro', NEW.id, NULL, NULL, 'erro', SQLERRM);
+        RETURN NEW;
+    END;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_booking_cancelamento_politica ON public.therapist_bookings;
+CREATE TRIGGER trg_booking_cancelamento_politica
+    AFTER UPDATE ON public.therapist_bookings
+    FOR EACH ROW EXECUTE FUNCTION public.notificar_cancelamento_politica();
 
 
 
